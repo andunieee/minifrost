@@ -14,8 +14,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -31,7 +29,7 @@ import javax.crypto.spec.GCMParameterSpec
  *   - is generated inside the Android Keystore (StrongBox secure element when the phone has one,
  *     otherwise the TEE) and can never be exported,
  *   - only works shortly after the user unlocked with biometrics or their screen lock,
- *   - only works while the device is unlocked.
+ *   - only works while the device is unlocked (Android 9+; StrongBox likewise).
  * The ciphertext sits in noBackupFilesDir, which is excluded from every backup/transfer path.
  *
  * Consequence worth knowing: if the user removes their screen lock or wipes the phone, the key is
@@ -48,8 +46,13 @@ class Vault(private val activity: FragmentActivity) {
         private const val VERSION: Byte = 1
     }
 
+    // Before API 30 "strong biometric or screen lock" can't be asked in one prompt, so there we
+    // accept any enrolled biometric (WEAK includes STRONG) or the screen lock.
     private val authenticators =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        if (android.os.Build.VERSION.SDK_INT >= 30)
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        else
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
     fun hasSecureLockScreen(): Boolean =
         (activity.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure
@@ -73,13 +76,25 @@ class Vault(private val activity: FragmentActivity) {
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
             .setUserAuthenticationRequired(true)
-            .setUserAuthenticationParameters(
-                AUTH_VALID_SECONDS,
-                KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
-            )
-            .setUnlockedDeviceRequired(true)
+            .apply {
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    setUserAuthenticationParameters(
+                        AUTH_VALID_SECONDS,
+                        KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    setUserAuthenticationValidityDurationSeconds(AUTH_VALID_SECONDS)
+                }
+            }
             .setRandomizedEncryptionRequired(true)
-            .apply { if (strongBox) setIsStrongBoxBacked(true) }
+            .apply {
+                // Extra protections on Android 9+; older phones just don't get them.
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    setUnlockedDeviceRequired(true)
+                    if (strongBox) setIsStrongBoxBacked(true)
+                }
+            }
             .build()
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
             init(spec)
@@ -89,6 +104,7 @@ class Vault(private val activity: FragmentActivity) {
 
     private fun key(): SecretKey {
         (keyStore.getKey(ALIAS, null) as? SecretKey)?.let { return it }
+        if (android.os.Build.VERSION.SDK_INT < 28) return createKey(strongBox = false)
         return try {
             createKey(strongBox = true)
         } catch (e: StrongBoxUnavailableException) {
@@ -155,7 +171,8 @@ class Vault(private val activity: FragmentActivity) {
             val blob = seal(plain)
             val tmp = File(file.parentFile, "signer.vault.tmp")
             FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            // java.nio.file needs API 26; rename(2) within one directory is atomic and replaces.
+            if (!tmp.renameTo(file)) throw java.io.IOException("could not move vault into place")
         }, { ok() }, fail)
     }
 

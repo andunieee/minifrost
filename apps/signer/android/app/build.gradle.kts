@@ -19,7 +19,7 @@ android {
         applicationId = "dev.minifrost.minifrost_signer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 30 // hardware-backed key auth parameters need API 30
+        minSdk = 24 // StrongBox / unlocked-only key need API 28, strong-biometric auth API 30; Vault.kt degrades below that
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)

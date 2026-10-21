@@ -64,7 +64,10 @@ trip still happens, which is what binds the transaction review to the signature.
   generated inside the Android Keystore** (StrongBox secure element when present, otherwise the TEE;
   non-exportable). The key only works within 2 minutes of biometric / screen-lock unlock and only
   while the phone is unlocked. File lives in `noBackupFilesDir`; backups and device transfer are
-  disabled; `FLAG_SECURE` blocks screenshots.
+  disabled; `FLAG_SECURE` blocks screenshots. Minimum Android is 7 (API 24). Protections scale with the phone: StrongBox and
+  "key only usable while unlocked" need Android 9+; requiring a *strong* biometric needs Android 11+
+  (before that any enrolled biometric or the screen lock unlocks the key). The key is always
+  hardware-backed (TEE) where the phone has one. The setup screen shows the level in use.
 - State is persisted **before** any QR derived from it is shown (`controller.dart`). After
   signing, the snapshot contains the burned nonce — so a crash cannot lead to nonce reuse.
 - The manifest asks for `CAMERA` (and, through `androidx.biometric`, `USE_BIOMETRIC` /
