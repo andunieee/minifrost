@@ -24,7 +24,7 @@ coordinator-release:
 coordinator-build:
     cd apps/coordinator && flutter build linux --release
 
-# --- signer (android) ------------------------------------------------------------------------
+# --- signer (android phone) ------------------------------------------------------------------
 
 # Build the signer APK for arm64 phones. No INTERNET permission means no hot reload, so release only.
 signer-build:
@@ -49,6 +49,22 @@ signer-uninstall:
 # Fail if the signer has networking crates or the APK asks for unexpected permissions.
 check-offline: signer-build
     ./scripts/check-signer-offline.sh {{apk}}
+
+# --- signer (linux desktop) ------------------------------------------------------------------
+# Dev/testing build: the key share lives in a plain file (see lib/vault.dart), webcam scanning
+# comes from the shared `desktop_camera` crate. Not for serious funds.
+
+# Run the signer on this machine (debug build, hot reload with `r`).
+signer-linux:
+    cd apps/signer && flutter run -d linux
+
+# Run the signer as a release build.
+signer-linux-release:
+    cd apps/signer && flutter run -d linux --release
+
+# Build the Linux bundle: apps/signer/build/linux/x64/release/bundle/
+signer-build-linux:
+    cd apps/signer && flutter build linux --release
 
 # --- development -----------------------------------------------------------------------------
 

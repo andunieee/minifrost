@@ -5,7 +5,7 @@ everything between them and the coordinator travels as **animated QR codes**.
 
 | | Coordinator | Signer |
 |---|---|---|
-| App | `apps/coordinator` (Flutter, Linux desktop) | `apps/signer` (Flutter, Android) |
+| App | `apps/coordinator` (Flutter, Linux desktop) | `apps/signer` (Flutter, Android; also runs on Linux desktop for dev/testing) |
 | Rust | `crates/minifrost_coordinator` | `crates/minifrost_signer` |
 | Network | Esplora only (balances, fee estimates, broadcast) | **none** — no `INTERNET` permission, no networking crates |
 | Permissions | webcam | `CAMERA`, plus `USE_BIOMETRIC`/`USE_FINGERPRINT` for the unlock prompt |
@@ -87,6 +87,7 @@ Android SDK + NDK 27.2 for the signer, GTK/cmake/clang for the Linux coordinator
 cargo test --workspace                       # protocol, wallet logic, full QR flow end to end
 
 cd apps/coordinator && flutter run -d linux  # coordinator
+cd apps/signer && flutter run -d linux       # signer, desktop (dev/testing)
 cd apps/signer && flutter build apk --release --target-platform android-arm64
 adb install build/app/outputs/flutter-apk/app-release.apk
 ../../scripts/check-signer-offline.sh build/app/outputs/flutter-apk/app-release.apk
@@ -108,6 +109,10 @@ The release APK is signed with the debug key; set up your own signing config bef
   threshold is for). Frostsnap's backup / restoration flows are not ported.
 - Wallet: single taproot account, largest-first coin selection, one signing session at a time,
   gap limit 10. Change addresses are not reserved across concurrent drafts.
+- The Linux desktop signer is for dev/testing only: the key share sits in a plain file (`lib/vault.dart`,
+  `FileVault`), the webcam replaces the phone camera (`desktop_camera`), and there is no biometric
+  unlock. The QR protocol is identical to the phone, so coordinator↔signer flows can be driven
+  entirely on one machine.
 - The Flutter UI has not been run against a physical phone or webcam in the environment this was
   written in: everything below the UI is covered by tests, the Android and Linux builds are
   verified to compile, the camera, Keystore prompts and screens need a real device pass.

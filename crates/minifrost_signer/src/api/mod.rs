@@ -2,8 +2,10 @@
 
 use std::sync::Mutex;
 
-pub use crate::engine::{KeyInfo, OutputSummary, Prompt, Step, StepResult, TxSummary};
 use crate::engine::Signer;
+pub use crate::engine::{KeyInfo, OutputSummary, Prompt, Step, StepResult, TxSummary};
+
+pub mod camera;
 
 /// The signer. One per app process.
 pub struct SignerApp {
@@ -12,12 +14,16 @@ pub struct SignerApp {
 
 /// Create a brand-new signer (first launch). The caller must store `snapshot()` right away.
 pub fn new_signer(name: String) -> SignerApp {
-    SignerApp { inner: Mutex::new(Signer::create(name)) }
+    SignerApp {
+        inner: Mutex::new(Signer::create(name)),
+    }
 }
 
 /// Restore the signer from the bytes the caller stored in secure storage.
 pub fn load_signer(snapshot: Vec<u8>) -> Result<SignerApp, String> {
-    Ok(SignerApp { inner: Mutex::new(Signer::from_snapshot(&snapshot)?) })
+    Ok(SignerApp {
+        inner: Mutex::new(Signer::from_snapshot(&snapshot)?),
+    })
 }
 
 impl SignerApp {
@@ -67,7 +73,9 @@ pub struct QrScanner {
 }
 
 pub fn new_qr_scanner() -> QrScanner {
-    QrScanner { inner: Mutex::new(qr_transport::Assembler::new()) }
+    QrScanner {
+        inner: Mutex::new(qr_transport::Assembler::new()),
+    }
 }
 
 impl QrScanner {
@@ -79,7 +87,12 @@ impl QrScanner {
                 payload: p.complete,
                 problem: None,
             },
-            Err(e) => ScanProgress { received: 0, total: 0, payload: None, problem: Some(e.to_string()) },
+            Err(e) => ScanProgress {
+                received: 0,
+                total: 0,
+                payload: None,
+                problem: Some(e.to_string()),
+            },
         }
     }
     pub fn reset(&self) {
@@ -95,5 +108,8 @@ pub fn decode_qr_luma(width: u32, height: u32, row_stride: u32, luma: Vec<u8>) -
         return vec![];
     }
     let mut img = rqrr::PreparedImage::prepare_from_greyscale(w, h, |x, y| luma[y * stride + x]);
-    img.detect_grids().into_iter().filter_map(|g| g.decode().ok().map(|(_, text)| text)).collect()
+    img.detect_grids()
+        .into_iter()
+        .filter_map(|g| g.decode().ok().map(|(_, text)| text))
+        .collect()
 }

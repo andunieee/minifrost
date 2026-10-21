@@ -30,7 +30,7 @@ class _Boot extends StatefulWidget {
 }
 
 class _BootState extends State<_Boot> {
-  final vault = Vault();
+  final Vault vault = createVault();
   SignerController? controller;
   VaultStatus? status;
   String? error;

@@ -19,5 +19,11 @@ bitcoin = { workspace = true, features = ["std", "rand-std"] }
 rand = { workspace = true }
 rqrr = "0.10"
 
+# Webcam QR scanning, desktop build only (see api/camera.rs). `v4l` is host capture, not
+# networking, so scripts/check-signer-offline.sh lets it through.
+[target.'cfg(target_os = "linux")'.dependencies]
+desktop_camera = { path = "../desktop_camera" }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

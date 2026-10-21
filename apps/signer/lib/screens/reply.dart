@@ -19,7 +19,7 @@ class ReplyScreen extends StatelessWidget {
         Text(what, textAlign: TextAlign.center),
         const SizedBox(height: 8),
         const Text(
-          'Hold the phone steady until the coordinator has all parts.',
+          'Hold the device steady until the coordinator has all parts.',
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),

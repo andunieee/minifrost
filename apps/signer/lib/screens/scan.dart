@@ -1,21 +1,38 @@
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../src/rust/api.dart';
+import 'webcam.dart';
 
-/// Scans an animated QR code with the back camera. QR detection and frame reassembly are done in
-/// Rust (the app has no Google/ML-Kit dependency). Pops with the completed payload.
-class ScanScreen extends StatefulWidget {
+/// Scans an animated QR code. On Linux it uses the webcam api in Rust; on Android it uses the
+/// `camera` plugin and the luma decoder in Rust. QR frame reassembly is done in Rust on both
+/// (the app has no Google/ML-Kit dependency). Pops with the completed payload.
+class ScanScreen extends StatelessWidget {
   const ScanScreen({super.key, this.hint = 'Point the camera at the coordinator’s QR code'});
   final String hint;
 
   @override
-  State<ScanScreen> createState() => _ScanScreenState();
+  Widget build(BuildContext context) {
+    if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+      return WebcamScanScreen(hint: hint);
+    }
+    return CameraScanScreen(hint: hint);
+  }
 }
 
-class _ScanScreenState extends State<ScanScreen> {
+/// Scans an animated QR code with the phone's back camera.
+class CameraScanScreen extends StatefulWidget {
+  const CameraScanScreen({super.key, this.hint = 'Point the camera at the coordinator’s QR code'});
+  final String hint;
+
+  @override
+  State<CameraScanScreen> createState() => _CameraScanScreenState();
+}
+
+class _CameraScanScreenState extends State<CameraScanScreen> {
   CameraController? _camera;
   QrScanner? _scanner;
   String? _error;

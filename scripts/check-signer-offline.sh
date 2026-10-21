@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 echo "== Rust dependency tree of the signer"
 tree=$(cargo tree -p minifrost_signer -e normal --prefix none | sed 's/ v.*//' | sort -u)
-bad=$(echo "$tree" | grep -E '^(ureq|rustls|hyper|reqwest|openssl|native-tls|socket2|mio|curl|h2|tungstenite|v4l|minifrost_coordinator)$' || true)
+bad=$(echo "$tree" | grep -E '^(ureq|rustls|hyper|reqwest|openssl|native-tls|socket2|mio|curl|h2|tungstenite|minifrost_coordinator)$' || true)
 if [ -n "$bad" ]; then echo "FAIL: networking/coordinator crates in the signer:"; echo "$bad"; exit 1; fi
 if cargo tree -p minifrost_signer -e features -i tokio 2>/dev/null | grep -qE 'tokio feature "(net|process|signal)"'; then
   echo "FAIL: tokio networking features enabled in the signer"; exit 1

@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 
 import '../controller.dart';
@@ -43,9 +45,13 @@ class _SetupState extends State<Setup> {
     return Scaffold(
       appBar: AppBar(title: const Text('Set up signer')),
       body: ListView(padding: const EdgeInsets.all(24), children: [
-        const Text(
-          'This phone becomes one signer of a threshold wallet. It never connects to the internet: '
-          'it talks to the coordinator only through QR codes.',
+        Text(
+          Platform.isAndroid
+              ? 'This phone becomes one signer of a threshold wallet. It never connects to the '
+                  'internet: it talks to the coordinator only through QR codes.'
+              : 'This desktop app becomes one signer of a threshold wallet, talking to the '
+                  'coordinator only through QR codes. Careful: unlike the phone build there is '
+                  'no hardware- or OS-key protection here — for testing, not serious funds.',
         ),
         const SizedBox(height: 24),
         TextField(
