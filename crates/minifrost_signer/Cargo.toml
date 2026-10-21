@@ -1,0 +1,23 @@
+[package]
+name = "minifrost_signer"
+version = "0.1.0"
+edition = "2021"
+description = "Offline FROST signer: keygen participant and partial signer driven entirely by QR packets."
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+# Deliberately no networking crates here. `cargo tree -p minifrost_signer` must never show
+# an http/tls/socket library; scripts/check-signer-offline.sh enforces that.
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+frostsnap_core = { workspace = true, features = ["std"] }
+minifrost_wire = { path = "../minifrost_wire" }
+qr_transport = { path = "../qr_transport" }
+bincode = { workspace = true }
+bitcoin = { workspace = true, features = ["std", "rand-std"] }
+rand = { workspace = true }
+rqrr = "0.10"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Intentionally empty: Flutter normally adds INTERNET here for hot reload. The signer never
+         gets it, so debug builds are as offline as release builds. Use `flutter run --release`
+         or install the APK with adb. -->
+</manifest>

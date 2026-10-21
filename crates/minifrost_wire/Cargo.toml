@@ -1,0 +1,10 @@
+[package]
+name = "minifrost_wire"
+version = "0.1.0"
+edition = "2021"
+description = "The packets the coordinator and signers exchange over QR codes."
+
+[dependencies]
+frostsnap_core = { workspace = true, features = ["std"] }
+bincode = { workspace = true }
+bitcoin = { workspace = true, features = ["std"] }

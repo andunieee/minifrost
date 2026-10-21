@@ -1,0 +1,25 @@
+[package]
+name = "minifrost_coordinator"
+version = "0.1.0"
+edition = "2021"
+description = "Coordinator: orchestrates keygen and signing over QR codes, builds transactions, talks to Esplora."
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+frostsnap_core = { workspace = true, features = ["std", "coordinator"] }
+minifrost_wire = { path = "../minifrost_wire" }
+qr_transport = { path = "../qr_transport" }
+bincode = { workspace = true }
+bitcoin = { workspace = true, features = ["std", "rand-std"] }
+rand = { workspace = true }
+serde_json = "1"
+ureq = { version = "2", features = ["json"] }
+rqrr = "0.10"
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+desktop_camera = { path = "../desktop_camera" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
