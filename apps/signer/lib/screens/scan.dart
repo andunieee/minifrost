@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../src/rust/api.dart';
+import 'paste_bar.dart';
 import 'webcam.dart';
 
 /// Scans an animated QR code. On Linux it uses the webcam api in Rust; on Android it uses the
@@ -87,24 +88,30 @@ class _CameraScanScreenState extends State<CameraScanScreen> {
       luma: y.bytes,
     );
     for (final t in texts) {
-      final p = await _scanner!.push(text: t);
-      if (!mounted || _done) return;
-      if (p.payload != null) {
-        _done = true;
-        await _camera?.stopImageStream().catchError((_) {});
-        if (mounted) Navigator.pop<Uint8List>(context, p.payload);
-        return;
-      }
-      setState(() {
-        if (p.problem != null) {
-          _problem = p.problem;
-        } else {
-          _problem = null;
-          _received = p.received;
-          _total = p.total;
-        }
-      });
+      if (await _push(t)) return;
     }
+  }
+
+  /// Feeds one QR text to the scanner; returns true when scanning is finished (or abandoned).
+  Future<bool> _push(String t) async {
+    final p = await _scanner!.push(text: t);
+    if (!mounted || _done) return true;
+    if (p.payload != null) {
+      _done = true;
+      await _camera?.stopImageStream().catchError((_) {});
+      if (mounted) Navigator.pop<Uint8List>(context, p.payload);
+      return true;
+    }
+    setState(() {
+      if (p.problem != null) {
+        _problem = p.problem;
+      } else {
+        _problem = null;
+        _received = p.received;
+        _total = p.total;
+      }
+    });
+    return false;
   }
 
   @override
@@ -118,7 +125,9 @@ class _CameraScanScreenState extends State<CameraScanScreen> {
     final cam = _camera;
     return Scaffold(
       appBar: AppBar(title: const Text('Scan')),
-      body: _error != null
+      body: Column(children: [
+        Expanded(
+          child: _error != null
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
           : cam == null
               ? const Center(child: CircularProgressIndicator())
@@ -142,6 +151,9 @@ class _CameraScanScreenState extends State<CameraScanScreen> {
                     ),
                   ),
                 ]),
+        ),
+        PasteBar(onText: _push),
+      ]),
     );
   }
 }

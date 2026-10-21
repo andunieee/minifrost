@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../src/rust/api.dart';
 import '../src/rust/api/camera.dart' as cam;
+import 'paste_bar.dart';
 
 /// Screens an animated QR code with the machine's webcam, for running the signer on the
 /// desktop. Capture and QR detection happen in Rust (the signer crate's camera api on top of
@@ -116,7 +117,9 @@ class _WebcamScanScreenState extends State<WebcamScanScreen> {
     final jpeg = _jpeg;
     return Scaffold(
       appBar: AppBar(title: const Text('Scan')),
-      body: _error != null
+      body: Column(children: [
+        Expanded(
+          child: _error != null
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
           : jpeg == null
               ? const Center(child: CircularProgressIndicator())
@@ -155,6 +158,9 @@ class _WebcamScanScreenState extends State<WebcamScanScreen> {
                     ),
                   ),
                 ]),
+        ),
+        PasteBar(onText: _process),
+      ]),
     );
   }
 }

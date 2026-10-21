@@ -190,23 +190,24 @@ class _ScanPanelState extends State<ScanPanel> {
         LinearProgressIndicator(value: received / total),
         Text('$received of $total parts', textAlign: TextAlign.center),
       ],
-      ExpansionTile(
-        title: const Text('Paste QR text instead'),
-        children: [
-          TextField(controller: paste, minLines: 1, maxLines: 3, decoration: const InputDecoration(hintText: 'MF1:…')),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                for (final line in paste.text.split(RegExp(r'\s+'))) {
-                  if (line.isNotEmpty) _push(line);
-                }
-                paste.clear();
-              },
-              child: const Text('Add'),
-            ),
-          ),
-        ],
+      const SizedBox(height: 8),
+      TextField(
+        controller: paste,
+        minLines: 1,
+        maxLines: 3,
+        decoration: const InputDecoration(labelText: 'Paste QR text', hintText: 'MF1:…', border: OutlineInputBorder()),
+      ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: () {
+            for (final line in paste.text.split(RegExp(r'\s+'))) {
+              if (line.isNotEmpty) _push(line);
+            }
+            paste.clear();
+          },
+          child: const Text('Add'),
+        ),
       ),
     ]);
   }
