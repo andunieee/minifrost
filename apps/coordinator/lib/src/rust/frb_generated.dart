@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 976548597;
+  int get rustContentHash => 674381630;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -163,6 +163,13 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<void> crateApiQrScannerReset({required QrScanner that});
+
+  Future<List<String>> crateApiDecodeQrLuma({
+    required int width,
+    required int height,
+    required int rowStride,
+    required List<int> luma,
+  });
 
   Future<List<CameraInfo>> crateApiCameraListCameras();
 
@@ -810,6 +817,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "QrScanner_reset", argNames: ["that"]);
 
   @override
+  Future<List<String>> crateApiDecodeQrLuma({
+    required int width,
+    required int height,
+    required int rowStride,
+    required List<int> luma,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(width, serializer);
+          sse_encode_u_32(height, serializer);
+          sse_encode_u_32(rowStride, serializer);
+          sse_encode_list_prim_u_8_loose(luma, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDecodeQrLumaConstMeta,
+        argValues: [width, height, rowStride, luma],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDecodeQrLumaConstMeta => const TaskConstMeta(
+    debugName: "decode_qr_luma",
+    argNames: ["width", "height", "rowStride", "luma"],
+  );
+
+  @override
   Future<List<CameraInfo>> crateApiCameraListCameras() {
     return handler.executeNormal(
       NormalTask(
@@ -818,7 +863,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -845,7 +890,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -874,7 +919,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -906,7 +951,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 20,
+              funcId: 21,
               port: port_,
             );
           },
@@ -937,7 +982,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },

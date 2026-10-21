@@ -17,6 +17,20 @@ Future<CoordinatorApp> openCoordinator({required String dir}) =>
 
 Future<QrScanner> newQrScanner() => RustLib.instance.api.crateApiNewQrScanner();
 
+/// Decode QR codes from one camera frame's luma (Y) plane. `row_stride` is the plane's bytes per
+/// row, which can be wider than `width`.
+Future<List<String>> decodeQrLuma({
+  required int width,
+  required int height,
+  required int rowStride,
+  required List<int> luma,
+}) => RustLib.instance.api.crateApiDecodeQrLuma(
+  width: width,
+  height: height,
+  rowStride: rowStride,
+  luma: luma,
+);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>>
 abstract class CoordinatorApp implements RustOpaqueInterface {
   /// Start the signing ceremony for the payment from `prepare_send`.

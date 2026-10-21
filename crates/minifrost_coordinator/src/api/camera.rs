@@ -1,9 +1,12 @@
 //! Webcam -> QR text. Capture and decoding both happen in Rust; Dart gets preview JPEGs to show
 //! and decoded QR strings to feed into a `QrScanner`.
 
+#[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "linux")]
 use std::sync::{Arc, Mutex};
 
+#[cfg(target_os = "linux")]
 use desktop_camera::{Camera, CameraSink, DeviceInfo, Frame};
 
 use crate::frb_generated::StreamSink;
@@ -22,8 +25,10 @@ pub enum CameraEvent {
     Qr(String),
 }
 
+#[cfg(target_os = "linux")]
 static RUNNING: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
 
+#[cfg(target_os = "linux")]
 pub fn list_cameras() -> Vec<CameraInfo> {
     Camera::list_devices()
         .unwrap_or_default()
@@ -32,6 +37,7 @@ pub fn list_cameras() -> Vec<CameraInfo> {
         .collect()
 }
 
+#[cfg(target_os = "linux")]
 struct Sink {
     stop: Arc<AtomicBool>,
     events: StreamSink<CameraEvent>,
@@ -39,6 +45,7 @@ struct Sink {
     n: Mutex<u64>,
 }
 
+#[cfg(target_os = "linux")]
 impl CameraSink for Sink {
     fn send_frame(&self, frame: Frame) -> desktop_camera::Result<()> {
         if self.stop.load(Ordering::Relaxed) {
@@ -58,6 +65,7 @@ impl CameraSink for Sink {
 }
 
 /// Start streaming from camera `index`. Any previously running camera is stopped.
+#[cfg(target_os = "linux")]
 pub fn start_camera(index: u32, events: StreamSink<CameraEvent>) -> Result<(), String> {
     stop_camera();
     let info: DeviceInfo = Camera::list_devices()
@@ -94,12 +102,14 @@ pub fn start_camera(index: u32, events: StreamSink<CameraEvent>) -> Result<(), S
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 pub fn stop_camera() {
     if let Some(flag) = RUNNING.lock().unwrap().take() {
         flag.store(true, Ordering::Relaxed);
     }
 }
 
+#[cfg(target_os = "linux")]
 fn decode_qr(jpeg: &[u8]) -> Vec<String> {
     let Ok(img) = image::load_from_memory_with_format(jpeg, image::ImageFormat::Jpeg) else {
         return vec![];
@@ -108,3 +118,18 @@ fn decode_qr(jpeg: &[u8]) -> Vec<String> {
     let mut prepared = rqrr::PreparedImage::prepare(luma);
     prepared.detect_grids().into_iter().filter_map(|g| g.decode().ok().map(|(_, text)| text)).collect()
 }
+
+/// Stubs so the generated bindings compile on Android too; the Dart side never calls them
+/// there (it uses the `camera` plugin instead).
+#[cfg(not(target_os = "linux"))]
+pub fn list_cameras() -> Vec<CameraInfo> {
+    vec![]
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn start_camera(_index: u32, _events: StreamSink<CameraEvent>) -> Result<(), String> {
+    Err("webcam scanning is only available in the desktop build".into())
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn stop_camera() {}

@@ -190,3 +190,17 @@ impl QrScanner {
         self.inner.lock().unwrap().reset()
     }
 }
+
+/// Decode QR codes from one camera frame's luma (Y) plane. `row_stride` is the plane's bytes per
+/// row, which can be wider than `width`.
+pub fn decode_qr_luma(width: u32, height: u32, row_stride: u32, luma: Vec<u8>) -> Vec<String> {
+    let (w, h, stride) = (width as usize, height as usize, row_stride as usize);
+    if w == 0 || h == 0 || stride < w || luma.len() < stride * (h - 1) + w {
+        return vec![];
+    }
+    let mut img = rqrr::PreparedImage::prepare_from_greyscale(w, h, |x, y| luma[y * stride + x]);
+    img.detect_grids()
+        .into_iter()
+        .filter_map(|g| g.decode().ok().map(|(_, text)| text))
+        .collect()
+}

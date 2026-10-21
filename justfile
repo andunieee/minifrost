@@ -24,6 +24,22 @@ coordinator-release:
 coordinator-build:
     cd apps/coordinator && flutter build linux --release
 
+# --- coordinator (android phone) -------------------------------------------------------------
+
+coordinator_apk := "apps/coordinator/build/app/outputs/flutter-apk/app-release.apk"
+
+# Build the coordinator APK for arm64 phones.
+coordinator-build-android:
+    cd apps/coordinator && flutter build apk --release --target-platform android-arm64
+
+# Build and install the coordinator on the connected phone via adb.
+coordinator-install: coordinator-build-android
+    adb install -r {{coordinator_apk}}
+
+# Run the coordinator on the connected phone (release mode).
+coordinator-android:
+    cd apps/coordinator && flutter run --release -d android
+
 # --- signer (android phone) ------------------------------------------------------------------
 
 # Build the signer APK for arm64 phones. No INTERNET permission means no hot reload, so release only.

@@ -18,8 +18,12 @@ rand = { workspace = true }
 serde_json = "1"
 ureq = { version = "2", features = ["json"] }
 rqrr = "0.10"
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
+# Webcam capture, desktop build only (see api/camera.rs). Android scans through the `camera`
+# plugin and `decode_qr_luma` instead.
+[target.'cfg(target_os = "linux")'.dependencies]
 desktop_camera = { path = "../desktop_camera" }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

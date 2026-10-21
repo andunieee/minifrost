@@ -134,6 +134,8 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
                   icon: const Icon(Icons.copy),
                   label: const Text('Copy address'),
                 ),
+                Text('QR contains: ${s.receiveAddress.toUpperCase()}',
+                    style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
               ]),
             ),
           ]),

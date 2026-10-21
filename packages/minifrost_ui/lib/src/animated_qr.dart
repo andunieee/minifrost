@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// Shows a list of text frames as a looping QR code. A single frame is shown still.
@@ -17,6 +18,7 @@ class AnimatedQr extends StatefulWidget {
 
 class _AnimatedQrState extends State<AnimatedQr> {
   int _i = 0;
+  bool _showRaw = false;
   Timer? _timer;
 
   @override
@@ -70,6 +72,33 @@ class _AnimatedQrState extends State<AnimatedQr> {
           padding: const EdgeInsets.only(top: 8),
           child: Text('part ${i + 1} of ${widget.frames.length}',
               style: Theme.of(context).textTheme.bodySmall),
+        ),
+      Wrap(alignment: WrapAlignment.center, children: [
+        TextButton.icon(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: widget.frames.join('\n')));
+            if (!context.mounted) return;
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+                content: Text(widget.frames.length > 1
+                    ? 'Copied all ${widget.frames.length} parts'
+                    : 'Copied QR contents')));
+          },
+          icon: const Icon(Icons.copy),
+          label: Text(widget.frames.length > 1 ? 'Copy all parts' : 'Copy contents'),
+        ),
+        TextButton.icon(
+          onPressed: () => setState(() => _showRaw = !_showRaw),
+          icon: Icon(_showRaw ? Icons.visibility_off : Icons.visibility),
+          label: Text(_showRaw ? 'Hide raw' : 'Show raw'),
+        ),
+      ]),
+      if (_showRaw)
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: widget.size + 24, maxHeight: 200),
+          child: SingleChildScrollView(
+            child: SelectableText(widget.frames.join('\n'),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+          ),
         ),
     ]);
   }
