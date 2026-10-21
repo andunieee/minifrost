@@ -17,7 +17,7 @@ class _SignersPageState extends State<SignersPage> {
   void _reload() => setState(() => signers = widget.app.signers());
 
   Future<void> _add() async {
-    await showDialog<void>(context: context, builder: (_) => _EnrollDialog(app: widget.app));
+    await showDialog<void>(context: context, builder: (_) => _EnrollDialog(app: widget.app, onAdded: _reload));
     _reload();
   }
 
@@ -73,8 +73,9 @@ class _SignersPageState extends State<SignersPage> {
 }
 
 class _EnrollDialog extends StatefulWidget {
-  const _EnrollDialog({required this.app});
+  const _EnrollDialog({required this.app, required this.onAdded});
   final CoordinatorApp app;
+  final VoidCallback onAdded;
   @override
   State<_EnrollDialog> createState() => _EnrollDialogState();
 }
@@ -96,6 +97,7 @@ class _EnrollDialogState extends State<_EnrollDialog> {
                 onPayload: (bytes) async {
                   try {
                     final s = await widget.app.enroll(payload: bytes);
+                    widget.onAdded();
                     if (mounted) setState(() => added = s);
                   } catch (e) {
                     if (mounted) setState(() => error = '$e');
