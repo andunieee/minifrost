@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 /// A text field plus "Add" button for entering QR text by hand when scanning isn't possible.
-/// Each whitespace-separated token is passed to [onText].
+/// Every `MF1:…` frame found in the text is passed to [onText], one at a time, in order.
 class PasteBar extends StatefulWidget {
   const PasteBar({super.key, required this.onText});
-  final void Function(String text) onText;
+  final Future<void> Function(String text) onText;
 
   @override
   State<PasteBar> createState() => _PasteBarState();
@@ -19,11 +19,20 @@ class _PasteBarState extends State<PasteBar> {
     super.dispose();
   }
 
-  void _add() {
-    for (final t in _controller.text.split(RegExp(r'\s+'))) {
-      if (t.isNotEmpty) widget.onText(t);
+  Future<void> _add() async {
+    // frames are upper-case, but tolerate pasted text that was lower-cased or run together
+    final frames = RegExp(r'MF1:[A-Z0-9:]+', caseSensitive: false)
+        .allMatches(_controller.text)
+        .map((m) => m.group(0)!.toUpperCase())
+        .toList();
+    if (frames.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No QR frames (MF1:…) found in that text.')));
+      return;
     }
     _controller.clear();
+    for (final f in frames) {
+      await widget.onText(f);
+    }
   }
 
   @override
