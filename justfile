@@ -14,10 +14,11 @@ default:
 coordinator-desktop:
     cd apps/coordinator && flutter run -d linux
 
-# Run the coordinator on the connected phone (debug build).
-# Picks the first connected android device (see `just devices`).
+# Build the coordinator debug APK and install it on the connected phone.
+# Install only, no attached shell (no logcat / hot reload). For logs:
+# `adb -s <device> logcat`. Picks the first connected android device (see `just devices`).
 coordinator-android:
-    cd apps/coordinator && flutter run -d "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')"
+    cd apps/coordinator && flutter build apk --debug && adb -s "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')" install -r -t build/app/outputs/flutter-apk/app-debug.apk
 
 # --- signer ----------------------------------------------------------------------------------
 # On desktop the key share lives in a plain file (see lib/vault.dart), webcam scanning
@@ -27,10 +28,11 @@ coordinator-android:
 signer-desktop:
     cd apps/signer && flutter run -d linux
 
-# Run the signer on the connected phone (debug build).
-# Picks the first connected android device (see `just devices`).
+# Build the signer debug APK and install it on the connected phone.
+# Install only, no attached shell (no logcat / hot reload). For logs:
+# `adb -s <device> logcat`. Picks the first connected android device (see `just devices`).
 signer-android:
-    cd apps/signer && flutter run -d "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')"
+    cd apps/signer && flutter build apk --debug && adb -s "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')" install -r -t build/app/outputs/flutter-apk/app-debug.apk
 
 # --- development -----------------------------------------------------------------------------
 
