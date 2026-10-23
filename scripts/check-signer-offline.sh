@@ -19,9 +19,8 @@ if [ $# -ge 1 ]; then
   echo "== Permissions in $apk"
   perms=$("$aapt2" dump permissions "$apk" | grep -E "^uses-permission" || true)
   echo "$perms"
-  # CAMERA to read QR codes; USE_BIOMETRIC/USE_FINGERPRINT (from androidx.biometric) only enable the
-  # local unlock prompt and grant no network or data access.
-  extra=$(echo "$perms" | grep -vE "android.permission.(CAMERA|USE_BIOMETRIC|USE_FINGERPRINT)'|DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
+  # Only CAMERA, to read QR codes.
+  extra=$(echo "$perms" | grep -vE "android.permission.(CAMERA)'|DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
   if [ -n "$extra" ]; then echo "FAIL: unexpected permissions:"; echo "$extra"; exit 1; fi
-  echo "ok: only camera + local biometric unlock"
+  echo "ok: only camera"
 fi

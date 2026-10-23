@@ -19,7 +19,7 @@ android {
         applicationId = "dev.minifrost.minifrost_signer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 24 // StrongBox / unlocked-only key need API 28, strong-biometric auth API 30; Vault.kt degrades below that
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
@@ -44,10 +44,6 @@ kotlin {
     }
 }
 
-dependencies {
-    implementation("androidx.biometric:biometric:1.1.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
-}
 
 flutter {
     source = "../.."

@@ -3,9 +3,6 @@
 
     <!-- The only permission this app asks for. -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Added by androidx.biometric (merged automatically, listed here for the record): lets the
-         app ask for the fingerprint / screen-lock prompt that guards the key share. Local only:
-         no network, no data access. -->
 
     <!-- This is an air-gapped signer: it must never be able to reach a network. Libraries (and the
          Flutter debug tooling) sometimes declare these; strip them from the merged manifest.

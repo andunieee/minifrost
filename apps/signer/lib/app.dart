@@ -46,9 +46,8 @@ class _BootState extends State<_Boot> {
     try {
       final st = await vault.status();
       setState(() => status = st);
-      if (!st.secureLockScreen) return; // the UI explains
       if (st.exists) {
-        final bytes = await vault.load(); // asks for biometrics / screen lock
+        final bytes = await vault.load();
         if (bytes == null) throw VaultException('missing', 'Vault file disappeared.');
         final signer = await loadSigner(snapshot: bytes);
         final c = SignerController(signer, vault);
@@ -81,25 +80,6 @@ class _BootState extends State<_Boot> {
       );
     }
     if (st == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (!st.secureLockScreen) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.screen_lock_portrait, size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                'Set a screen lock (PIN, pattern or password) first. Your key share is protected by it.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _start, child: const Text('I set one — continue')),
-            ]),
-          ),
-        ),
-      );
-    }
     return Setup(
       vault: vault,
       onCreated: (c) => setState(() => controller = c),

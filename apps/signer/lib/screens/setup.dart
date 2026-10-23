@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 
 import '../controller.dart';
@@ -27,7 +25,7 @@ class _SetupState extends State<Setup> {
     });
     try {
       final signer = await newSigner(name: name.text.trim());
-      // Store before doing anything else; this also creates the hardware-backed key.
+      // Store before doing anything else.
       await widget.vault.save(await signer.snapshot());
       final c = SignerController(signer, widget.vault);
       await c.refresh();
@@ -46,12 +44,9 @@ class _SetupState extends State<Setup> {
       appBar: AppBar(title: const Text('Set up signer')),
       body: ListView(padding: const EdgeInsets.all(24), children: [
         Text(
-          Platform.isAndroid
-              ? 'This phone becomes one signer of a threshold wallet. It never connects to the '
-                  'internet: it talks to the coordinator only through QR codes.'
-              : 'This desktop app becomes one signer of a threshold wallet, talking to the '
-                  'coordinator only through QR codes. Careful: unlike the phone build there is '
-                  'no hardware- or OS-key protection here — for testing, not serious funds.',
+          'This device becomes one signer of a threshold wallet. It never connects to the '
+          'internet: it talks to the coordinator only through QR codes. Its key share is stored '
+          'unencrypted on this device.',
         ),
         const SizedBox(height: 24),
         TextField(

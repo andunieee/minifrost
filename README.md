@@ -8,7 +8,7 @@ everything between them and the coordinator travels as **animated QR codes**.
 | App | `apps/coordinator` (Flutter, Linux desktop) | `apps/signer` (Flutter, Android; also runs on Linux desktop for dev/testing) |
 | Rust | `crates/minifrost_coordinator` | `crates/minifrost_signer` |
 | Network | Esplora only (balances, fee estimates, broadcast) | **none** — no `INTERNET` permission, no networking crates |
-| Permissions | webcam | `CAMERA`, plus `USE_BIOMETRIC`/`USE_FINGERPRINT` for the unlock prompt |
+| Permissions | webcam | `CAMERA` |
 | Holds | coordinator half of the share-decryption secret, public wallet data | the secret key share |
 
 The cryptography and protocol are [frostsnap](https://github.com/frostsnap/frostsnap)'s: the
@@ -20,8 +20,7 @@ copied in because it isn't published as a library we can depend on cleanly.
 
 All the protocol logic is Rust and is exercised by `cargo test` without any UI. Flutter only draws
 screens, shows QR codes and runs the camera; `flutter_rust_bridge` generates the glue. One UI
-toolkit covers both Android and Linux, `camera` + `qr_flutter` cover the QR needs, and the Android
-Keystore (the right place for the signer's secret) is reachable through a ~150 line Kotlin class.
+toolkit covers both Android and Linux, `camera` + `qr_flutter` cover the QR needs, and storage is a plain file.
 Kotlin-only would have duplicated the protocol or required hand-written JNI.
 
 ## How the QR protocol works
@@ -60,18 +59,13 @@ trip still happens, which is what binds the transaction review to the signature.
 - One 32-byte random `device_secret`; the identity key, the share-encryption key and the nonce
   seeds are all HMAC-derived from it. The share is encrypted under a key that also needs a value
   only the coordinator holds, so the phone's storage alone cannot sign.
-- Rust hands the app a snapshot; `android/.../Vault.kt` encrypts it with an **AES-256-GCM key
-  generated inside the Android Keystore** (StrongBox secure element when present, otherwise the TEE;
-  non-exportable). The key only works within 2 minutes of biometric / screen-lock unlock and only
-  while the phone is unlocked. File lives in `noBackupFilesDir`; backups and device transfer are
-  disabled; `FLAG_SECURE` blocks screenshots. Minimum Android is 7 (API 24). Protections scale with the phone: StrongBox and
-  "key only usable while unlocked" need Android 9+; requiring a *strong* biometric needs Android 11+
-  (before that any enrolled biometric or the screen lock unlocks the key). The key is always
-  hardware-backed (TEE) where the phone has one. The setup screen shows the level in use.
+- Rust hands the app a snapshot, which `lib/vault.dart` writes **unencrypted** to a file in the
+  app-private directory (atomic temp file + rename). Backups and device transfer are disabled;
+  `FLAG_SECURE` blocks screenshots. Minimum Android is 7 (API 24). No screen lock, biometrics or
+  Keystore are involved, so anyone with file access to the phone (root, forensics) can read the share.
 - State is persisted **before** any QR derived from it is shown (`controller.dart`). After
   signing, the snapshot contains the burned nonce — so a crash cannot lead to nonce reuse.
-- The manifest asks for `CAMERA` (and, through `androidx.biometric`, `USE_BIOMETRIC` /
-  `USE_FINGERPRINT` for the unlock prompt) and explicitly removes `INTERNET`, network-state, audio
+- The manifest asks for `CAMERA` and explicitly removes `INTERNET`, network-state, audio
   and storage permissions (also in debug/profile builds). QR decoding is done in Rust (`rqrr`), so there is no ML Kit or
   Google Play Services dependency.
 
@@ -105,14 +99,13 @@ The release APK is signed with the debug key; set up your own signing config bef
 
 - Signer state mid-keygen is in memory only: if the app is killed during a key generation, redo
   that keygen. Finished keys, nonce state and the "reviewed transaction" survive restarts.
-- If the phone's screen lock is removed or the phone is wiped, its share is gone (that is what the
+- If the phone is wiped, its share is gone (that is what the
   threshold is for). Frostsnap's backup / restoration flows are not ported.
 - Wallet: single taproot account, largest-first coin selection, one signing session at a time,
   gap limit 10. Change addresses are not reserved across concurrent drafts.
-- The Linux desktop signer is for dev/testing only: the key share sits in a plain file (`lib/vault.dart`,
-  `FileVault`), the webcam replaces the phone camera (`desktop_camera`), and there is no biometric
-  unlock. The QR protocol is identical to the phone, so coordinator↔signer flows can be driven
+- The Linux desktop signer is for dev/testing only: the webcam replaces the phone camera
+  (`desktop_camera`). The QR protocol is identical to the phone, so coordinator↔signer flows can be driven
   entirely on one machine.
 - The Flutter UI has not been run against a physical phone or webcam in the environment this was
   written in: everything below the UI is covered by tests, the Android and Linux builds are
-  verified to compile, the camera, Keystore prompts and screens need a real device pass.
+  verified to compile, the camera and screens need a real device pass.
