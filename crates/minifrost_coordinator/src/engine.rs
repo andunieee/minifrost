@@ -671,7 +671,8 @@ pub fn default_esplora(network: Network) -> &'static str {
     match network {
         Network::Bitcoin => "https://mempool.space/api",
         Network::Testnet => "https://mempool.space/testnet/api",
-        Network::Signet => "https://mempool.space/signet/api",
+        // Mutinynet is a custom signet; the key/address handling is identical to signet
+        Network::Signet => "https://mutinynet.com/api",
         _ => "http://localhost:3002",
     }
 }

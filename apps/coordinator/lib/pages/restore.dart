@@ -337,7 +337,7 @@ class _NewRestorationDialogState extends State<_NewRestorationDialog> {
               initialValue: network,
               decoration: const InputDecoration(labelText: 'Network'),
               items: const [
-                DropdownMenuItem(value: 'signet', child: Text('Signet (test coins)')),
+                DropdownMenuItem(value: 'signet', child: Text('Signet (Mutinynet)')),
                 DropdownMenuItem(value: 'testnet', child: Text('Testnet')),
                 DropdownMenuItem(value: 'bitcoin', child: Text('Bitcoin mainnet')),
               ],
