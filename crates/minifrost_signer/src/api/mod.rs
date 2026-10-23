@@ -3,7 +3,9 @@
 use std::sync::Mutex;
 
 use crate::engine::Signer;
-pub use crate::engine::{KeyInfo, OutputSummary, Prompt, Step, StepResult, TxSummary};
+pub use crate::engine::{
+    KeyInfo, OutputSummary, PendingBackup, Prompt, QuizAnswer, QuizQuestion, Step, StepResult, TxSummary,
+};
 
 pub mod camera;
 
@@ -53,6 +55,33 @@ impl SignerApp {
     pub fn reject(&self) {
         self.inner.lock().unwrap().reject()
     }
+
+    // ---- backups
+    /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
+    /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+    pub fn submit_backup(&self, share_index: u32, words: Vec<String>) -> Result<StepResult, String> {
+        self.inner.lock().unwrap().submit_backup(share_index, words)
+    }
+    /// The check-backup quiz question currently on screen (after `Step::CheckBackup`).
+    pub fn quiz_question(&self) -> Result<QuizQuestion, String> {
+        self.inner.lock().unwrap().quiz_question()
+    }
+    pub fn quiz_answer(&self, choice: u32) -> Result<QuizAnswer, String> {
+        self.inner.lock().unwrap().quiz_answer(choice)
+    }
+    /// Backups typed into this signer that are still waiting for the coordinator.
+    pub fn pending_backups(&self) -> Vec<PendingBackup> {
+        self.inner.lock().unwrap().pending_backups()
+    }
+}
+
+/// BIP39 words that start with `prefix`, for the backup entry autocomplete.
+#[flutter_rust_bridge::frb(sync)]
+pub fn backup_word_suggestions(prefix: String) -> Vec<String> {
+    frost_backup::bip39_words::words_with_prefix(&prefix.trim().to_uppercase())
+        .iter()
+        .map(|w| w.to_string())
+        .collect()
 }
 
 // ------------------------------------------------------------------------------------------

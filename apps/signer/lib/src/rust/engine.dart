@@ -64,6 +64,29 @@ class OutputSummary {
           ownLabel == other.ownLabel;
 }
 
+/// A backup the user typed into this signer that has not been turned into a real share yet
+/// (waiting for the coordinator to finish the restoration).
+class PendingBackup {
+  final String? keyName;
+  final int? threshold;
+  final int shareIndex;
+
+  const PendingBackup({this.keyName, this.threshold, required this.shareIndex});
+
+  @override
+  int get hashCode =>
+      keyName.hashCode ^ threshold.hashCode ^ shareIndex.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PendingBackup &&
+          runtimeType == other.runtimeType &&
+          keyName == other.keyName &&
+          threshold == other.threshold &&
+          shareIndex == other.shareIndex;
+}
+
 @freezed
 sealed class Prompt with _$Prompt {
   const Prompt._();
@@ -91,6 +114,71 @@ sealed class Prompt with _$Prompt {
   /// Round 2: final, verified view. Approving releases the partial signature.
   const factory Prompt.signTransaction(TxSummary field0) =
       Prompt_SignTransaction;
+
+  /// The coordinator asked this signer to show its secret backup. Approving means "I wrote
+  /// every word down"; it tells the coordinator so it can stop nagging about this share.
+  const factory Prompt.displayBackup({
+    required String keyName,
+    required int threshold,
+    required int shareIndex,
+
+    /// The 25 BIP39 words, in order.
+    required List<String> words,
+  }) = Prompt_DisplayBackup;
+}
+
+class QuizAnswer {
+  final bool correct;
+
+  /// The next question, unless the quiz is over or the answer was wrong.
+  final QuizQuestion? next;
+
+  /// Set once the last question was answered correctly: show this to the coordinator.
+  final StepResult? done;
+
+  const QuizAnswer({required this.correct, this.next, this.done});
+
+  @override
+  int get hashCode => correct.hashCode ^ next.hashCode ^ done.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuizAnswer &&
+          runtimeType == other.runtimeType &&
+          correct == other.correct &&
+          next == other.next &&
+          done == other.done;
+}
+
+class QuizQuestion {
+  final String title;
+  final List<String> options;
+
+  /// 0-based position, `total` questions in all.
+  final int screen;
+  final int total;
+
+  const QuizQuestion({
+    required this.title,
+    required this.options,
+    required this.screen,
+    required this.total,
+  });
+
+  @override
+  int get hashCode =>
+      title.hashCode ^ options.hashCode ^ screen.hashCode ^ total.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuizQuestion &&
+          runtimeType == other.runtimeType &&
+          title == other.title &&
+          options == other.options &&
+          screen == other.screen &&
+          total == other.total;
 }
 
 @freezed
@@ -111,6 +199,14 @@ sealed class Step with _$Step {
 
   /// Finished locally; nothing to show the coordinator.
   const factory Step.done({required String message}) = Step_Done;
+
+  /// The coordinator wants the user to type in a physical backup (key number + 25 words).
+  /// Answer with `submit_backup`, or call `reject` to give up.
+  const factory Step.enterBackup() = Step_EnterBackup;
+
+  /// The coordinator wants the user to prove their physical backup is right. Walk through the
+  /// questions with `quiz_question` / `quiz_answer`, or call `reject` to give up.
+  const factory Step.checkBackup({required String keyName}) = Step_CheckBackup;
 }
 
 class StepResult {

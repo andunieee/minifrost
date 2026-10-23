@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'engine.dart';
+import 'engine/restore.dart';
 import 'frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
@@ -81,6 +82,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  BackupShare dco_decode_backup_share(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -91,6 +95,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw);
 
   @protected
   Broadcast dco_decode_broadcast(dynamic raw);
@@ -108,6 +115,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Finished dco_decode_finished(dynamic raw);
 
   @protected
+  HeldShareView dco_decode_held_share_view(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
@@ -117,16 +127,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<BackupShare> dco_decode_list_backup_share(dynamic raw);
+
+  @protected
   List<CameraInfo> dco_decode_list_camera_info(dynamic raw);
 
   @protected
+  List<HeldShareView> dco_decode_list_held_share_view(dynamic raw);
+
+  @protected
   List<KeyView> dco_decode_list_key_view(dynamic raw);
+
+  @protected
+  List<PendingConsolidationView> dco_decode_list_pending_consolidation_view(
+    dynamic raw,
+  );
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<RestorationShareView> dco_decode_list_restoration_share_view(
+    dynamic raw,
+  );
+
+  @protected
+  List<RestorationView> dco_decode_list_restoration_view(dynamic raw);
 
   @protected
   List<SignerInfo> dco_decode_list_signer_info(dynamic raw);
@@ -144,7 +173,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  PendingConsolidationView dco_decode_pending_consolidation_view(dynamic raw);
+
+  @protected
+  RestorationShareView dco_decode_restoration_share_view(dynamic raw);
+
+  @protected
+  RestorationView dco_decode_restoration_view(dynamic raw);
 
   @protected
   ScanProgress dco_decode_scan_progress(dynamic raw);
@@ -224,6 +265,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  BackupShare sse_decode_backup_share(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
@@ -234,6 +278,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
   Broadcast sse_decode_broadcast(SseDeserializer deserializer);
@@ -251,6 +298,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Finished sse_decode_finished(SseDeserializer deserializer);
 
   @protected
+  HeldShareView sse_decode_held_share_view(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
@@ -260,16 +310,39 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<BackupShare> sse_decode_list_backup_share(SseDeserializer deserializer);
+
+  @protected
   List<CameraInfo> sse_decode_list_camera_info(SseDeserializer deserializer);
 
   @protected
+  List<HeldShareView> sse_decode_list_held_share_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<KeyView> sse_decode_list_key_view(SseDeserializer deserializer);
+
+  @protected
+  List<PendingConsolidationView> sse_decode_list_pending_consolidation_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<RestorationShareView> sse_decode_list_restoration_share_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<RestorationView> sse_decode_list_restoration_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<SignerInfo> sse_decode_list_signer_info(SseDeserializer deserializer);
@@ -287,7 +360,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  PendingConsolidationView sse_decode_pending_consolidation_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RestorationShareView sse_decode_restoration_share_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RestorationView sse_decode_restoration_view(SseDeserializer deserializer);
 
   @protected
   ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
@@ -380,6 +469,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_backup_share(BackupShare self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
@@ -398,6 +490,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_broadcast(Broadcast self, SseSerializer serializer);
 
   @protected
@@ -413,6 +508,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_finished(Finished self, SseSerializer serializer);
 
   @protected
+  void sse_encode_held_share_view(HeldShareView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
@@ -422,8 +520,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_backup_share(
+    List<BackupShare> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_camera_info(
     List<CameraInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_held_share_view(
+    List<HeldShareView> self,
     SseSerializer serializer,
   );
 
@@ -431,11 +541,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_key_view(List<KeyView> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_pending_consolidation_view(
+    List<PendingConsolidationView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_restoration_share_view(
+    List<RestorationShareView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_restoration_view(
+    List<RestorationView> self,
     SseSerializer serializer,
   );
 
@@ -467,8 +595,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
     Uint8List? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_pending_consolidation_view(
+    PendingConsolidationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_restoration_share_view(
+    RestorationShareView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_restoration_view(
+    RestorationView self,
     SseSerializer serializer,
   );
 

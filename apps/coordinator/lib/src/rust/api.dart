@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import 'engine.dart';
+import 'engine/restore.dart';
 import 'frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -33,6 +34,21 @@ Future<List<String>> decodeQrLuma({
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>>
 abstract class CoordinatorApp implements RustOpaqueInterface {
+  Future<void> addHeldShareToRestoration({
+    required String restorationId,
+    required String deviceId,
+    required int shareIndex,
+  });
+
+  Future<void> addHeldShareToWallet({
+    required String keyId,
+    required String deviceId,
+    required int shareIndex,
+  });
+
+  /// Every share of the wallet and whether its backup was recorded.
+  Future<List<BackupShare>> backupShares({required String keyId});
+
   /// Start the signing ceremony for the payment from `prepare_send`.
   Future<Update> beginSigning({
     required String keyId,
@@ -42,16 +58,35 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
   /// Publish a signed transaction through the Esplora backend. Returns the txid.
   Future<String> broadcast({required String keyId, required String txHex});
 
+  Future<void> cancelRestoration({required String restorationId});
+
   Future<void> cancelSession();
+
+  Future<void> deleteRestorationShare({
+    required String restorationId,
+    required String deviceId,
+  });
 
   /// Scan of a signer's "hello" QR.
   Future<SignerInfo> enroll({required List<int> payload});
 
   Future<String> esploraUrl({required String network});
 
+  /// Turn a restoration with enough shares into a wallet. Returns the wallet's key id.
+  Future<String> finishRestoration({required String restorationId});
+
   Future<void> forgetSigner({required String deviceId});
 
   Future<List<KeyView>> keys();
+
+  /// "I already have this backup" — records it without a session.
+  Future<void> markBackupComplete({
+    required String keyId,
+    required int shareIndex,
+  });
+
+  /// Signers whose typed-in backup still has to become a normal share.
+  Future<List<PendingConsolidationView>> pendingConsolidations();
 
   /// `amount_sats = None` sends everything.
   Future<SendPreview> prepareSend({
@@ -66,15 +101,62 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
 
   Future<WalletSummary> refreshWallet({required String keyId});
 
+  Future<List<RestorationView>> restorations();
+
   Future<void> setEsploraUrl({String? url});
 
   Future<List<SignerInfo>> signers();
+
+  /// Ask a signer to quiz the user on their paper backup.
+  Future<Update> startCheckBackup({
+    required String keyId,
+    required String deviceId,
+  });
+
+  Future<Update> startConsolidate({
+    required String keyId,
+    required String deviceId,
+  });
+
+  /// Ask a signer to show its 25-word backup.
+  Future<Update> startDisplayBackup({
+    required String keyId,
+    required String deviceId,
+  });
+
+  /// Ask a signer to type in a physical backup that starts a new restoration.
+  Future<Update> startEnterBackupNewWallet({
+    required String deviceId,
+    required String name,
+    required String network,
+    int? threshold,
+  });
+
+  /// ... that joins a restoration already in progress.
+  Future<Update> startEnterBackupRestoration({
+    required String deviceId,
+    required String restorationId,
+  });
+
+  /// ... that adds a share to a wallet this coordinator already has.
+  Future<Update> startEnterBackupWallet({
+    required String deviceId,
+    required String keyId,
+  });
 
   Future<Update> startKeygen({
     required String keyName,
     required int threshold,
     required List<String> deviceIds,
     required String network,
+  });
+
+  /// Ask a signer which shares it holds (result arrives as `Finished.heldShares`).
+  Future<Update> startRequestHeldShares({required String deviceId});
+
+  Future<String> startRestorationFromHeldShare({
+    required String deviceId,
+    required int shareIndex,
   });
 
   /// Fee rate (sat/vB) for roughly the next `blocks` blocks.

@@ -3,6 +3,7 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import 'engine/restore.dart';
 import 'frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -37,6 +38,41 @@ sealed class Finished with _$Finished {
   }) = Finished_KeyCreated;
   const factory Finished.signed({required String txid, required String txHex}) =
       Finished_Signed;
+
+  /// A signer displayed its backup and the user confirmed writing it down.
+  const factory Finished.backupRecorded({
+    required String keyName,
+    required int shareIndex,
+  }) = Finished_BackupRecorded;
+
+  /// A signer's check-backup quiz was passed.
+  const factory Finished.backupChecked({
+    required String keyName,
+    required int shareIndex,
+  }) = Finished_BackupChecked;
+
+  /// An entered backup was saved on its signer as part of a restoration.
+  const factory Finished.backupSaved({
+    required String restorationId,
+    required int shareIndex,
+    required bool restorable,
+  }) = Finished_BackupSaved;
+
+  /// An entered backup (or a reply for one) was refused; the session is over.
+  const factory Finished.backupRejected({required String reason}) =
+      Finished_BackupRejected;
+
+  /// A signer turned a typed-in backup into a normal share of a wallet.
+  const factory Finished.consolidated({
+    required String keyName,
+    required int shareIndex,
+  }) = Finished_Consolidated;
+
+  /// The shares a signer reported holding.
+  const factory Finished.heldShares({
+    required String deviceName,
+    required List<HeldShareView> shares,
+  }) = Finished_HeldShares;
 }
 
 class KeyView {

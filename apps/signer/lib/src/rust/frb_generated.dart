@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1895375167;
+  int get rustContentHash => 1187087941;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -98,6 +98,17 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiSignerAppName({required SignerApp that});
 
+  Future<List<PendingBackup>> crateApiSignerAppPendingBackups({
+    required SignerApp that,
+  });
+
+  Future<QuizAnswer> crateApiSignerAppQuizAnswer({
+    required SignerApp that,
+    required int choice,
+  });
+
+  Future<QuizQuestion> crateApiSignerAppQuizQuestion({required SignerApp that});
+
   Future<StepResult> crateApiSignerAppReceive({
     required SignerApp that,
     required List<int> payload,
@@ -106,6 +117,14 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSignerAppReject({required SignerApp that});
 
   Future<Uint8List> crateApiSignerAppSnapshot({required SignerApp that});
+
+  Future<StepResult> crateApiSignerAppSubmitBackup({
+    required SignerApp that,
+    required int shareIndex,
+    required List<String> words,
+  });
+
+  List<String> crateApiBackupWordSuggestions({required String prefix});
 
   Future<List<String>> crateApiDecodeQrLuma({
     required int width,
@@ -378,6 +397,116 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "SignerApp_name", argNames: ["that"]);
 
   @override
+  Future<List<PendingBackup>> crateApiSignerAppPendingBackups({
+    required SignerApp that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSignerApp(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_pending_backup,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSignerAppPendingBackupsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSignerAppPendingBackupsConstMeta =>
+      const TaskConstMeta(
+        debugName: "SignerApp_pending_backups",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<QuizAnswer> crateApiSignerAppQuizAnswer({
+    required SignerApp that,
+    required int choice,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSignerApp(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(choice, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_quiz_answer,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSignerAppQuizAnswerConstMeta,
+        argValues: [that, choice],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSignerAppQuizAnswerConstMeta =>
+      const TaskConstMeta(
+        debugName: "SignerApp_quiz_answer",
+        argNames: ["that", "choice"],
+      );
+
+  @override
+  Future<QuizQuestion> crateApiSignerAppQuizQuestion({
+    required SignerApp that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSignerApp(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_quiz_question,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSignerAppQuizQuestionConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSignerAppQuizQuestionConstMeta =>
+      const TaskConstMeta(
+        debugName: "SignerApp_quiz_question",
+        argNames: ["that"],
+      );
+
+  @override
   Future<StepResult> crateApiSignerAppReceive({
     required SignerApp that,
     required List<int> payload,
@@ -394,7 +523,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 11,
             port: port_,
           );
         },
@@ -427,7 +556,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 12,
             port: port_,
           );
         },
@@ -458,7 +587,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 13,
             port: port_,
           );
         },
@@ -475,6 +604,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSignerAppSnapshotConstMeta =>
       const TaskConstMeta(debugName: "SignerApp_snapshot", argNames: ["that"]);
+
+  @override
+  Future<StepResult> crateApiSignerAppSubmitBackup({
+    required SignerApp that,
+    required int shareIndex,
+    required List<String> words,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSignerApp(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(shareIndex, serializer);
+          sse_encode_list_String(words, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_step_result,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSignerAppSubmitBackupConstMeta,
+        argValues: [that, shareIndex, words],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSignerAppSubmitBackupConstMeta =>
+      const TaskConstMeta(
+        debugName: "SignerApp_submit_backup",
+        argNames: ["that", "shareIndex", "words"],
+      );
+
+  @override
+  List<String> crateApiBackupWordSuggestions({required String prefix}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(prefix, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiBackupWordSuggestionsConstMeta,
+        argValues: [prefix],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBackupWordSuggestionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "backup_word_suggestions",
+        argNames: ["prefix"],
+      );
 
   @override
   Future<List<String>> crateApiDecodeQrLuma({
@@ -494,7 +689,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 16,
             port: port_,
           );
         },
@@ -523,7 +718,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 17,
             port: port_,
           );
         },
@@ -551,7 +746,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 18,
             port: port_,
           );
         },
@@ -579,7 +774,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 19,
             port: port_,
           );
         },
@@ -608,7 +803,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 20,
             port: port_,
           );
         },
@@ -640,7 +835,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 16,
+              funcId: 21,
               port: port_,
             );
           },
@@ -671,7 +866,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 22,
             port: port_,
           );
         },
@@ -798,9 +993,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  QuizQuestion dco_decode_box_autoadd_quiz_question(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_quiz_question(raw);
+  }
+
+  @protected
+  StepResult dco_decode_box_autoadd_step_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_step_result(raw);
+  }
+
+  @protected
   TxSummary dco_decode_box_autoadd_tx_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_tx_summary(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -879,6 +1092,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<PendingBackup> dco_decode_list_pending_backup(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_pending_backup).toList();
+  }
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as List<int>;
@@ -903,6 +1122,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  QuizQuestion? dco_decode_opt_box_autoadd_quiz_question(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_quiz_question(raw);
+  }
+
+  @protected
+  StepResult? dco_decode_opt_box_autoadd_step_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_step_result(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_16(raw);
+  }
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
@@ -918,6 +1155,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       address: dco_decode_String(arr[0]),
       amountSats: dco_decode_i_64(arr[1]),
       ownLabel: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  PendingBackup dco_decode_pending_backup(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PendingBackup(
+      keyName: dco_decode_opt_String(arr[0]),
+      threshold: dco_decode_opt_box_autoadd_u_16(arr[1]),
+      shareIndex: dco_decode_u_32(arr[2]),
     );
   }
 
@@ -947,9 +1197,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return Prompt_SignTransaction(
           dco_decode_box_autoadd_tx_summary(raw[1]),
         );
+      case 4:
+        return Prompt_DisplayBackup(
+          keyName: dco_decode_String(raw[1]),
+          threshold: dco_decode_u_16(raw[2]),
+          shareIndex: dco_decode_u_32(raw[3]),
+          words: dco_decode_list_String(raw[4]),
+        );
       default:
         throw Exception("unreachable");
     }
+  }
+
+  @protected
+  QuizAnswer dco_decode_quiz_answer(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return QuizAnswer(
+      correct: dco_decode_bool(arr[0]),
+      next: dco_decode_opt_box_autoadd_quiz_question(arr[1]),
+      done: dco_decode_opt_box_autoadd_step_result(arr[2]),
+    );
+  }
+
+  @protected
+  QuizQuestion dco_decode_quiz_question(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return QuizQuestion(
+      title: dco_decode_String(arr[0]),
+      options: dco_decode_list_String(arr[1]),
+      screen: dco_decode_u_32(arr[2]),
+      total: dco_decode_u_32(arr[3]),
+    );
   }
 
   @protected
@@ -981,6 +1265,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         );
       case 3:
         return Step_Done(message: dco_decode_String(raw[1]));
+      case 4:
+        return Step_EnterBackup();
+      case 5:
+        return Step_CheckBackup(keyName: dco_decode_String(raw[1]));
       default:
         throw Exception("unreachable");
     }
@@ -1160,9 +1448,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  QuizQuestion sse_decode_box_autoadd_quiz_question(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_quiz_question(deserializer));
+  }
+
+  @protected
+  StepResult sse_decode_box_autoadd_step_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_step_result(deserializer));
+  }
+
+  @protected
   TxSummary sse_decode_box_autoadd_tx_summary(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_tx_summary(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_16(deserializer));
   }
 
   @protected
@@ -1268,6 +1576,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<PendingBackup> sse_decode_list_pending_backup(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PendingBackup>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_pending_backup(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1304,6 +1626,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  QuizQuestion? sse_decode_opt_box_autoadd_quiz_question(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_quiz_question(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  StepResult? sse_decode_opt_box_autoadd_step_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_step_result(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_16(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1324,6 +1683,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       address: var_address,
       amountSats: var_amountSats,
       ownLabel: var_ownLabel,
+    );
+  }
+
+  @protected
+  PendingBackup sse_decode_pending_backup(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_keyName = sse_decode_opt_String(deserializer);
+    var var_threshold = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_shareIndex = sse_decode_u_32(deserializer);
+    return PendingBackup(
+      keyName: var_keyName,
+      threshold: var_threshold,
+      shareIndex: var_shareIndex,
     );
   }
 
@@ -1361,9 +1733,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 3:
         var var_field0 = sse_decode_box_autoadd_tx_summary(deserializer);
         return Prompt_SignTransaction(var_field0);
+      case 4:
+        var var_keyName = sse_decode_String(deserializer);
+        var var_threshold = sse_decode_u_16(deserializer);
+        var var_shareIndex = sse_decode_u_32(deserializer);
+        var var_words = sse_decode_list_String(deserializer);
+        return Prompt_DisplayBackup(
+          keyName: var_keyName,
+          threshold: var_threshold,
+          shareIndex: var_shareIndex,
+          words: var_words,
+        );
       default:
         throw UnimplementedError('');
     }
+  }
+
+  @protected
+  QuizAnswer sse_decode_quiz_answer(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_correct = sse_decode_bool(deserializer);
+    var var_next = sse_decode_opt_box_autoadd_quiz_question(deserializer);
+    var var_done = sse_decode_opt_box_autoadd_step_result(deserializer);
+    return QuizAnswer(correct: var_correct, next: var_next, done: var_done);
+  }
+
+  @protected
+  QuizQuestion sse_decode_quiz_question(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_title = sse_decode_String(deserializer);
+    var var_options = sse_decode_list_String(deserializer);
+    var var_screen = sse_decode_u_32(deserializer);
+    var var_total = sse_decode_u_32(deserializer);
+    return QuizQuestion(
+      title: var_title,
+      options: var_options,
+      screen: var_screen,
+      total: var_total,
+    );
   }
 
   @protected
@@ -1400,6 +1807,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 3:
         var var_message = sse_decode_String(deserializer);
         return Step_Done(message: var_message);
+      case 4:
+        return Step_EnterBackup();
+      case 5:
+        var var_keyName = sse_decode_String(deserializer);
+        return Step_CheckBackup(keyName: var_keyName);
       default:
         throw UnimplementedError('');
     }
@@ -1602,12 +2014,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_quiz_question(
+    QuizQuestion self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_quiz_question(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_step_result(
+    StepResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_step_result(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_tx_summary(
     TxSummary self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_tx_summary(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_16(self, serializer);
   }
 
   @protected
@@ -1694,6 +2130,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_pending_backup(
+    List<PendingBackup> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_pending_backup(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_loose(
     List<int> self,
     SseSerializer serializer,
@@ -1736,6 +2184,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_quiz_question(
+    QuizQuestion? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_quiz_question(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_step_result(
+    StepResult? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_step_result(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_16(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
     Uint8List? self,
     SseSerializer serializer,
@@ -1754,6 +2238,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.address, serializer);
     sse_encode_i_64(self.amountSats, serializer);
     sse_encode_opt_String(self.ownLabel, serializer);
+  }
+
+  @protected
+  void sse_encode_pending_backup(PendingBackup self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.keyName, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.threshold, serializer);
+    sse_encode_u_32(self.shareIndex, serializer);
   }
 
   @protected
@@ -1788,7 +2280,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case Prompt_SignTransaction(field0: final field0):
         sse_encode_i_32(3, serializer);
         sse_encode_box_autoadd_tx_summary(field0, serializer);
+      case Prompt_DisplayBackup(
+        keyName: final keyName,
+        threshold: final threshold,
+        shareIndex: final shareIndex,
+        words: final words,
+      ):
+        sse_encode_i_32(4, serializer);
+        sse_encode_String(keyName, serializer);
+        sse_encode_u_16(threshold, serializer);
+        sse_encode_u_32(shareIndex, serializer);
+        sse_encode_list_String(words, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_quiz_answer(QuizAnswer self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.correct, serializer);
+    sse_encode_opt_box_autoadd_quiz_question(self.next, serializer);
+    sse_encode_opt_box_autoadd_step_result(self.done, serializer);
+  }
+
+  @protected
+  void sse_encode_quiz_question(QuizQuestion self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.title, serializer);
+    sse_encode_list_String(self.options, serializer);
+    sse_encode_u_32(self.screen, serializer);
+    sse_encode_u_32(self.total, serializer);
   }
 
   @protected
@@ -1817,6 +2337,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case Step_Done(message: final message):
         sse_encode_i_32(3, serializer);
         sse_encode_String(message, serializer);
+      case Step_EnterBackup():
+        sse_encode_i_32(4, serializer);
+      case Step_CheckBackup(keyName: final keyName):
+        sse_encode_i_32(5, serializer);
+        sse_encode_String(keyName, serializer);
     }
   }
 
@@ -1938,6 +2463,17 @@ class SignerAppImpl extends RustOpaque implements SignerApp {
   Future<String> name() =>
       RustLib.instance.api.crateApiSignerAppName(that: this);
 
+  /// Backups typed into this signer that are still waiting for the coordinator.
+  Future<List<PendingBackup>> pendingBackups() =>
+      RustLib.instance.api.crateApiSignerAppPendingBackups(that: this);
+
+  Future<QuizAnswer> quizAnswer({required int choice}) => RustLib.instance.api
+      .crateApiSignerAppQuizAnswer(that: this, choice: choice);
+
+  /// The check-backup quiz question currently on screen (after `Step::CheckBackup`).
+  Future<QuizQuestion> quizQuestion() =>
+      RustLib.instance.api.crateApiSignerAppQuizQuestion(that: this);
+
   /// Feed a fully scanned QR payload (see `QrScanner`).
   Future<StepResult> receive({required List<int> payload}) => RustLib
       .instance
@@ -1949,4 +2485,15 @@ class SignerAppImpl extends RustOpaque implements SignerApp {
 
   Future<Uint8List> snapshot() =>
       RustLib.instance.api.crateApiSignerAppSnapshot(that: this);
+
+  /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
+  /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+  Future<StepResult> submitBackup({
+    required int shareIndex,
+    required List<String> words,
+  }) => RustLib.instance.api.crateApiSignerAppSubmitBackup(
+    that: this,
+    shareIndex: shareIndex,
+    words: words,
+  );
 }

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../controller.dart';
 import '../src/rust/engine.dart';
+import 'enter_backup.dart';
 import 'prompt.dart';
+import 'quiz.dart';
 import 'reply.dart';
 import 'scan.dart';
 
@@ -39,6 +41,24 @@ Future<void> _handle(BuildContext context, SignerController c, Future<StepResult
           actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
         ),
       );
+    case Step_EnterBackup():
+      // The screen submits the words itself; it pops with the signer's next step, or null if the
+      // user gave up.
+      final next = await nav.push<StepResult>(MaterialPageRoute(builder: (_) => EnterBackupScreen(controller: c)));
+      if (next == null) {
+        await c.reject();
+        return;
+      }
+      if (!context.mounted) return;
+      await _handle(context, c, () async => next);
+    case Step_CheckBackup(:final keyName):
+      final next = await nav.push<StepResult>(MaterialPageRoute(builder: (_) => QuizScreen(controller: c, keyName: keyName)));
+      if (next == null) {
+        await c.reject();
+        return;
+      }
+      if (!context.mounted) return;
+      await _handle(context, c, () async => next);
     case Step_Reply(:final frames, :final what):
       await nav.push(MaterialPageRoute(builder: (_) => ReplyScreen(frames: frames, title: 'Show to coordinator', what: what)));
     case Step_Confirm(:final field0):

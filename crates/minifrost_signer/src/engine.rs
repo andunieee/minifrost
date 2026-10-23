@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
+use frost_backup::{bip39_words, ShareBackup};
 use frostsnap_core::{
     device::{
+        restoration::{EnterBackupPhase, ToUserRestoration},
         DeviceSecretDerivation, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose,
         Mutation, SignPhase1,
     },
@@ -16,12 +18,18 @@ use frostsnap_core::{
         DeviceToCoordinatorMessage,
     },
     nonce_stream::NonceStreamId,
+    schnorr_fun::frost::ShareIndex,
     schnorr_fun::fun::{marker::*, KeyPair, Scalar},
     AccessStructureRef, CoordShareDecryptionContrib, DeviceId, KeyId, SymmetricKey, Versioned,
     WireSignTask,
 };
 use minifrost_wire::Packet;
 use rand::rngs::OsRng;
+
+// Not `mod backup_quiz;`: the e2e test compiles this file in through `#[path]`, so a sibling
+// module has to be named explicitly.
+#[path = "backup_quiz.rs"]
+mod backup_quiz;
 
 const NONCE_SLOTS: usize = 4;
 const SNAPSHOT_VERSION: u8 = 1;
@@ -47,9 +55,10 @@ impl NonceStreamSlot for SharedSlot {
 // Secret derivation
 // ---------------------------------------------------------------------------------------------
 
-/// Everything secret on this signer derives from one 32-byte random `device_secret`. The share is
-/// encrypted under a key that mixes in a contribution only the coordinator can supply, so
-/// stealing this signer's storage alone is not enough to sign.
+/// Everything secret on this signer derives from one 32-byte random `device_secret`. The share
+/// encryption key deliberately ignores the coordinator's contribution: `frostsnap_core` insists on
+/// encrypting shares, but the key sits next to the ciphertext, so this is storage-equivalent to
+/// plaintext. That keeps a lost coordinator from making every signer's share undecryptable.
 #[derive(Clone)]
 struct Derivation {
     device_secret: [u8; 32],
@@ -78,10 +87,10 @@ impl DeviceSecretDerivation for Derivation {
         &mut self,
         access_structure_ref: AccessStructureRef,
         party_index: frostsnap_core::schnorr_fun::frost::ShareIndex,
-        coord_key: CoordShareDecryptionContrib,
+        _coord_key: CoordShareDecryptionContrib,
     ) -> SymmetricKey {
         let ctx = bincode::encode_to_vec(
-            (access_structure_ref, party_index, coord_key),
+            (access_structure_ref, party_index),
             bincode::config::standard(),
         )
         .expect("encodes");
@@ -169,6 +178,15 @@ pub enum Prompt {
     ReviewTransaction(TxSummary),
     /// Round 2: final, verified view. Approving releases the partial signature.
     SignTransaction(TxSummary),
+    /// The coordinator asked this signer to show its secret backup. Approving means "I wrote
+    /// every word down"; it tells the coordinator so it can stop nagging about this share.
+    DisplayBackup {
+        key_name: String,
+        threshold: u16,
+        share_index: u32,
+        /// The 25 BIP39 words, in order.
+        words: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -181,6 +199,39 @@ pub enum Step {
     Reply { frames: Vec<String>, what: String },
     /// Finished locally; nothing to show the coordinator.
     Done { message: String },
+    /// The coordinator wants the user to type in a physical backup (key number + 25 words).
+    /// Answer with `submit_backup`, or call `reject` to give up.
+    EnterBackup,
+    /// The coordinator wants the user to prove their physical backup is right. Walk through the
+    /// questions with `quiz_question` / `quiz_answer`, or call `reject` to give up.
+    CheckBackup { key_name: String },
+}
+
+#[derive(Debug, Clone)]
+pub struct QuizQuestion {
+    pub title: String,
+    pub options: Vec<String>,
+    /// 0-based position, `total` questions in all.
+    pub screen: u32,
+    pub total: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct QuizAnswer {
+    pub correct: bool,
+    /// The next question, unless the quiz is over or the answer was wrong.
+    pub next: Option<QuizQuestion>,
+    /// Set once the last question was answered correctly: show this to the coordinator.
+    pub done: Option<StepResult>,
+}
+
+/// A backup the user typed into this signer that has not been turned into a real share yet
+/// (waiting for the coordinator to finish the restoration).
+#[derive(Debug, Clone)]
+pub struct PendingBackup {
+    pub key_name: Option<String>,
+    pub threshold: Option<u16>,
+    pub share_index: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -204,6 +255,9 @@ enum Pending {
     CheckKeygen(Box<KeyGenPhase3>),
     Nonces(CoordinatorToDeviceMessage, bitcoin::Txid, KeyId),
     Sign(Box<SignPhase1>),
+    EnterBackup(EnterBackupPhase),
+    DisplayBackup { access_structure_ref: AccessStructureRef, share_index: ShareIndex },
+    Quiz { quiz: backup_quiz::Quiz, access_structure_ref: AccessStructureRef, share_index: ShareIndex },
 }
 
 pub struct Signer {
@@ -350,7 +404,10 @@ impl Signer {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let me = self.device_id();
         let step = match packet {
-            Packet::Hello { .. } | Packet::FromDevice { .. } => Step::Ignored {
+            Packet::Hello { .. }
+            | Packet::FromDevice { .. }
+            | Packet::BackupRecorded { .. }
+            | Packet::BackupChecked { .. } => Step::Ignored {
                 reason: "This code is meant for a coordinator, not for a signer.".into(),
             },
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
@@ -415,11 +472,65 @@ impl Signer {
                 Err("Signing request was not accepted.".into())
             }
             _ => {
-                // CertifyPlease / Check / Finalize
+                // CertifyPlease / Check / Finalize, and every restoration / backup message
                 let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
                 self.handle_sends(sends)
             }
         }
+    }
+
+    /// What `frostsnap_core` tells the user about a restoration or backup message. Most of it
+    /// needs no decision here: saving an entered backup and consolidating it into a real share
+    /// are automatic, exactly as on a frostsnap device (the user can't meaningfully verify
+    /// either).
+    fn handle_restoration(&mut self, msg: ToUserRestoration) -> Res<Option<Step>> {
+        Ok(match msg {
+            ToUserRestoration::EnterBackup { phase } => {
+                self.pending = Some(Pending::EnterBackup(phase));
+                Some(Step::EnterBackup)
+            }
+            // The `PhysicalSaved` message to the coordinator comes with it.
+            ToUserRestoration::BackupSaved { .. } => None,
+            ToUserRestoration::ConsolidateBackup(phase) => {
+                let sends: Vec<DeviceSend> = self
+                    .inner
+                    .finish_consolidation(&mut self.derivation, phase, &mut OsRng)
+                    .into_iter()
+                    .collect();
+                // the freshly consolidated share is a new key the home screen should list
+                Some(self.handle_sends(sends)?)
+            }
+            ToUserRestoration::DisplayBackup { key_name, access_structure_ref, phase } => {
+                let backup = phase
+                    .decrypt_to_backup(&mut self.derivation)
+                    .map_err(|e| format!("could not read this signer's share: {e:?}"))?;
+                let share_index = phase.share_index;
+                let words = backup.to_words().iter().map(|w| w.to_string()).collect();
+                let threshold = self.threshold_of(access_structure_ref.key_id);
+                self.pending = Some(Pending::DisplayBackup { access_structure_ref, share_index });
+                Some(Step::Confirm(Prompt::DisplayBackup {
+                    key_name,
+                    threshold,
+                    share_index: share_index_u32(share_index)?,
+                    words,
+                }))
+            }
+            ToUserRestoration::CheckBackup { key_name, access_structure_ref, phase } => {
+                let backup = phase
+                    .decrypt_to_backup(&mut self.derivation)
+                    .map_err(|e| format!("could not read this signer's share: {e:?}"))?;
+                self.pending = Some(Pending::Quiz {
+                    quiz: backup_quiz::Quiz::new(&backup, &mut OsRng),
+                    access_structure_ref,
+                    share_index: phase.share_index,
+                });
+                Some(Step::CheckBackup { key_name })
+            }
+        })
+    }
+
+    fn threshold_of(&self, key_id: KeyId) -> u16 {
+        self.keys().into_iter().find(|k| k.key_id == key_id.to_string()).map_or(0, |k| k.threshold)
     }
 
     fn prompt_final_sign(&mut self, phase: Box<SignPhase1>) -> Res<Step> {
@@ -480,6 +591,11 @@ impl Signer {
                             message: format!("Key “{key_name}” was created and its share stored securely."),
                         });
                     }
+                    DeviceToUserMessage::Restoration(r) => {
+                        if let Some(s) = self.handle_restoration(*r)? {
+                            step = Some(s);
+                        }
+                    }
                     _ => {}
                 },
             }
@@ -490,6 +606,9 @@ impl Signer {
     /// The user tapped "approve" on the current [`Prompt`].
     pub fn approve(&mut self) -> Res<StepResult> {
         let me = self.device_id();
+        if matches!(self.pending, Some(Pending::EnterBackup(_) | Pending::Quiz { .. })) {
+            return Err("This step is not answered with approve.".into());
+        }
         let pending = self.pending.take().ok_or("nothing is waiting for approval")?;
         let step = match pending {
             Pending::Keygen(msg) => {
@@ -530,6 +649,11 @@ impl Signer {
                     "Nonces — show this to the coordinator",
                 )
             }
+            Pending::DisplayBackup { access_structure_ref, share_index } => reply_packet(
+                Packet::BackupRecorded { device_id: me, access_structure_ref, share_index },
+                "Backup recorded — show this to the coordinator",
+            ),
+            Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();
                 let sends = self
@@ -552,9 +676,102 @@ impl Signer {
     }
 
     pub fn reject(&mut self) {
-        self.pending = None;
+        if let Some(Pending::EnterBackup(_)) = self.pending.take() {
+            // forget a backup that was typed in but never saved
+            self.inner.clear_tmp_data();
+        }
         self.inner.clear_unfinished_keygens();
     }
+
+    /// The user typed in a physical backup: the key number and the 25 words. Errors (a mistyped
+    /// word, a failed checksum) leave the signer waiting so the user can correct them.
+    pub fn submit_backup(&mut self, share_index: u32, words: Vec<String>) -> Res<StepResult> {
+        if !matches!(self.pending, Some(Pending::EnterBackup(_))) {
+            return Err("The coordinator has not asked for a backup.".into());
+        }
+        if share_index == 0 {
+            return Err("The key number is at least 1.".into());
+        }
+        let words: Vec<String> = words.iter().map(|w| w.trim().to_uppercase()).collect();
+        let words: [&str; 25] = words
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .try_into()
+            .map_err(|_| "A backup has exactly 25 words.".to_string())?;
+        if let Some(bad) = words.iter().position(|w| !bip39_words::is_valid_bip39_word(w)) {
+            return Err(format!("Word {} is not a valid backup word.", bad + 1));
+        }
+        let backup = ShareBackup::from_words(share_index, words)
+            .map_err(|e| format!("These words are not a valid backup: {e}"))?;
+        let Some(Pending::EnterBackup(phase)) = self.pending.take() else { unreachable!() };
+        let sends: Vec<DeviceSend> =
+            self.inner.tell_coordinator_about_backup_load_result(phase, backup).into_iter().collect();
+        let step = self.handle_sends(sends)?;
+        Ok(self.result(step))
+    }
+
+    /// The question the check-backup quiz is on.
+    pub fn quiz_question(&self) -> Res<QuizQuestion> {
+        match &self.pending {
+            Some(Pending::Quiz { quiz, .. }) => Ok(quiz_question(quiz)),
+            _ => Err("No backup check is running.".into()),
+        }
+    }
+
+    /// Answer the current quiz question with the option the user picked. A wrong answer changes
+    /// nothing: the same question stays up.
+    pub fn quiz_answer(&mut self, choice: u32) -> Res<QuizAnswer> {
+        let me = self.device_id();
+        let Some(Pending::Quiz { quiz, .. }) = &mut self.pending else {
+            return Err("No backup check is running.".into());
+        };
+        match quiz.answer(choice as usize, &mut OsRng) {
+            backup_quiz::Answer::Wrong => Ok(QuizAnswer { correct: false, next: None, done: None }),
+            backup_quiz::Answer::Next => {
+                Ok(QuizAnswer { correct: true, next: Some(quiz_question(quiz)), done: None })
+            }
+            backup_quiz::Answer::Done => {
+                let Some(Pending::Quiz { access_structure_ref, share_index, .. }) = self.pending.take() else {
+                    unreachable!()
+                };
+                let step = reply_packet(
+                    Packet::BackupChecked { device_id: me, access_structure_ref, share_index },
+                    "Backup checked — show this to the coordinator",
+                );
+                Ok(QuizAnswer { correct: true, next: None, done: Some(self.result(step)) })
+            }
+        }
+    }
+
+    /// Backups typed into this signer that await the coordinator finishing a restoration.
+    pub fn pending_backups(&self) -> Vec<PendingBackup> {
+        self.inner
+            .saved_backups()
+            .values()
+            .filter_map(|b| {
+                Some(PendingBackup {
+                    key_name: b.key_name.clone(),
+                    threshold: b.threshold,
+                    share_index: share_index_u32(b.share_backup.index()).ok()?,
+                })
+            })
+            .collect()
+    }
+}
+
+fn quiz_question(quiz: &backup_quiz::Quiz) -> QuizQuestion {
+    let q = quiz.question();
+    QuizQuestion {
+        title: q.title.clone(),
+        options: q.options.clone(),
+        screen: quiz.screen() as u32,
+        total: backup_quiz::TOTAL_SCREENS as u32,
+    }
+}
+
+fn share_index_u32(i: ShareIndex) -> Res<u32> {
+    i.try_into().map_err(|_| "share index out of range".to_string())
 }
 
 fn network_name(p: &KeyPurpose) -> String {
@@ -566,7 +783,11 @@ fn network_name(p: &KeyPurpose) -> String {
 }
 
 fn reply(me: DeviceId, message: DeviceToCoordinatorMessage, what: &str) -> Step {
-    let bytes = Packet::FromDevice { device_id: me, message }.to_bytes();
+    reply_packet(Packet::FromDevice { device_id: me, message }, what)
+}
+
+fn reply_packet(packet: Packet, what: &str) -> Step {
+    let bytes = packet.to_bytes();
     Step::Reply {
         frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
         what: what.to_string(),

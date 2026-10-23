@@ -38,6 +38,19 @@ class Home extends StatelessWidget {
               child: Text('None yet. Show your enrolment code to a coordinator, then scan its key generation codes.'),
             ),
           for (final k in controller.keys) _KeyTile(k),
+          if (controller.pendingBackups.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Restoring', style: Theme.of(context).textTheme.titleMedium),
+            for (final b in controller.pendingBackups)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.history),
+                  title: Text('Backup #${b.shareIndex}${b.keyName == null ? '' : ' of “${b.keyName}”'}'),
+                  subtitle: const Text('Saved on this signer. It becomes a normal share once the coordinator finishes restoring the wallet.'),
+                  isThreeLine: true,
+                ),
+              ),
+          ],
           const SizedBox(height: 16),
           OutlinedButton.icon(
             icon: const Icon(Icons.qr_code),

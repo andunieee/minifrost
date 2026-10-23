@@ -4,7 +4,10 @@ pub mod camera;
 
 use std::sync::Mutex;
 
-pub use crate::engine::{Broadcast, Finished, KeyView, SignerInfo, Update};
+pub use crate::engine::{
+    BackupShare, Broadcast, Finished, HeldShareView, KeyView, PendingConsolidationView, RestorationShareView,
+    RestorationView, SignerInfo, Update,
+};
 use crate::engine::{default_esplora, Coordinator};
 use crate::wallet::{self, Amt};
 
@@ -83,6 +86,85 @@ impl CoordinatorApp {
     /// A signer's reply, fully scanned.
     pub fn receive(&self, payload: Vec<u8>) -> Result<Update, String> {
         self.inner.lock().unwrap().receive(&payload)
+    }
+
+    // ---- backups
+    /// Every share of the wallet and whether its backup was recorded.
+    pub fn backup_shares(&self, key_id: String) -> Result<Vec<BackupShare>, String> {
+        self.inner.lock().unwrap().backup_shares(&key_id)
+    }
+    /// "I already have this backup" — records it without a session.
+    pub fn mark_backup_complete(&self, key_id: String, share_index: u32) -> Result<(), String> {
+        self.inner.lock().unwrap().mark_backup_complete(&key_id, share_index)
+    }
+    /// Ask a signer to show its 25-word backup.
+    pub fn start_display_backup(&self, key_id: String, device_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_display_backup(&key_id, &device_id)
+    }
+    /// Ask a signer to quiz the user on their paper backup.
+    pub fn start_check_backup(&self, key_id: String, device_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_check_backup(&key_id, &device_id)
+    }
+
+    // ---- restoration
+    pub fn restorations(&self) -> Vec<RestorationView> {
+        self.inner.lock().unwrap().restorations()
+    }
+    pub fn cancel_restoration(&self, restoration_id: String) -> Result<(), String> {
+        self.inner.lock().unwrap().cancel_restoration(&restoration_id)
+    }
+    pub fn delete_restoration_share(&self, restoration_id: String, device_id: String) -> Result<(), String> {
+        self.inner.lock().unwrap().delete_restoration_share(&restoration_id, &device_id)
+    }
+    /// Turn a restoration with enough shares into a wallet. Returns the wallet's key id.
+    pub fn finish_restoration(&self, restoration_id: String) -> Result<String, String> {
+        self.inner.lock().unwrap().finish_restoration(&restoration_id)
+    }
+    /// Ask a signer to type in a physical backup that starts a new restoration.
+    pub fn start_enter_backup_new_wallet(
+        &self,
+        device_id: String,
+        name: String,
+        network: String,
+        threshold: Option<u16>,
+    ) -> Result<Update, String> {
+        self.inner
+            .lock()
+            .unwrap()
+            .start_enter_backup_new_wallet(&device_id, name, parse_network(&network)?, threshold)
+    }
+    /// ... that joins a restoration already in progress.
+    pub fn start_enter_backup_restoration(&self, device_id: String, restoration_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_enter_backup_restoration(&device_id, &restoration_id)
+    }
+    /// ... that adds a share to a wallet this coordinator already has.
+    pub fn start_enter_backup_wallet(&self, device_id: String, key_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_enter_backup_wallet(&device_id, &key_id)
+    }
+    /// Ask a signer which shares it holds (result arrives as `Finished.heldShares`).
+    pub fn start_request_held_shares(&self, device_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_request_held_shares(&device_id)
+    }
+    pub fn start_restoration_from_held_share(&self, device_id: String, share_index: u32) -> Result<String, String> {
+        self.inner.lock().unwrap().start_restoration_from_held_share(&device_id, share_index)
+    }
+    pub fn add_held_share_to_restoration(
+        &self,
+        restoration_id: String,
+        device_id: String,
+        share_index: u32,
+    ) -> Result<(), String> {
+        self.inner.lock().unwrap().add_held_share_to_restoration(&restoration_id, &device_id, share_index)
+    }
+    pub fn add_held_share_to_wallet(&self, key_id: String, device_id: String, share_index: u32) -> Result<(), String> {
+        self.inner.lock().unwrap().add_held_share_to_wallet(&key_id, &device_id, share_index)
+    }
+    /// Signers whose typed-in backup still has to become a normal share.
+    pub fn pending_consolidations(&self) -> Vec<PendingConsolidationView> {
+        self.inner.lock().unwrap().pending_consolidations()
+    }
+    pub fn start_consolidate(&self, key_id: String, device_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().start_consolidate(&key_id, &device_id)
     }
 
     // ---- wallet (talks to Esplora; never holds the lock across a request)

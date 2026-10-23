@@ -27,3 +27,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+[dev-dependencies]
+# The tests compile the signer engine in with `#[path]`, so they need what it needs.
+frost_backup = { workspace = true, features = ["bincode"] }

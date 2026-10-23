@@ -90,7 +90,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Prompt dco_decode_box_autoadd_prompt(dynamic raw);
 
   @protected
+  QuizQuestion dco_decode_box_autoadd_quiz_question(dynamic raw);
+
+  @protected
+  StepResult dco_decode_box_autoadd_step_result(dynamic raw);
+
+  @protected
   TxSummary dco_decode_box_autoadd_tx_summary(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw);
 
   @protected
   CameraEvent dco_decode_camera_event(dynamic raw);
@@ -120,6 +129,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<OutputSummary> dco_decode_list_output_summary(dynamic raw);
 
   @protected
+  List<PendingBackup> dco_decode_list_pending_backup(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
@@ -132,13 +144,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
+  QuizQuestion? dco_decode_opt_box_autoadd_quiz_question(dynamic raw);
+
+  @protected
+  StepResult? dco_decode_opt_box_autoadd_step_result(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
 
   @protected
   OutputSummary dco_decode_output_summary(dynamic raw);
 
   @protected
+  PendingBackup dco_decode_pending_backup(dynamic raw);
+
+  @protected
   Prompt dco_decode_prompt(dynamic raw);
+
+  @protected
+  QuizAnswer dco_decode_quiz_answer(dynamic raw);
+
+  @protected
+  QuizQuestion dco_decode_quiz_question(dynamic raw);
 
   @protected
   ScanProgress dco_decode_scan_progress(dynamic raw);
@@ -224,7 +254,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Prompt sse_decode_box_autoadd_prompt(SseDeserializer deserializer);
 
   @protected
+  QuizQuestion sse_decode_box_autoadd_quiz_question(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  StepResult sse_decode_box_autoadd_step_result(SseDeserializer deserializer);
+
+  @protected
   TxSummary sse_decode_box_autoadd_tx_summary(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
   CameraEvent sse_decode_camera_event(SseDeserializer deserializer);
@@ -256,6 +297,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<PendingBackup> sse_decode_list_pending_backup(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
@@ -268,13 +314,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  QuizQuestion? sse_decode_opt_box_autoadd_quiz_question(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  StepResult? sse_decode_opt_box_autoadd_step_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
   OutputSummary sse_decode_output_summary(SseDeserializer deserializer);
 
   @protected
+  PendingBackup sse_decode_pending_backup(SseDeserializer deserializer);
+
+  @protected
   Prompt sse_decode_prompt(SseDeserializer deserializer);
+
+  @protected
+  QuizAnswer sse_decode_quiz_answer(SseDeserializer deserializer);
+
+  @protected
+  QuizQuestion sse_decode_quiz_question(SseDeserializer deserializer);
 
   @protected
   ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
@@ -373,10 +441,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_prompt(Prompt self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_quiz_question(
+    QuizQuestion self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_step_result(
+    StepResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_tx_summary(
     TxSummary self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_camera_event(CameraEvent self, SseSerializer serializer);
@@ -412,6 +495,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_pending_backup(
+    List<PendingBackup> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
@@ -427,6 +516,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_quiz_question(
+    QuizQuestion? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_step_result(
+    StepResult? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
     Uint8List? self,
     SseSerializer serializer,
@@ -436,7 +540,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_output_summary(OutputSummary self, SseSerializer serializer);
 
   @protected
+  void sse_encode_pending_backup(PendingBackup self, SseSerializer serializer);
+
+  @protected
   void sse_encode_prompt(Prompt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_quiz_answer(QuizAnswer self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_quiz_question(QuizQuestion self, SseSerializer serializer);
 
   @protected
   void sse_encode_scan_progress(ScanProgress self, SseSerializer serializer);

@@ -68,7 +68,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
       if (ok != true) return;
       await widget.app.cancelSession();
     }
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, update.finished);
   }
 
   Future<void> _broadcast(String txHex) async {
@@ -131,12 +131,13 @@ class _CeremonyPageState extends State<CeremonyPage> {
                   child: ListTile(
                     leading: const Icon(Icons.check_circle, color: Colors.green),
                     title: Text('Wallet “${f.name}” created'),
-                    subtitle: const Text('Show the code above so every signer stores its share, then close.'),
+                    subtitle: const Text('Show the code above so every signer stores its share. Then back up every signer from the wallet page: until a backup is written down, losing a signer can lose the wallet.'),
                   ),
                 ),
-                FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+                FilledButton(onPressed: () => Navigator.pop(context, f), child: const Text('Done')),
               ],
               if (f is Finished_Signed) ..._signedSection(f),
+              if (f != null && f is! Finished_KeyCreated && f is! Finished_Signed) ..._backupSection(f),
             ]),
           ),
           const VerticalDivider(width: 1),
@@ -160,6 +161,53 @@ class _CeremonyPageState extends State<CeremonyPage> {
         ]),
       ),
     );
+  }
+
+  /// Result cards for the backup and restoration sessions.
+  List<Widget> _backupSection(Finished f) {
+    final scheme = Theme.of(context).colorScheme;
+    final (IconData icon, Color color, String title, String detail) = switch (f) {
+      Finished_BackupRecorded(:final keyName, :final shareIndex) => (
+          Icons.check_circle,
+          Colors.green,
+          'Backup of key #$shareIndex recorded',
+          'The user confirmed writing down the 25 words for “$keyName”. Keep the paper safe and secret.',
+        ),
+      Finished_BackupChecked(:final keyName, :final shareIndex) => (
+          Icons.verified,
+          Colors.green,
+          'Backup of key #$shareIndex checked',
+          'Every answer matched the signer’s share of “$keyName”.',
+        ),
+      Finished_BackupSaved(:final shareIndex, :final restorable) => (
+          Icons.check_circle,
+          Colors.green,
+          'Backup #$shareIndex saved on the signer',
+          restorable
+              ? 'There are enough shares to rebuild the wallet. Finish the restoration from the Restore page.'
+              : 'More backups are needed before the wallet can be rebuilt.',
+        ),
+      Finished_BackupRejected(:final reason) => (Icons.error_outline, scheme.error, 'Backup not accepted', reason),
+      Finished_Consolidated(:final keyName, :final shareIndex) => (
+          Icons.check_circle,
+          Colors.green,
+          'Key #$shareIndex is ready',
+          'The signer now holds its share of “$keyName” and can sign.',
+        ),
+      Finished_HeldShares(:final deviceName, :final shares) => (
+          shares.isEmpty ? Icons.info_outline : Icons.check_circle,
+          shares.isEmpty ? scheme.outline : Colors.green,
+          '$deviceName holds ${shares.length} share(s)',
+          shares.isEmpty ? 'Nothing to restore from this signer.' : 'Close this page to choose one.',
+        ),
+      _ => (Icons.check_circle, Colors.green, 'Done', ''),
+    };
+    return [
+      const SizedBox(height: 24),
+      Card(child: ListTile(leading: Icon(icon, color: color), title: Text(title), subtitle: Text(detail))),
+      const SizedBox(height: 8),
+      FilledButton(onPressed: () => Navigator.pop(context, f), child: const Text('Close')),
+    ];
   }
 
   List<Widget> _signedSection(Finished_Signed f) => [
@@ -205,6 +253,6 @@ class _CeremonyPageState extends State<CeremonyPage> {
           ),
         ),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        OutlinedButton(onPressed: () => Navigator.pop(context, f), child: const Text('Close')),
       ];
 }

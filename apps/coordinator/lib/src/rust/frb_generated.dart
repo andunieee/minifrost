@@ -10,6 +10,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'engine.dart';
+import 'engine/restore.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
@@ -69,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 674381630;
+  int get rustContentHash => -959159812;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,6 +82,25 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<void> crateApiCoordinatorAppAddHeldShareToRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+    required String deviceId,
+    required int shareIndex,
+  });
+
+  Future<void> crateApiCoordinatorAppAddHeldShareToWallet({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+    required int shareIndex,
+  });
+
+  Future<List<BackupShare>> crateApiCoordinatorAppBackupShares({
+    required CoordinatorApp that,
+    required String keyId,
+  });
+
   Future<Update> crateApiCoordinatorAppBeginSigning({
     required CoordinatorApp that,
     required String keyId,
@@ -93,8 +113,19 @@ abstract class RustLibApi extends BaseApi {
     required String txHex,
   });
 
+  Future<void> crateApiCoordinatorAppCancelRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+  });
+
   Future<void> crateApiCoordinatorAppCancelSession({
     required CoordinatorApp that,
+  });
+
+  Future<void> crateApiCoordinatorAppDeleteRestorationShare({
+    required CoordinatorApp that,
+    required String restorationId,
+    required String deviceId,
   });
 
   Future<SignerInfo> crateApiCoordinatorAppEnroll({
@@ -107,6 +138,11 @@ abstract class RustLibApi extends BaseApi {
     required String network,
   });
 
+  Future<String> crateApiCoordinatorAppFinishRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+  });
+
   Future<void> crateApiCoordinatorAppForgetSigner({
     required CoordinatorApp that,
     required String deviceId,
@@ -115,6 +151,15 @@ abstract class RustLibApi extends BaseApi {
   Future<List<KeyView>> crateApiCoordinatorAppKeys({
     required CoordinatorApp that,
   });
+
+  Future<void> crateApiCoordinatorAppMarkBackupComplete({
+    required CoordinatorApp that,
+    required String keyId,
+    required int shareIndex,
+  });
+
+  Future<List<PendingConsolidationView>>
+  crateApiCoordinatorAppPendingConsolidations({required CoordinatorApp that});
 
   Future<SendPreview> crateApiCoordinatorAppPrepareSend({
     required CoordinatorApp that,
@@ -134,6 +179,10 @@ abstract class RustLibApi extends BaseApi {
     required String keyId,
   });
 
+  Future<List<RestorationView>> crateApiCoordinatorAppRestorations({
+    required CoordinatorApp that,
+  });
+
   Future<void> crateApiCoordinatorAppSetEsploraUrl({
     required CoordinatorApp that,
     String? url,
@@ -143,12 +192,61 @@ abstract class RustLibApi extends BaseApi {
     required CoordinatorApp that,
   });
 
+  Future<Update> crateApiCoordinatorAppStartCheckBackup({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartConsolidate({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartDisplayBackup({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartEnterBackupNewWallet({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String name,
+    required String network,
+    int? threshold,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartEnterBackupRestoration({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String restorationId,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartEnterBackupWallet({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String keyId,
+  });
+
   Future<Update> crateApiCoordinatorAppStartKeygen({
     required CoordinatorApp that,
     required String keyName,
     required int threshold,
     required List<String> deviceIds,
     required String network,
+  });
+
+  Future<Update> crateApiCoordinatorAppStartRequestHeldShares({
+    required CoordinatorApp that,
+    required String deviceId,
+  });
+
+  Future<String> crateApiCoordinatorAppStartRestorationFromHeldShare({
+    required CoordinatorApp that,
+    required String deviceId,
+    required int shareIndex,
   });
 
   Future<double> crateApiCoordinatorAppSuggestedFeeRate({
@@ -208,6 +306,128 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<void> crateApiCoordinatorAppAddHeldShareToRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+    required String deviceId,
+    required int shareIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(restorationId, serializer);
+          sse_encode_String(deviceId, serializer);
+          sse_encode_u_32(shareIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppAddHeldShareToRestorationConstMeta,
+        argValues: [that, restorationId, deviceId, shareIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppAddHeldShareToRestorationConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_add_held_share_to_restoration",
+        argNames: ["that", "restorationId", "deviceId", "shareIndex"],
+      );
+
+  @override
+  Future<void> crateApiCoordinatorAppAddHeldShareToWallet({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+    required int shareIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          sse_encode_String(deviceId, serializer);
+          sse_encode_u_32(shareIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppAddHeldShareToWalletConstMeta,
+        argValues: [that, keyId, deviceId, shareIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppAddHeldShareToWalletConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_add_held_share_to_wallet",
+        argNames: ["that", "keyId", "deviceId", "shareIndex"],
+      );
+
+  @override
+  Future<List<BackupShare>> crateApiCoordinatorAppBackupShares({
+    required CoordinatorApp that,
+    required String keyId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_backup_share,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppBackupSharesConstMeta,
+        argValues: [that, keyId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppBackupSharesConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_backup_shares",
+        argNames: ["that", "keyId"],
+      );
+
+  @override
   Future<Update> crateApiCoordinatorAppBeginSigning({
     required CoordinatorApp that,
     required String keyId,
@@ -226,7 +446,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 4,
             port: port_,
           );
         },
@@ -266,7 +486,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 5,
             port: port_,
           );
         },
@@ -288,6 +508,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiCoordinatorAppCancelRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(restorationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppCancelRestorationConstMeta,
+        argValues: [that, restorationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppCancelRestorationConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_cancel_restoration",
+        argNames: ["that", "restorationId"],
+      );
+
+  @override
   Future<void> crateApiCoordinatorAppCancelSession({
     required CoordinatorApp that,
   }) {
@@ -302,7 +560,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 7,
             port: port_,
           );
         },
@@ -324,6 +582,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiCoordinatorAppDeleteRestorationShare({
+    required CoordinatorApp that,
+    required String restorationId,
+    required String deviceId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(restorationId, serializer);
+          sse_encode_String(deviceId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppDeleteRestorationShareConstMeta,
+        argValues: [that, restorationId, deviceId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppDeleteRestorationShareConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_delete_restoration_share",
+        argNames: ["that", "restorationId", "deviceId"],
+      );
+
+  @override
   Future<SignerInfo> crateApiCoordinatorAppEnroll({
     required CoordinatorApp that,
     required List<int> payload,
@@ -340,7 +638,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 9,
             port: port_,
           );
         },
@@ -378,7 +676,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 10,
             port: port_,
           );
         },
@@ -400,6 +698,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiCoordinatorAppFinishRestoration({
+    required CoordinatorApp that,
+    required String restorationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(restorationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppFinishRestorationConstMeta,
+        argValues: [that, restorationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppFinishRestorationConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_finish_restoration",
+        argNames: ["that", "restorationId"],
+      );
+
+  @override
   Future<void> crateApiCoordinatorAppForgetSigner({
     required CoordinatorApp that,
     required String deviceId,
@@ -416,7 +752,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 12,
             port: port_,
           );
         },
@@ -452,7 +788,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 13,
             port: port_,
           );
         },
@@ -469,6 +805,81 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiCoordinatorAppKeysConstMeta =>
       const TaskConstMeta(debugName: "CoordinatorApp_keys", argNames: ["that"]);
+
+  @override
+  Future<void> crateApiCoordinatorAppMarkBackupComplete({
+    required CoordinatorApp that,
+    required String keyId,
+    required int shareIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          sse_encode_u_32(shareIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppMarkBackupCompleteConstMeta,
+        argValues: [that, keyId, shareIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppMarkBackupCompleteConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_mark_backup_complete",
+        argNames: ["that", "keyId", "shareIndex"],
+      );
+
+  @override
+  Future<List<PendingConsolidationView>>
+  crateApiCoordinatorAppPendingConsolidations({required CoordinatorApp that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_pending_consolidation_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCoordinatorAppPendingConsolidationsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppPendingConsolidationsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_pending_consolidations",
+        argNames: ["that"],
+      );
 
   @override
   Future<SendPreview> crateApiCoordinatorAppPrepareSend({
@@ -493,7 +904,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 16,
             port: port_,
           );
         },
@@ -531,7 +942,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 17,
             port: port_,
           );
         },
@@ -569,7 +980,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 18,
             port: port_,
           );
         },
@@ -591,6 +1002,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<RestorationView>> crateApiCoordinatorAppRestorations({
+    required CoordinatorApp that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_restoration_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCoordinatorAppRestorationsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppRestorationsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_restorations",
+        argNames: ["that"],
+      );
+
+  @override
   Future<void> crateApiCoordinatorAppSetEsploraUrl({
     required CoordinatorApp that,
     String? url,
@@ -607,7 +1054,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 20,
             port: port_,
           );
         },
@@ -643,7 +1090,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 21,
             port: port_,
           );
         },
@@ -662,6 +1109,251 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "CoordinatorApp_signers",
         argNames: ["that"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartCheckBackup({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          sse_encode_String(deviceId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartCheckBackupConstMeta,
+        argValues: [that, keyId, deviceId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartCheckBackupConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_check_backup",
+        argNames: ["that", "keyId", "deviceId"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartConsolidate({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          sse_encode_String(deviceId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartConsolidateConstMeta,
+        argValues: [that, keyId, deviceId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartConsolidateConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_consolidate",
+        argNames: ["that", "keyId", "deviceId"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartDisplayBackup({
+    required CoordinatorApp that,
+    required String keyId,
+    required String deviceId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          sse_encode_String(deviceId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartDisplayBackupConstMeta,
+        argValues: [that, keyId, deviceId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartDisplayBackupConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_display_backup",
+        argNames: ["that", "keyId", "deviceId"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartEnterBackupNewWallet({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String name,
+    required String network,
+    int? threshold,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(deviceId, serializer);
+          sse_encode_String(name, serializer);
+          sse_encode_String(network, serializer);
+          sse_encode_opt_box_autoadd_u_16(threshold, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartEnterBackupNewWalletConstMeta,
+        argValues: [that, deviceId, name, network, threshold],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartEnterBackupNewWalletConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_enter_backup_new_wallet",
+        argNames: ["that", "deviceId", "name", "network", "threshold"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartEnterBackupRestoration({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String restorationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(deviceId, serializer);
+          sse_encode_String(restorationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartEnterBackupRestorationConstMeta,
+        argValues: [that, deviceId, restorationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiCoordinatorAppStartEnterBackupRestorationConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_enter_backup_restoration",
+        argNames: ["that", "deviceId", "restorationId"],
+      );
+
+  @override
+  Future<Update> crateApiCoordinatorAppStartEnterBackupWallet({
+    required CoordinatorApp that,
+    required String deviceId,
+    required String keyId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(deviceId, serializer);
+          sse_encode_String(keyId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartEnterBackupWalletConstMeta,
+        argValues: [that, deviceId, keyId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartEnterBackupWalletConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_enter_backup_wallet",
+        argNames: ["that", "deviceId", "keyId"],
       );
 
   @override
@@ -687,7 +1379,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 28,
             port: port_,
           );
         },
@@ -709,6 +1401,86 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<Update> crateApiCoordinatorAppStartRequestHeldShares({
+    required CoordinatorApp that,
+    required String deviceId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(deviceId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_update,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiCoordinatorAppStartRequestHeldSharesConstMeta,
+        argValues: [that, deviceId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoordinatorAppStartRequestHeldSharesConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_request_held_shares",
+        argNames: ["that", "deviceId"],
+      );
+
+  @override
+  Future<String> crateApiCoordinatorAppStartRestorationFromHeldShare({
+    required CoordinatorApp that,
+    required String deviceId,
+    required int shareIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoordinatorApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(deviceId, serializer);
+          sse_encode_u_32(shareIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 30,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiCoordinatorAppStartRestorationFromHeldShareConstMeta,
+        argValues: [that, deviceId, shareIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiCoordinatorAppStartRestorationFromHeldShareConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoordinatorApp_start_restoration_from_held_share",
+        argNames: ["that", "deviceId", "shareIndex"],
+      );
+
+  @override
   Future<double> crateApiCoordinatorAppSuggestedFeeRate({
     required CoordinatorApp that,
     required String keyId,
@@ -727,7 +1499,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 31,
             port: port_,
           );
         },
@@ -765,7 +1537,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 32,
             port: port_,
           );
         },
@@ -798,7 +1570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 33,
             port: port_,
           );
         },
@@ -834,7 +1606,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 34,
             port: port_,
           );
         },
@@ -863,7 +1635,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 35,
             port: port_,
           );
         },
@@ -890,7 +1662,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 36,
             port: port_,
           );
         },
@@ -919,7 +1691,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 37,
             port: port_,
           );
         },
@@ -951,7 +1723,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 21,
+              funcId: 38,
               port: port_,
             );
           },
@@ -982,7 +1754,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1091,6 +1863,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BackupShare dco_decode_backup_share(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return BackupShare(
+      deviceId: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      shareIndex: dco_decode_u_32(arr[2]),
+      complete: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
@@ -1112,6 +1898,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_i_64(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -1171,9 +1963,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           txid: dco_decode_String(raw[1]),
           txHex: dco_decode_String(raw[2]),
         );
+      case 2:
+        return Finished_BackupRecorded(
+          keyName: dco_decode_String(raw[1]),
+          shareIndex: dco_decode_u_32(raw[2]),
+        );
+      case 3:
+        return Finished_BackupChecked(
+          keyName: dco_decode_String(raw[1]),
+          shareIndex: dco_decode_u_32(raw[2]),
+        );
+      case 4:
+        return Finished_BackupSaved(
+          restorationId: dco_decode_String(raw[1]),
+          shareIndex: dco_decode_u_32(raw[2]),
+          restorable: dco_decode_bool(raw[3]),
+        );
+      case 5:
+        return Finished_BackupRejected(reason: dco_decode_String(raw[1]));
+      case 6:
+        return Finished_Consolidated(
+          keyName: dco_decode_String(raw[1]),
+          shareIndex: dco_decode_u_32(raw[2]),
+        );
+      case 7:
+        return Finished_HeldShares(
+          deviceName: dco_decode_String(raw[1]),
+          shares: dco_decode_list_held_share_view(raw[2]),
+        );
       default:
         throw Exception("unreachable");
     }
+  }
+
+  @protected
+  HeldShareView dco_decode_held_share_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return HeldShareView(
+      deviceId: dco_decode_String(arr[0]),
+      shareIndex: dco_decode_u_32(arr[1]),
+      keyName: dco_decode_opt_String(arr[2]),
+      threshold: dco_decode_opt_box_autoadd_u_16(arr[3]),
+      network: dco_decode_opt_String(arr[4]),
+      needsConsolidation: dco_decode_bool(arr[5]),
+      knownWallet: dco_decode_opt_String(arr[6]),
+    );
   }
 
   @protected
@@ -1204,15 +2041,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<BackupShare> dco_decode_list_backup_share(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_backup_share).toList();
+  }
+
+  @protected
   List<CameraInfo> dco_decode_list_camera_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_camera_info).toList();
   }
 
   @protected
+  List<HeldShareView> dco_decode_list_held_share_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_held_share_view).toList();
+  }
+
+  @protected
   List<KeyView> dco_decode_list_key_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_key_view).toList();
+  }
+
+  @protected
+  List<PendingConsolidationView> dco_decode_list_pending_consolidation_view(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_pending_consolidation_view)
+        .toList();
   }
 
   @protected
@@ -1225,6 +2084,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  List<RestorationShareView> dco_decode_list_restoration_share_view(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_restoration_share_view)
+        .toList();
+  }
+
+  @protected
+  List<RestorationView> dco_decode_list_restoration_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_restoration_view).toList();
   }
 
   @protected
@@ -1258,9 +2133,62 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_16(raw);
+  }
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
+  }
+
+  @protected
+  PendingConsolidationView dco_decode_pending_consolidation_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return PendingConsolidationView(
+      keyId: dco_decode_String(arr[0]),
+      keyName: dco_decode_String(arr[1]),
+      deviceId: dco_decode_String(arr[2]),
+      deviceName: dco_decode_String(arr[3]),
+      shareIndex: dco_decode_u_32(arr[4]),
+    );
+  }
+
+  @protected
+  RestorationShareView dco_decode_restoration_share_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return RestorationShareView(
+      deviceId: dco_decode_String(arr[0]),
+      deviceName: dco_decode_String(arr[1]),
+      shareIndex: dco_decode_u_32(arr[2]),
+      compatibility: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  RestorationView dco_decode_restoration_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return RestorationView(
+      restorationId: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      network: dco_decode_String(arr[2]),
+      threshold: dco_decode_opt_box_autoadd_u_16(arr[3]),
+      shares: dco_decode_list_restoration_share_view(arr[4]),
+      got: dco_decode_opt_box_autoadd_u_16(arr[5]),
+      incompatible: dco_decode_u_16(arr[6]),
+      restorable: dco_decode_bool(arr[7]),
+    );
   }
 
   @protected
@@ -1460,6 +2388,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BackupShare sse_decode_backup_share(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_deviceId = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_shareIndex = sse_decode_u_32(deserializer);
+    var var_complete = sse_decode_bool(deserializer);
+    return BackupShare(
+      deviceId: var_deviceId,
+      name: var_name,
+      shareIndex: var_shareIndex,
+      complete: var_complete,
+    );
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
@@ -1481,6 +2424,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_64(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_16(deserializer));
   }
 
   @protected
@@ -1536,9 +2485,70 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_txid = sse_decode_String(deserializer);
         var var_txHex = sse_decode_String(deserializer);
         return Finished_Signed(txid: var_txid, txHex: var_txHex);
+      case 2:
+        var var_keyName = sse_decode_String(deserializer);
+        var var_shareIndex = sse_decode_u_32(deserializer);
+        return Finished_BackupRecorded(
+          keyName: var_keyName,
+          shareIndex: var_shareIndex,
+        );
+      case 3:
+        var var_keyName = sse_decode_String(deserializer);
+        var var_shareIndex = sse_decode_u_32(deserializer);
+        return Finished_BackupChecked(
+          keyName: var_keyName,
+          shareIndex: var_shareIndex,
+        );
+      case 4:
+        var var_restorationId = sse_decode_String(deserializer);
+        var var_shareIndex = sse_decode_u_32(deserializer);
+        var var_restorable = sse_decode_bool(deserializer);
+        return Finished_BackupSaved(
+          restorationId: var_restorationId,
+          shareIndex: var_shareIndex,
+          restorable: var_restorable,
+        );
+      case 5:
+        var var_reason = sse_decode_String(deserializer);
+        return Finished_BackupRejected(reason: var_reason);
+      case 6:
+        var var_keyName = sse_decode_String(deserializer);
+        var var_shareIndex = sse_decode_u_32(deserializer);
+        return Finished_Consolidated(
+          keyName: var_keyName,
+          shareIndex: var_shareIndex,
+        );
+      case 7:
+        var var_deviceName = sse_decode_String(deserializer);
+        var var_shares = sse_decode_list_held_share_view(deserializer);
+        return Finished_HeldShares(
+          deviceName: var_deviceName,
+          shares: var_shares,
+        );
       default:
         throw UnimplementedError('');
     }
+  }
+
+  @protected
+  HeldShareView sse_decode_held_share_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_deviceId = sse_decode_String(deserializer);
+    var var_shareIndex = sse_decode_u_32(deserializer);
+    var var_keyName = sse_decode_opt_String(deserializer);
+    var var_threshold = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_network = sse_decode_opt_String(deserializer);
+    var var_needsConsolidation = sse_decode_bool(deserializer);
+    var var_knownWallet = sse_decode_opt_String(deserializer);
+    return HeldShareView(
+      deviceId: var_deviceId,
+      shareIndex: var_shareIndex,
+      keyName: var_keyName,
+      threshold: var_threshold,
+      network: var_network,
+      needsConsolidation: var_needsConsolidation,
+      knownWallet: var_knownWallet,
+    );
   }
 
   @protected
@@ -1577,6 +2587,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<BackupShare> sse_decode_list_backup_share(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BackupShare>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_backup_share(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<CameraInfo> sse_decode_list_camera_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1584,6 +2606,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CameraInfo>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_camera_info(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<HeldShareView> sse_decode_list_held_share_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HeldShareView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_held_share_view(deserializer));
     }
     return ans_;
   }
@@ -1601,6 +2637,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<PendingConsolidationView> sse_decode_list_pending_consolidation_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PendingConsolidationView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_pending_consolidation_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1612,6 +2662,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<RestorationShareView> sse_decode_list_restoration_share_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RestorationShareView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_restoration_share_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<RestorationView> sse_decode_list_restoration_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RestorationView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_restoration_view(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -1673,6 +2751,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_16(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1681,6 +2770,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  PendingConsolidationView sse_decode_pending_consolidation_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_keyId = sse_decode_String(deserializer);
+    var var_keyName = sse_decode_String(deserializer);
+    var var_deviceId = sse_decode_String(deserializer);
+    var var_deviceName = sse_decode_String(deserializer);
+    var var_shareIndex = sse_decode_u_32(deserializer);
+    return PendingConsolidationView(
+      keyId: var_keyId,
+      keyName: var_keyName,
+      deviceId: var_deviceId,
+      deviceName: var_deviceName,
+      shareIndex: var_shareIndex,
+    );
+  }
+
+  @protected
+  RestorationShareView sse_decode_restoration_share_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_deviceId = sse_decode_String(deserializer);
+    var var_deviceName = sse_decode_String(deserializer);
+    var var_shareIndex = sse_decode_u_32(deserializer);
+    var var_compatibility = sse_decode_String(deserializer);
+    return RestorationShareView(
+      deviceId: var_deviceId,
+      deviceName: var_deviceName,
+      shareIndex: var_shareIndex,
+      compatibility: var_compatibility,
+    );
+  }
+
+  @protected
+  RestorationView sse_decode_restoration_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_restorationId = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_network = sse_decode_String(deserializer);
+    var var_threshold = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_shares = sse_decode_list_restoration_share_view(deserializer);
+    var var_got = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_incompatible = sse_decode_u_16(deserializer);
+    var var_restorable = sse_decode_bool(deserializer);
+    return RestorationView(
+      restorationId: var_restorationId,
+      name: var_name,
+      network: var_network,
+      threshold: var_threshold,
+      shares: var_shares,
+      got: var_got,
+      incompatible: var_incompatible,
+      restorable: var_restorable,
+    );
   }
 
   @protected
@@ -1905,6 +3053,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_backup_share(BackupShare self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.deviceId, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_u_32(self.shareIndex, serializer);
+    sse_encode_bool(self.complete, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
@@ -1935,6 +3092,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_16(self, serializer);
   }
 
   @protected
@@ -1982,7 +3145,62 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(1, serializer);
         sse_encode_String(txid, serializer);
         sse_encode_String(txHex, serializer);
+      case Finished_BackupRecorded(
+        keyName: final keyName,
+        shareIndex: final shareIndex,
+      ):
+        sse_encode_i_32(2, serializer);
+        sse_encode_String(keyName, serializer);
+        sse_encode_u_32(shareIndex, serializer);
+      case Finished_BackupChecked(
+        keyName: final keyName,
+        shareIndex: final shareIndex,
+      ):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(keyName, serializer);
+        sse_encode_u_32(shareIndex, serializer);
+      case Finished_BackupSaved(
+        restorationId: final restorationId,
+        shareIndex: final shareIndex,
+        restorable: final restorable,
+      ):
+        sse_encode_i_32(4, serializer);
+        sse_encode_String(restorationId, serializer);
+        sse_encode_u_32(shareIndex, serializer);
+        sse_encode_bool(restorable, serializer);
+      case Finished_BackupRejected(reason: final reason):
+        sse_encode_i_32(5, serializer);
+        sse_encode_String(reason, serializer);
+      case Finished_Consolidated(
+        keyName: final keyName,
+        shareIndex: final shareIndex,
+      ):
+        sse_encode_i_32(6, serializer);
+        sse_encode_String(keyName, serializer);
+        sse_encode_u_32(shareIndex, serializer);
+      case Finished_HeldShares(
+        deviceName: final deviceName,
+        shares: final shares,
+      ):
+        sse_encode_i_32(7, serializer);
+        sse_encode_String(deviceName, serializer);
+        sse_encode_list_held_share_view(shares, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_held_share_view(
+    HeldShareView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.deviceId, serializer);
+    sse_encode_u_32(self.shareIndex, serializer);
+    sse_encode_opt_String(self.keyName, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.threshold, serializer);
+    sse_encode_opt_String(self.network, serializer);
+    sse_encode_bool(self.needsConsolidation, serializer);
+    sse_encode_opt_String(self.knownWallet, serializer);
   }
 
   @protected
@@ -2011,6 +3229,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_backup_share(
+    List<BackupShare> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_backup_share(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_camera_info(
     List<CameraInfo> self,
     SseSerializer serializer,
@@ -2023,11 +3253,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_held_share_view(
+    List<HeldShareView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_held_share_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_key_view(List<KeyView> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_key_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_pending_consolidation_view(
+    List<PendingConsolidationView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_pending_consolidation_view(item, serializer);
     }
   }
 
@@ -2051,6 +3305,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_restoration_share_view(
+    List<RestorationShareView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_restoration_share_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_restoration_view(
+    List<RestorationView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_restoration_view(item, serializer);
+    }
   }
 
   @protected
@@ -2115,6 +3393,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_16(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
     Uint8List? self,
     SseSerializer serializer,
@@ -2125,6 +3413,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_list_prim_u_8_strict(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_pending_consolidation_view(
+    PendingConsolidationView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.keyId, serializer);
+    sse_encode_String(self.keyName, serializer);
+    sse_encode_String(self.deviceId, serializer);
+    sse_encode_String(self.deviceName, serializer);
+    sse_encode_u_32(self.shareIndex, serializer);
+  }
+
+  @protected
+  void sse_encode_restoration_share_view(
+    RestorationShareView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.deviceId, serializer);
+    sse_encode_String(self.deviceName, serializer);
+    sse_encode_u_32(self.shareIndex, serializer);
+    sse_encode_String(self.compatibility, serializer);
+  }
+
+  @protected
+  void sse_encode_restoration_view(
+    RestorationView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.restorationId, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.network, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.threshold, serializer);
+    sse_encode_list_restoration_share_view(self.shares, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.got, serializer);
+    sse_encode_u_16(self.incompatible, serializer);
+    sse_encode_bool(self.restorable, serializer);
   }
 
   @protected
@@ -2229,6 +3558,34 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
         RustLib.instance.api.rust_arc_decrement_strong_count_CoordinatorAppPtr,
   );
 
+  Future<void> addHeldShareToRestoration({
+    required String restorationId,
+    required String deviceId,
+    required int shareIndex,
+  }) => RustLib.instance.api.crateApiCoordinatorAppAddHeldShareToRestoration(
+    that: this,
+    restorationId: restorationId,
+    deviceId: deviceId,
+    shareIndex: shareIndex,
+  );
+
+  Future<void> addHeldShareToWallet({
+    required String keyId,
+    required String deviceId,
+    required int shareIndex,
+  }) => RustLib.instance.api.crateApiCoordinatorAppAddHeldShareToWallet(
+    that: this,
+    keyId: keyId,
+    deviceId: deviceId,
+    shareIndex: shareIndex,
+  );
+
+  /// Every share of the wallet and whether its backup was recorded.
+  Future<List<BackupShare>> backupShares({required String keyId}) => RustLib
+      .instance
+      .api
+      .crateApiCoordinatorAppBackupShares(that: this, keyId: keyId);
+
   /// Start the signing ceremony for the payment from `prepare_send`.
   Future<Update> beginSigning({
     required String keyId,
@@ -2247,8 +3604,23 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
         txHex: txHex,
       );
 
+  Future<void> cancelRestoration({required String restorationId}) =>
+      RustLib.instance.api.crateApiCoordinatorAppCancelRestoration(
+        that: this,
+        restorationId: restorationId,
+      );
+
   Future<void> cancelSession() =>
       RustLib.instance.api.crateApiCoordinatorAppCancelSession(that: this);
+
+  Future<void> deleteRestorationShare({
+    required String restorationId,
+    required String deviceId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppDeleteRestorationShare(
+    that: this,
+    restorationId: restorationId,
+    deviceId: deviceId,
+  );
 
   /// Scan of a signer's "hello" QR.
   Future<SignerInfo> enroll({required List<int> payload}) => RustLib
@@ -2259,11 +3631,34 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
   Future<String> esploraUrl({required String network}) => RustLib.instance.api
       .crateApiCoordinatorAppEsploraUrl(that: this, network: network);
 
+  /// Turn a restoration with enough shares into a wallet. Returns the wallet's key id.
+  Future<String> finishRestoration({required String restorationId}) =>
+      RustLib.instance.api.crateApiCoordinatorAppFinishRestoration(
+        that: this,
+        restorationId: restorationId,
+      );
+
   Future<void> forgetSigner({required String deviceId}) => RustLib.instance.api
       .crateApiCoordinatorAppForgetSigner(that: this, deviceId: deviceId);
 
   Future<List<KeyView>> keys() =>
       RustLib.instance.api.crateApiCoordinatorAppKeys(that: this);
+
+  /// "I already have this backup" — records it without a session.
+  Future<void> markBackupComplete({
+    required String keyId,
+    required int shareIndex,
+  }) => RustLib.instance.api.crateApiCoordinatorAppMarkBackupComplete(
+    that: this,
+    keyId: keyId,
+    shareIndex: shareIndex,
+  );
+
+  /// Signers whose typed-in backup still has to become a normal share.
+  Future<List<PendingConsolidationView>> pendingConsolidations() => RustLib
+      .instance
+      .api
+      .crateApiCoordinatorAppPendingConsolidations(that: this);
 
   /// `amount_sats = None` sends everything.
   Future<SendPreview> prepareSend({
@@ -2288,11 +3683,77 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
       .api
       .crateApiCoordinatorAppRefreshWallet(that: this, keyId: keyId);
 
+  Future<List<RestorationView>> restorations() =>
+      RustLib.instance.api.crateApiCoordinatorAppRestorations(that: this);
+
   Future<void> setEsploraUrl({String? url}) => RustLib.instance.api
       .crateApiCoordinatorAppSetEsploraUrl(that: this, url: url);
 
   Future<List<SignerInfo>> signers() =>
       RustLib.instance.api.crateApiCoordinatorAppSigners(that: this);
+
+  /// Ask a signer to quiz the user on their paper backup.
+  Future<Update> startCheckBackup({
+    required String keyId,
+    required String deviceId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartCheckBackup(
+    that: this,
+    keyId: keyId,
+    deviceId: deviceId,
+  );
+
+  Future<Update> startConsolidate({
+    required String keyId,
+    required String deviceId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartConsolidate(
+    that: this,
+    keyId: keyId,
+    deviceId: deviceId,
+  );
+
+  /// Ask a signer to show its 25-word backup.
+  Future<Update> startDisplayBackup({
+    required String keyId,
+    required String deviceId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartDisplayBackup(
+    that: this,
+    keyId: keyId,
+    deviceId: deviceId,
+  );
+
+  /// Ask a signer to type in a physical backup that starts a new restoration.
+  Future<Update> startEnterBackupNewWallet({
+    required String deviceId,
+    required String name,
+    required String network,
+    int? threshold,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartEnterBackupNewWallet(
+    that: this,
+    deviceId: deviceId,
+    name: name,
+    network: network,
+    threshold: threshold,
+  );
+
+  /// ... that joins a restoration already in progress.
+  Future<Update> startEnterBackupRestoration({
+    required String deviceId,
+    required String restorationId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartEnterBackupRestoration(
+    that: this,
+    deviceId: deviceId,
+    restorationId: restorationId,
+  );
+
+  /// ... that adds a share to a wallet this coordinator already has.
+  Future<Update> startEnterBackupWallet({
+    required String deviceId,
+    required String keyId,
+  }) => RustLib.instance.api.crateApiCoordinatorAppStartEnterBackupWallet(
+    that: this,
+    deviceId: deviceId,
+    keyId: keyId,
+  );
 
   Future<Update> startKeygen({
     required String keyName,
@@ -2306,6 +3767,23 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
     deviceIds: deviceIds,
     network: network,
   );
+
+  /// Ask a signer which shares it holds (result arrives as `Finished.heldShares`).
+  Future<Update> startRequestHeldShares({required String deviceId}) =>
+      RustLib.instance.api.crateApiCoordinatorAppStartRequestHeldShares(
+        that: this,
+        deviceId: deviceId,
+      );
+
+  Future<String> startRestorationFromHeldShare({
+    required String deviceId,
+    required int shareIndex,
+  }) =>
+      RustLib.instance.api.crateApiCoordinatorAppStartRestorationFromHeldShare(
+        that: this,
+        deviceId: deviceId,
+        shareIndex: shareIndex,
+      );
 
   /// Fee rate (sat/vB) for roughly the next `blocks` blocks.
   Future<double> suggestedFeeRate({

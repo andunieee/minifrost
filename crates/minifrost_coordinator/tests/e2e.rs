@@ -5,77 +5,15 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use bitcoin::{secp256k1, Address, Network, Txid};
+use bitcoin::{secp256k1, Network, Txid};
 use minifrost_coordinator::engine::{Coordinator, Finished, Update};
-use minifrost_coordinator::wallet::{self, Amt, Esplora, EsploraUtxo};
-// Compile the signer engine straight into this test instead of linking the signer crate: both
-// FFI crates export the same flutter_rust_bridge symbols, so a binary can't link both.
-#[path = "../../minifrost_signer/src/engine.rs"]
-mod signer_engine;
-use signer_engine::{Prompt, Signer, Step};
+use minifrost_coordinator::wallet::{self, Amt, EsploraUtxo};
 
-/// What a camera would do: feed frames (shuffled, repeated) to the assembler.
-fn scan(frames: &[String]) -> Vec<u8> {
-    let mut asm = qr_transport::Assembler::new();
-    let mut order: Vec<&String> = frames.iter().collect();
-    order.reverse();
-    for f in order.iter().chain(order.iter()) {
-        if let Some(bytes) = asm.push(f).unwrap().complete {
-            return bytes;
-        }
-    }
-    panic!("frames never completed");
-}
-
-struct Chain(BTreeMap<String, Vec<EsploraUtxo>>);
-impl Esplora for Chain {
-    fn address_used(&self, a: &Address) -> Result<bool, String> {
-        Ok(self.0.contains_key(&a.to_string()))
-    }
-    fn address_utxos(&self, a: &Address) -> Result<Vec<EsploraUtxo>, String> {
-        Ok(self.0.get(&a.to_string()).cloned().unwrap_or_default())
-    }
-    fn fee_rate(&self, _: u32) -> Result<f64, String> {
-        Ok(3.0)
-    }
-    fn broadcast(&self, _: &str) -> Result<String, String> {
-        unreachable!()
-    }
-}
-
-fn frames_of(update: &Update) -> Vec<String> {
-    update.broadcast.as_ref().expect("a broadcast").frames.clone()
-}
-
-/// Run one signer through a coordinator broadcast; `approve` decides whether the user taps OK.
-fn signer_step(s: &mut Signer, frames: &[String]) -> Step {
-    s.receive(&scan(frames)).unwrap().step
-}
-
-fn approve_to_reply(s: &mut Signer) -> Vec<String> {
-    let r = s.approve().unwrap();
-    match r.step {
-        Step::Reply { frames, .. } => frames,
-        other => panic!("expected reply, got {other:?}"),
-    }
-}
-
-/// Nonce release and partial signing burn nonces: the snapshot must come with the reply.
-fn approve_persisting(s: &mut Signer) -> Vec<String> {
-    let r = s.approve().unwrap();
-    assert!(r.snapshot.is_some(), "burned nonces must be persisted before the QR is shown");
-    match r.step {
-        Step::Reply { frames, .. } => frames,
-        other => panic!("expected reply, got {other:?}"),
-    }
-}
-
-fn auto_reply(s: &mut Signer, frames: &[String]) -> Vec<String> {
-    match signer_step(s, frames) {
-        Step::Reply { frames, .. } => frames,
-        other => panic!("expected automatic reply, got {other:?}"),
-    }
-}
+mod common;
+use common::{
+    approve_persisting, approve_to_reply, auto_reply, frames_of, run_keygen, scan, signer_step, Chain, Prompt,
+    Signer, Step,
+};
 
 #[test]
 fn keygen_and_sign_over_qr_only() {
@@ -272,36 +210,4 @@ fn signer_refuses_swapped_transaction() {
         let err = s.receive(&scan(&bundle)).unwrap_err();
         assert!(err.contains("NOT the transaction you reviewed"), "{err}");
     }
-}
-
-fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update) -> Update {
-    let mut up = first;
-    let b1 = frames_of(&up);
-    let replies: Vec<_> = signers
-        .iter_mut()
-        .map(|s| {
-            assert!(matches!(signer_step(s, &b1), Step::Confirm(Prompt::JoinKeygen { .. })));
-            approve_to_reply(s)
-        })
-        .collect();
-    for r in &replies {
-        up = coord.receive(&scan(r)).unwrap();
-    }
-    let b2 = frames_of(&up);
-    let replies: Vec<_> = signers.iter_mut().map(|s| auto_reply(s, &b2)).collect();
-    for r in &replies {
-        up = coord.receive(&scan(r)).unwrap();
-    }
-    let b3 = frames_of(&up);
-    let acks: Vec<_> = signers
-        .iter_mut()
-        .map(|s| {
-            assert!(matches!(signer_step(s, &b3), Step::Confirm(Prompt::VerifyKeygen { .. })));
-            approve_to_reply(s)
-        })
-        .collect();
-    for a in &acks {
-        up = coord.receive(&scan(a)).unwrap();
-    }
-    up
 }

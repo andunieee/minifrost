@@ -12,6 +12,8 @@ members = [
 bincode = { version = "2.0.1", features = ["serde", "alloc", "derive"], default-features = false }
 serde = { version = "1", features = ["derive", "alloc"], default-features = false }
 frostsnap_core = { git = "https://github.com/frostsnap/frostsnap", rev = "14446c811fa0c86714a2080ef7a107afea96e863", default-features = false }
+# Same rev as frostsnap_core. The 25-word share backup format; `cli` (the default) is not wanted.
+frost_backup = { git = "https://github.com/frostsnap/frostsnap", rev = "14446c811fa0c86714a2080ef7a107afea96e863", default-features = false }
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 proptest = "=1.6.0"
 rand_chacha = { version = "0.3", default-features = false }

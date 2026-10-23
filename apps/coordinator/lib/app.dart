@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'pages/restore.dart';
 import 'pages/settings.dart';
 import 'pages/signers.dart';
 import 'pages/wallets.dart';
@@ -35,6 +36,7 @@ class _ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final pages = [
       WalletsPage(app: widget.app),
+      RestorePage(app: widget.app),
       SignersPage(app: widget.app),
       SettingsPage(app: widget.app),
     ];
@@ -46,6 +48,7 @@ class _ShellState extends State<Shell> {
           labelType: NavigationRailLabelType.all,
           destinations: const [
             NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: Text('Wallets')),
+            NavigationRailDestination(icon: Icon(Icons.history), label: Text('Restore')),
             NavigationRailDestination(icon: Icon(Icons.shield_outlined), label: Text('Signers')),
             NavigationRailDestination(icon: Icon(Icons.settings_outlined), label: Text('Settings')),
           ],

@@ -12,6 +12,7 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 [dependencies]
 flutter_rust_bridge = "=2.13.0"
 frostsnap_core = { workspace = true, features = ["std"] }
+frost_backup = { workspace = true, features = ["bincode"] }
 minifrost_wire = { path = "../minifrost_wire" }
 qr_transport = { path = "../qr_transport" }
 bincode = { workspace = true }

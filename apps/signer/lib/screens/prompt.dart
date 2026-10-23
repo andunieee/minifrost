@@ -52,6 +52,11 @@ class _PromptScreenState extends State<PromptScreen> {
           _tx(field0, 'Approving produces your partial signature. This cannot be undone.'),
           'Sign'
         ),
+      Prompt_DisplayBackup(:final keyName, :final threshold, :final shareIndex, :final words) => (
+          'Secret backup',
+          _backup(context, keyName, threshold, shareIndex, words),
+          'I wrote it down'
+        ),
     };
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -75,6 +80,45 @@ class _PromptScreenState extends State<PromptScreen> {
         ]),
       ]),
     );
+  }
+
+  Widget _backup(BuildContext c, String name, int threshold, int shareIndex, List<String> words) {
+    final scheme = Theme.of(c).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(8)),
+        child: Row(children: [
+          Icon(Icons.warning_amber_rounded, color: scheme.onErrorContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'This backup is secret. Anyone holding $threshold of the wallet’s backups can take all of its bitcoin. '
+              'Write the words down on paper, in order. Do not photograph or type them anywhere.',
+              style: TextStyle(color: scheme.onErrorContainer, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      Text('Wallet “$name” · $threshold signatures needed', style: Theme.of(c).textTheme.bodyLarge),
+      const SizedBox(height: 4),
+      Text('Key #$shareIndex', style: Theme.of(c).textTheme.headlineMedium),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (var i = 0; i < words.length; i++)
+          SizedBox(
+            width: 150,
+            child: Row(children: [
+              SizedBox(width: 28, child: Text('${i + 1}', textAlign: TextAlign.right, style: TextStyle(color: scheme.outline))),
+              const SizedBox(width: 8),
+              Text(words[i], style: const TextStyle(fontFamily: 'monospace', fontSize: 18, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+      ]),
+      const SizedBox(height: 12),
+      const Text('Also note the key number, the threshold and the wallet name next to the words.'),
+    ]);
   }
 
   Widget _text(String s) => Padding(padding: const EdgeInsets.all(8), child: Text(s, style: const TextStyle(fontSize: 16)));

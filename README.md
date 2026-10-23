@@ -54,11 +54,49 @@ Frostsnap pre-shares batches of nonces (a nonce stream) so that, after the first
 returns "no new nonces needed" and the nonces already held by the coordinator are used. The round
 trip still happens, which is what binds the transaction review to the signature.
 
+### Backups and restoration
+
+These follow frostsnap's flows (`frostsnap_core`'s restoration state machine, with the same
+messages); only the transport and the screens are minifrost's. A share's backup is **25 BIP39 words
+plus a key number**. The words carry a checksum tied to the wallet's public polynomial, so a backup
+typed into the wrong wallet is caught.
+
+**Backup** (after key generation every share is "not backed up" until its signer confirmed it)
+1. Coordinator broadcasts `DisplayBackup` to one signer. The signer decrypts its own share and
+   shows the 25 words with the key number, threshold and wallet name; the user writes them down and
+   confirms → `BackupRecorded` QR → the coordinator marks that share backed up. "Mark as backed up"
+   does the same by hand.
+2. **Check** (`CheckBackup`): the signer quizzes the user with 26 multiple-choice questions (key
+   number, then each word; the wrong options are the closest BIP39 words) answered from the paper.
+   Wrong answers change nothing. Passing → `BackupChecked` QR.
+
+**Restoration from physical backups** (new coordinator and/or new phones)
+1. Coordinator creates a restoration (wallet name, network, optional threshold) and broadcasts
+   `EnterPhysicalBackup` to a signer. The user types the key number and 25 words; the signer checks
+   the word checksums and replies with the share's public *image* only.
+2. The coordinator checks it fits (not a share it already has, not a different wallet's), then
+   broadcasts `SavePhysicalBackup` → the signer keeps the backup and replies `PhysicalSaved`.
+3. Repeat with other signers until the shares determine the key (`Restore wallet` becomes available).
+   `finish_restoration` creates the wallet, with the same addresses as before.
+4. **Consolidation**: each signer that was restored from a typed-in backup is asked (`Consolidate`)
+   to turn it into a normal share of the wallet; it does so by itself and replies. Until then it
+   cannot sign. The same path adds a replaced signer to a wallet the coordinator already has.
+
+**Restoration from signers** (the coordinator was lost, the signers still hold their shares): the
+coordinator broadcasts `RequestHeldShares`, each signer answers with the shares it holds (public
+images, wallet name, threshold), and the user picks them into a restoration. A signer that rejoins
+an existing wallet this way needs no consolidation.
+
+The coordinator's own file is **not** needed to recover funds: its key only protects public wallet
+data, and the signers' share encryption ignores it. What *is* needed is a threshold of backups (or
+signer phones), and knowing the wallet's name, network and threshold to check the result against.
+
 ## Where the signer keeps its secret
 
 - One 32-byte random `device_secret`; the identity key, the share-encryption key and the nonce
-  seeds are all HMAC-derived from it. The share is encrypted under a key that also needs a value
-  only the coordinator holds, so the phone's storage alone cannot sign.
+  seeds are all HMAC-derived from it. `frostsnap_core` always encrypts the share, but the key is
+  derived from `device_secret` alone (the coordinator's decryption contribution is ignored), so it
+  is effectively plaintext: the phone's storage alone can sign.
 - Rust hands the app a snapshot, which `lib/vault.dart` writes **unencrypted** to a file in the
   app-private directory (atomic temp file + rename). Backups and device transfer are disabled;
   `FLAG_SECURE` blocks screenshots. Minimum Android is 7 (API 24). No screen lock, biometrics or
@@ -99,8 +137,15 @@ The release APK is signed with the debug key; set up your own signing config bef
 
 - Signer state mid-keygen is in memory only: if the app is killed during a key generation, redo
   that keygen. Finished keys, nonce state and the "reviewed transaction" survive restarts.
-- If the phone is wiped, its share is gone (that is what the
-  threshold is for). Frostsnap's backup / restoration flows are not ported.
+- If a phone is wiped, its share is gone unless its 25-word backup was written down (that, and the
+  threshold, is what backups are for). The backup words are shown on the phone's screen: nothing
+  stops someone looking over the shoulder, and a typed-in backup sits in the signer's plain file
+  until it is consolidated. A backup typed in but not yet saved is kept in memory only, so an app
+  restart in the middle of entering one means entering it again.
+- Restoration state on the coordinator (shares gathered so far) is persisted; which shares each
+  signer *reported* holding is not, so ask the signer again after a restart.
+- The `CheckBackup` quiz compares against the signer's own share, so it proves the paper matches
+  *that signer*, not that the wallet itself is recoverable.
 - Wallet: single taproot account, largest-first coin selection, one signing session at a time,
   gap limit 10. Change addresses are not reserved across concurrent drafts.
 - The Linux desktop signer is for dev/testing only: the webcam replaces the phone camera

@@ -56,14 +56,15 @@ extension PromptPatterns on Prompt {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Prompt_JoinKeygen value)?  joinKeygen,TResult Function( Prompt_VerifyKeygen value)?  verifyKeygen,TResult Function( Prompt_ReviewTransaction value)?  reviewTransaction,TResult Function( Prompt_SignTransaction value)?  signTransaction,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Prompt_JoinKeygen value)?  joinKeygen,TResult Function( Prompt_VerifyKeygen value)?  verifyKeygen,TResult Function( Prompt_ReviewTransaction value)?  reviewTransaction,TResult Function( Prompt_SignTransaction value)?  signTransaction,TResult Function( Prompt_DisplayBackup value)?  displayBackup,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen() when joinKeygen != null:
 return joinKeygen(_that);case Prompt_VerifyKeygen() when verifyKeygen != null:
 return verifyKeygen(_that);case Prompt_ReviewTransaction() when reviewTransaction != null:
 return reviewTransaction(_that);case Prompt_SignTransaction() when signTransaction != null:
-return signTransaction(_that);case _:
+return signTransaction(_that);case Prompt_DisplayBackup() when displayBackup != null:
+return displayBackup(_that);case _:
   return orElse();
 
 }
@@ -81,14 +82,15 @@ return signTransaction(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Prompt_JoinKeygen value)  joinKeygen,required TResult Function( Prompt_VerifyKeygen value)  verifyKeygen,required TResult Function( Prompt_ReviewTransaction value)  reviewTransaction,required TResult Function( Prompt_SignTransaction value)  signTransaction,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Prompt_JoinKeygen value)  joinKeygen,required TResult Function( Prompt_VerifyKeygen value)  verifyKeygen,required TResult Function( Prompt_ReviewTransaction value)  reviewTransaction,required TResult Function( Prompt_SignTransaction value)  signTransaction,required TResult Function( Prompt_DisplayBackup value)  displayBackup,}){
 final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen():
 return joinKeygen(_that);case Prompt_VerifyKeygen():
 return verifyKeygen(_that);case Prompt_ReviewTransaction():
 return reviewTransaction(_that);case Prompt_SignTransaction():
-return signTransaction(_that);}
+return signTransaction(_that);case Prompt_DisplayBackup():
+return displayBackup(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -102,14 +104,15 @@ return signTransaction(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Prompt_JoinKeygen value)?  joinKeygen,TResult? Function( Prompt_VerifyKeygen value)?  verifyKeygen,TResult? Function( Prompt_ReviewTransaction value)?  reviewTransaction,TResult? Function( Prompt_SignTransaction value)?  signTransaction,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Prompt_JoinKeygen value)?  joinKeygen,TResult? Function( Prompt_VerifyKeygen value)?  verifyKeygen,TResult? Function( Prompt_ReviewTransaction value)?  reviewTransaction,TResult? Function( Prompt_SignTransaction value)?  signTransaction,TResult? Function( Prompt_DisplayBackup value)?  displayBackup,}){
 final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen() when joinKeygen != null:
 return joinKeygen(_that);case Prompt_VerifyKeygen() when verifyKeygen != null:
 return verifyKeygen(_that);case Prompt_ReviewTransaction() when reviewTransaction != null:
 return reviewTransaction(_that);case Prompt_SignTransaction() when signTransaction != null:
-return signTransaction(_that);case _:
+return signTransaction(_that);case Prompt_DisplayBackup() when displayBackup != null:
+return displayBackup(_that);case _:
   return null;
 
 }
@@ -126,13 +129,14 @@ return signTransaction(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String keyName,  int threshold,  int nSigners,  String network)?  joinKeygen,TResult Function( String keyName,  int threshold,  int nSigners,  String checkCode)?  verifyKeygen,TResult Function( TxSummary field0)?  reviewTransaction,TResult Function( TxSummary field0)?  signTransaction,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String keyName,  int threshold,  int nSigners,  String network)?  joinKeygen,TResult Function( String keyName,  int threshold,  int nSigners,  String checkCode)?  verifyKeygen,TResult Function( TxSummary field0)?  reviewTransaction,TResult Function( TxSummary field0)?  signTransaction,TResult Function( String keyName,  int threshold,  int shareIndex,  List<String> words)?  displayBackup,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen() when joinKeygen != null:
 return joinKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.network);case Prompt_VerifyKeygen() when verifyKeygen != null:
 return verifyKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.checkCode);case Prompt_ReviewTransaction() when reviewTransaction != null:
 return reviewTransaction(_that.field0);case Prompt_SignTransaction() when signTransaction != null:
-return signTransaction(_that.field0);case _:
+return signTransaction(_that.field0);case Prompt_DisplayBackup() when displayBackup != null:
+return displayBackup(_that.keyName,_that.threshold,_that.shareIndex,_that.words);case _:
   return orElse();
 
 }
@@ -150,13 +154,14 @@ return signTransaction(_that.field0);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String keyName,  int threshold,  int nSigners,  String network)  joinKeygen,required TResult Function( String keyName,  int threshold,  int nSigners,  String checkCode)  verifyKeygen,required TResult Function( TxSummary field0)  reviewTransaction,required TResult Function( TxSummary field0)  signTransaction,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String keyName,  int threshold,  int nSigners,  String network)  joinKeygen,required TResult Function( String keyName,  int threshold,  int nSigners,  String checkCode)  verifyKeygen,required TResult Function( TxSummary field0)  reviewTransaction,required TResult Function( TxSummary field0)  signTransaction,required TResult Function( String keyName,  int threshold,  int shareIndex,  List<String> words)  displayBackup,}) {final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen():
 return joinKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.network);case Prompt_VerifyKeygen():
 return verifyKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.checkCode);case Prompt_ReviewTransaction():
 return reviewTransaction(_that.field0);case Prompt_SignTransaction():
-return signTransaction(_that.field0);}
+return signTransaction(_that.field0);case Prompt_DisplayBackup():
+return displayBackup(_that.keyName,_that.threshold,_that.shareIndex,_that.words);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -170,13 +175,14 @@ return signTransaction(_that.field0);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String keyName,  int threshold,  int nSigners,  String network)?  joinKeygen,TResult? Function( String keyName,  int threshold,  int nSigners,  String checkCode)?  verifyKeygen,TResult? Function( TxSummary field0)?  reviewTransaction,TResult? Function( TxSummary field0)?  signTransaction,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String keyName,  int threshold,  int nSigners,  String network)?  joinKeygen,TResult? Function( String keyName,  int threshold,  int nSigners,  String checkCode)?  verifyKeygen,TResult? Function( TxSummary field0)?  reviewTransaction,TResult? Function( TxSummary field0)?  signTransaction,TResult? Function( String keyName,  int threshold,  int shareIndex,  List<String> words)?  displayBackup,}) {final _that = this;
 switch (_that) {
 case Prompt_JoinKeygen() when joinKeygen != null:
 return joinKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.network);case Prompt_VerifyKeygen() when verifyKeygen != null:
 return verifyKeygen(_that.keyName,_that.threshold,_that.nSigners,_that.checkCode);case Prompt_ReviewTransaction() when reviewTransaction != null:
 return reviewTransaction(_that.field0);case Prompt_SignTransaction() when signTransaction != null:
-return signTransaction(_that.field0);case _:
+return signTransaction(_that.field0);case Prompt_DisplayBackup() when displayBackup != null:
+return displayBackup(_that.keyName,_that.threshold,_that.shareIndex,_that.words);case _:
   return null;
 
 }
@@ -469,6 +475,88 @@ as TxSummary,
 }
 
 /// @nodoc
+
+
+class Prompt_DisplayBackup extends Prompt {
+  const Prompt_DisplayBackup({required this.keyName, required this.threshold, required this.shareIndex, required  List<String> words}): _words = words,super._();
+  
+
+ final  String keyName;
+ final  int threshold;
+ final  int shareIndex;
+/// The 25 BIP39 words, in order.
+ final  List<String> _words;
+/// The 25 BIP39 words, in order.
+ List<String> get words {
+  if (_words is EqualUnmodifiableListView) return _words;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_words);
+}
+
+
+/// Create a copy of Prompt
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$Prompt_DisplayBackupCopyWith<Prompt_DisplayBackup> get copyWith => _$Prompt_DisplayBackupCopyWithImpl<Prompt_DisplayBackup>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Prompt_DisplayBackup&&(identical(other.keyName, keyName) || other.keyName == keyName)&&(identical(other.threshold, threshold) || other.threshold == threshold)&&(identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex)&&const DeepCollectionEquality().equals(other.words, _words));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,keyName,threshold,shareIndex,const DeepCollectionEquality().hash(_words));
+}
+
+@override
+String toString() {
+    return 'Prompt.displayBackup(keyName: $keyName, threshold: $threshold, shareIndex: $shareIndex, words: $words)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $Prompt_DisplayBackupCopyWith<$Res> implements $PromptCopyWith<$Res> {
+  factory $Prompt_DisplayBackupCopyWith(Prompt_DisplayBackup value, $Res Function(Prompt_DisplayBackup) _then) = _$Prompt_DisplayBackupCopyWithImpl;
+@useResult
+$Res call({
+ String keyName, int threshold, int shareIndex, List<String> words
+});
+
+
+
+
+}
+/// @nodoc
+class _$Prompt_DisplayBackupCopyWithImpl<$Res>
+    implements $Prompt_DisplayBackupCopyWith<$Res> {
+  _$Prompt_DisplayBackupCopyWithImpl(this._self, this._then);
+
+  final Prompt_DisplayBackup _self;
+  final $Res Function(Prompt_DisplayBackup) _then;
+
+/// Create a copy of Prompt
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? keyName = null,Object? threshold = null,Object? shareIndex = null,Object? words = null,}) {
+  return _then(Prompt_DisplayBackup(
+keyName: null == keyName ? _self.keyName : keyName // ignore: cast_nullable_to_non_nullable
+as String,threshold: null == threshold ? _self.threshold : threshold // ignore: cast_nullable_to_non_nullable
+as int,shareIndex: null == shareIndex ? _self.shareIndex : shareIndex // ignore: cast_nullable_to_non_nullable
+as int,words: null == words ? _self._words : words // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$Step {
 
 
@@ -512,14 +600,16 @@ extension StepPatterns on Step {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Step_Ignored value)?  ignored,TResult Function( Step_Confirm value)?  confirm,TResult Function( Step_Reply value)?  reply,TResult Function( Step_Done value)?  done,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Step_Ignored value)?  ignored,TResult Function( Step_Confirm value)?  confirm,TResult Function( Step_Reply value)?  reply,TResult Function( Step_Done value)?  done,TResult Function( Step_EnterBackup value)?  enterBackup,TResult Function( Step_CheckBackup value)?  checkBackup,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that);case Step_Confirm() when confirm != null:
 return confirm(_that);case Step_Reply() when reply != null:
 return reply(_that);case Step_Done() when done != null:
-return done(_that);case _:
+return done(_that);case Step_EnterBackup() when enterBackup != null:
+return enterBackup(_that);case Step_CheckBackup() when checkBackup != null:
+return checkBackup(_that);case _:
   return orElse();
 
 }
@@ -537,14 +627,16 @@ return done(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Step_Ignored value)  ignored,required TResult Function( Step_Confirm value)  confirm,required TResult Function( Step_Reply value)  reply,required TResult Function( Step_Done value)  done,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Step_Ignored value)  ignored,required TResult Function( Step_Confirm value)  confirm,required TResult Function( Step_Reply value)  reply,required TResult Function( Step_Done value)  done,required TResult Function( Step_EnterBackup value)  enterBackup,required TResult Function( Step_CheckBackup value)  checkBackup,}){
 final _that = this;
 switch (_that) {
 case Step_Ignored():
 return ignored(_that);case Step_Confirm():
 return confirm(_that);case Step_Reply():
 return reply(_that);case Step_Done():
-return done(_that);}
+return done(_that);case Step_EnterBackup():
+return enterBackup(_that);case Step_CheckBackup():
+return checkBackup(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -558,14 +650,16 @@ return done(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Step_Ignored value)?  ignored,TResult? Function( Step_Confirm value)?  confirm,TResult? Function( Step_Reply value)?  reply,TResult? Function( Step_Done value)?  done,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Step_Ignored value)?  ignored,TResult? Function( Step_Confirm value)?  confirm,TResult? Function( Step_Reply value)?  reply,TResult? Function( Step_Done value)?  done,TResult? Function( Step_EnterBackup value)?  enterBackup,TResult? Function( Step_CheckBackup value)?  checkBackup,}){
 final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that);case Step_Confirm() when confirm != null:
 return confirm(_that);case Step_Reply() when reply != null:
 return reply(_that);case Step_Done() when done != null:
-return done(_that);case _:
+return done(_that);case Step_EnterBackup() when enterBackup != null:
+return enterBackup(_that);case Step_CheckBackup() when checkBackup != null:
+return checkBackup(_that);case _:
   return null;
 
 }
@@ -582,13 +676,15 @@ return done(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what)?  reply,TResult Function( String message)?  done,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what)?  reply,TResult Function( String message)?  done,TResult Function()?  enterBackup,TResult Function( String keyName)?  checkBackup,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
 return reply(_that.frames,_that.what);case Step_Done() when done != null:
-return done(_that.message);case _:
+return done(_that.message);case Step_EnterBackup() when enterBackup != null:
+return enterBackup();case Step_CheckBackup() when checkBackup != null:
+return checkBackup(_that.keyName);case _:
   return orElse();
 
 }
@@ -606,13 +702,15 @@ return done(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what)  reply,required TResult Function( String message)  done,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what)  reply,required TResult Function( String message)  done,required TResult Function()  enterBackup,required TResult Function( String keyName)  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored():
 return ignored(_that.reason);case Step_Confirm():
 return confirm(_that.field0);case Step_Reply():
 return reply(_that.frames,_that.what);case Step_Done():
-return done(_that.message);}
+return done(_that.message);case Step_EnterBackup():
+return enterBackup();case Step_CheckBackup():
+return checkBackup(_that.keyName);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -626,13 +724,15 @@ return done(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what)?  reply,TResult? Function( String message)?  done,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what)?  reply,TResult? Function( String message)?  done,TResult? Function()?  enterBackup,TResult? Function( String keyName)?  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
 return reply(_that.frames,_that.what);case Step_Done() when done != null:
-return done(_that.message);case _:
+return done(_that.message);case Step_EnterBackup() when enterBackup != null:
+return enterBackup();case Step_CheckBackup() when checkBackup != null:
+return checkBackup(_that.keyName);case _:
   return null;
 
 }
@@ -922,6 +1022,106 @@ class _$Step_DoneCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
   return _then(Step_Done(
 message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class Step_EnterBackup extends Step {
+  const Step_EnterBackup(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Step_EnterBackup);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'Step.enterBackup()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class Step_CheckBackup extends Step {
+  const Step_CheckBackup({required this.keyName}): super._();
+  
+
+ final  String keyName;
+
+/// Create a copy of Step
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$Step_CheckBackupCopyWith<Step_CheckBackup> get copyWith => _$Step_CheckBackupCopyWithImpl<Step_CheckBackup>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Step_CheckBackup&&(identical(other.keyName, keyName) || other.keyName == keyName));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,keyName);
+}
+
+@override
+String toString() {
+    return 'Step.checkBackup(keyName: $keyName)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $Step_CheckBackupCopyWith<$Res> implements $StepCopyWith<$Res> {
+  factory $Step_CheckBackupCopyWith(Step_CheckBackup value, $Res Function(Step_CheckBackup) _then) = _$Step_CheckBackupCopyWithImpl;
+@useResult
+$Res call({
+ String keyName
+});
+
+
+
+
+}
+/// @nodoc
+class _$Step_CheckBackupCopyWithImpl<$Res>
+    implements $Step_CheckBackupCopyWith<$Res> {
+  _$Step_CheckBackupCopyWithImpl(this._self, this._then);
+
+  final Step_CheckBackup _self;
+  final $Res Function(Step_CheckBackup) _then;
+
+/// Create a copy of Step
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? keyName = null,}) {
+  return _then(Step_CheckBackup(
+keyName: null == keyName ? _self.keyName : keyName // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

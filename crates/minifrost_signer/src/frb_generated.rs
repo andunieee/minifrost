@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1895375167;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1187087941;
 
 // Section: executor
 
@@ -397,6 +397,156 @@ fn wire__crate__api__SignerApp_name_impl(
         },
     )
 }
+fn wire__crate__api__SignerApp_pending_backups_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SignerApp_pending_backups",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SignerApp>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        Ok::<_, ()>(crate::api::SignerApp::pending_backups(&*api_that_guard))?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__SignerApp_quiz_answer_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SignerApp_quiz_answer",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SignerApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_choice = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::SignerApp::quiz_answer(&*api_that_guard, api_choice)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__SignerApp_quiz_question_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SignerApp_quiz_question",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SignerApp>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::SignerApp::quiz_question(&*api_that_guard)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__SignerApp_receive_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -544,6 +694,91 @@ fn wire__crate__api__SignerApp_snapshot_impl(
                     std::result::Result::Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__SignerApp_submit_backup_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SignerApp_submit_backup",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SignerApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_share_index = <u32>::sse_decode(&mut deserializer);
+            let api_words = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::SignerApp::submit_backup(
+                        &*api_that_guard,
+                        api_share_index,
+                        api_words,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__backup_word_suggestions_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "backup_word_suggestions",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_prefix = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::backup_word_suggestions(api_prefix))?;
+                std::result::Result::Ok(output_ok)
+            })())
         },
     )
 }
@@ -984,6 +1219,18 @@ impl SseDecode for Vec<crate::engine::OutputSummary> {
     }
 }
 
+impl SseDecode for Vec<crate::engine::PendingBackup> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::engine::PendingBackup>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1018,6 +1265,39 @@ impl SseDecode for Option<f64> {
     }
 }
 
+impl SseDecode for Option<crate::engine::QuizQuestion> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::engine::QuizQuestion>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::engine::StepResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::engine::StepResult>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<u16> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u16>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1039,6 +1319,20 @@ impl SseDecode for crate::engine::OutputSummary {
             address: var_address,
             amount_sats: var_amountSats,
             own_label: var_ownLabel,
+        };
+    }
+}
+
+impl SseDecode for crate::engine::PendingBackup {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_keyName = <Option<String>>::sse_decode(deserializer);
+        let mut var_threshold = <Option<u16>>::sse_decode(deserializer);
+        let mut var_shareIndex = <u32>::sse_decode(deserializer);
+        return crate::engine::PendingBackup {
+            key_name: var_keyName,
+            threshold: var_threshold,
+            share_index: var_shareIndex,
         };
     }
 }
@@ -1080,10 +1374,52 @@ impl SseDecode for crate::engine::Prompt {
                 let mut var_field0 = <crate::engine::TxSummary>::sse_decode(deserializer);
                 return crate::engine::Prompt::SignTransaction(var_field0);
             }
+            4 => {
+                let mut var_keyName = <String>::sse_decode(deserializer);
+                let mut var_threshold = <u16>::sse_decode(deserializer);
+                let mut var_shareIndex = <u32>::sse_decode(deserializer);
+                let mut var_words = <Vec<String>>::sse_decode(deserializer);
+                return crate::engine::Prompt::DisplayBackup {
+                    key_name: var_keyName,
+                    threshold: var_threshold,
+                    share_index: var_shareIndex,
+                    words: var_words,
+                };
+            }
             _ => {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseDecode for crate::engine::QuizAnswer {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_correct = <bool>::sse_decode(deserializer);
+        let mut var_next = <Option<crate::engine::QuizQuestion>>::sse_decode(deserializer);
+        let mut var_done = <Option<crate::engine::StepResult>>::sse_decode(deserializer);
+        return crate::engine::QuizAnswer {
+            correct: var_correct,
+            next: var_next,
+            done: var_done,
+        };
+    }
+}
+
+impl SseDecode for crate::engine::QuizQuestion {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_options = <Vec<String>>::sse_decode(deserializer);
+        let mut var_screen = <u32>::sse_decode(deserializer);
+        let mut var_total = <u32>::sse_decode(deserializer);
+        return crate::engine::QuizQuestion {
+            title: var_title,
+            options: var_options,
+            screen: var_screen,
+            total: var_total,
+        };
     }
 }
 
@@ -1128,6 +1464,15 @@ impl SseDecode for crate::engine::Step {
                 let mut var_message = <String>::sse_decode(deserializer);
                 return crate::engine::Step::Done {
                     message: var_message,
+                };
+            }
+            4 => {
+                return crate::engine::Step::EnterBackup;
+            }
+            5 => {
+                let mut var_keyName = <String>::sse_decode(deserializer);
+                return crate::engine::Step::CheckBackup {
+                    key_name: var_keyName,
                 };
             }
             _ => {
@@ -1231,16 +1576,20 @@ fn pde_ffi_dispatcher_primary_impl(
         5 => wire__crate__api__SignerApp_hello_frames_impl(port, ptr, rust_vec_len, data_len),
         6 => wire__crate__api__SignerApp_keys_impl(port, ptr, rust_vec_len, data_len),
         7 => wire__crate__api__SignerApp_name_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__SignerApp_receive_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__SignerApp_reject_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__SignerApp_snapshot_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__load_signer_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__new_signer_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__SignerApp_pending_backups_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__SignerApp_quiz_answer_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__SignerApp_quiz_question_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__SignerApp_receive_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__SignerApp_reject_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__SignerApp_snapshot_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__SignerApp_submit_backup_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__load_signer_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__new_signer_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1253,6 +1602,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
+        15 => wire__crate__api__backup_word_suggestions_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1375,6 +1725,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::engine::OutputSummary>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::engine::PendingBackup {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.key_name.into_into_dart().into_dart(),
+            self.threshold.into_into_dart().into_dart(),
+            self.share_index.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::PendingBackup {}
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::PendingBackup>
+    for crate::engine::PendingBackup
+{
+    fn into_into_dart(self) -> crate::engine::PendingBackup {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::engine::Prompt {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -1410,6 +1779,19 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Prompt {
             crate::engine::Prompt::SignTransaction(field0) => {
                 [3.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
+            crate::engine::Prompt::DisplayBackup {
+                key_name,
+                threshold,
+                share_index,
+                words,
+            } => [
+                4.into_dart(),
+                key_name.into_into_dart().into_dart(),
+                threshold.into_into_dart().into_dart(),
+                share_index.into_into_dart().into_dart(),
+                words.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
             _ => {
                 unimplemented!("");
             }
@@ -1419,6 +1801,43 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Prompt {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::Prompt {}
 impl flutter_rust_bridge::IntoIntoDart<crate::engine::Prompt> for crate::engine::Prompt {
     fn into_into_dart(self) -> crate::engine::Prompt {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::engine::QuizAnswer {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.correct.into_into_dart().into_dart(),
+            self.next.into_into_dart().into_dart(),
+            self.done.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::QuizAnswer {}
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::QuizAnswer> for crate::engine::QuizAnswer {
+    fn into_into_dart(self) -> crate::engine::QuizAnswer {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::engine::QuizQuestion {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.title.into_into_dart().into_dart(),
+            self.options.into_into_dart().into_dart(),
+            self.screen.into_into_dart().into_dart(),
+            self.total.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::QuizQuestion {}
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::QuizQuestion>
+    for crate::engine::QuizQuestion
+{
+    fn into_into_dart(self) -> crate::engine::QuizQuestion {
         self
     }
 }
@@ -1458,6 +1877,10 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Step {
             .into_dart(),
             crate::engine::Step::Done { message } => {
                 [3.into_dart(), message.into_into_dart().into_dart()].into_dart()
+            }
+            crate::engine::Step::EnterBackup => [4.into_dart()].into_dart(),
+            crate::engine::Step::CheckBackup { key_name } => {
+                [5.into_dart(), key_name.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -1668,6 +2091,16 @@ impl SseEncode for Vec<crate::engine::OutputSummary> {
     }
 }
 
+impl SseEncode for Vec<crate::engine::PendingBackup> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::engine::PendingBackup>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1698,6 +2131,36 @@ impl SseEncode for Option<f64> {
     }
 }
 
+impl SseEncode for Option<crate::engine::QuizQuestion> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::engine::QuizQuestion>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::engine::StepResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::engine::StepResult>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<u16> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u16>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1714,6 +2177,15 @@ impl SseEncode for crate::engine::OutputSummary {
         <String>::sse_encode(self.address, serializer);
         <i64>::sse_encode(self.amount_sats, serializer);
         <Option<String>>::sse_encode(self.own_label, serializer);
+    }
+}
+
+impl SseEncode for crate::engine::PendingBackup {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.key_name, serializer);
+        <Option<u16>>::sse_encode(self.threshold, serializer);
+        <u32>::sse_encode(self.share_index, serializer);
     }
 }
 
@@ -1753,10 +2225,41 @@ impl SseEncode for crate::engine::Prompt {
                 <i32>::sse_encode(3, serializer);
                 <crate::engine::TxSummary>::sse_encode(field0, serializer);
             }
+            crate::engine::Prompt::DisplayBackup {
+                key_name,
+                threshold,
+                share_index,
+                words,
+            } => {
+                <i32>::sse_encode(4, serializer);
+                <String>::sse_encode(key_name, serializer);
+                <u16>::sse_encode(threshold, serializer);
+                <u32>::sse_encode(share_index, serializer);
+                <Vec<String>>::sse_encode(words, serializer);
+            }
             _ => {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseEncode for crate::engine::QuizAnswer {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.correct, serializer);
+        <Option<crate::engine::QuizQuestion>>::sse_encode(self.next, serializer);
+        <Option<crate::engine::StepResult>>::sse_encode(self.done, serializer);
+    }
+}
+
+impl SseEncode for crate::engine::QuizQuestion {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.title, serializer);
+        <Vec<String>>::sse_encode(self.options, serializer);
+        <u32>::sse_encode(self.screen, serializer);
+        <u32>::sse_encode(self.total, serializer);
     }
 }
 
@@ -1790,6 +2293,13 @@ impl SseEncode for crate::engine::Step {
             crate::engine::Step::Done { message } => {
                 <i32>::sse_encode(3, serializer);
                 <String>::sse_encode(message, serializer);
+            }
+            crate::engine::Step::EnterBackup => {
+                <i32>::sse_encode(4, serializer);
+            }
+            crate::engine::Step::CheckBackup { key_name } => {
+                <i32>::sse_encode(5, serializer);
+                <String>::sse_encode(key_name, serializer);
             }
             _ => {
                 unimplemented!("");

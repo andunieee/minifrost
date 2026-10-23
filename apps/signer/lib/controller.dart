@@ -15,9 +15,11 @@ class SignerController extends ChangeNotifier {
   final SignerApp signer;
   final Vault vault;
   List<KeyInfo> keys = [];
+  List<PendingBackup> pendingBackups = [];
 
   Future<void> refresh() async {
     keys = await signer.keys();
+    pendingBackups = await signer.pendingBackups();
     notifyListeners();
   }
 
@@ -31,4 +33,18 @@ class SignerController extends ChangeNotifier {
   Future<StepResult> receive(Uint8List payload) async => _persist(await signer.receive(payload: payload));
   Future<StepResult> approve() async => _persist(await signer.approve());
   Future<void> reject() => signer.reject();
+
+  /// The user typed a physical backup (key number + 25 words). Throws a readable message when the
+  /// words don't form a valid backup; the signer then keeps waiting for a corrected attempt.
+  Future<StepResult> submitBackup(int shareIndex, List<String> words) async =>
+      _persist(await signer.submitBackup(shareIndex: shareIndex, words: words));
+
+  Future<QuizQuestion> quizQuestion() => signer.quizQuestion();
+
+  Future<QuizAnswer> quizAnswer(int choice) async {
+    final answer = await signer.quizAnswer(choice: choice);
+    final done = answer.done;
+    if (done != null) await _persist(done);
+    return answer;
+  }
 }

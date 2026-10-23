@@ -18,6 +18,10 @@ Future<SignerApp> newSigner({required String name}) =>
 Future<SignerApp> loadSigner({required List<int> snapshot}) =>
     RustLib.instance.api.crateApiLoadSigner(snapshot: snapshot);
 
+/// BIP39 words that start with `prefix`, for the backup entry autocomplete.
+List<String> backupWordSuggestions({required String prefix}) =>
+    RustLib.instance.api.crateApiBackupWordSuggestions(prefix: prefix);
+
 Future<QrScanner> newQrScanner() => RustLib.instance.api.crateApiNewQrScanner();
 
 /// Decode QR codes from one camera frame's luma (Y) plane. `row_stride` is the plane's bytes per
@@ -54,12 +58,27 @@ abstract class SignerApp implements RustOpaqueInterface {
 
   Future<String> name();
 
+  /// Backups typed into this signer that are still waiting for the coordinator.
+  Future<List<PendingBackup>> pendingBackups();
+
+  Future<QuizAnswer> quizAnswer({required int choice});
+
+  /// The check-backup quiz question currently on screen (after `Step::CheckBackup`).
+  Future<QuizQuestion> quizQuestion();
+
   /// Feed a fully scanned QR payload (see `QrScanner`).
   Future<StepResult> receive({required List<int> payload});
 
   Future<void> reject();
 
   Future<Uint8List> snapshot();
+
+  /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
+  /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+  Future<StepResult> submitBackup({
+    required int shareIndex,
+    required List<String> words,
+  });
 }
 
 class ScanProgress {

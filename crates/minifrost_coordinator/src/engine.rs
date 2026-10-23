@@ -23,7 +23,13 @@ use rand::{rngs::OsRng, RngCore};
 
 use crate::wallet::{self, Amt, BuiltSend, HttpEsplora, WalletView};
 
-const SNAPSHOT_VERSION: u8 = 1;
+pub mod restore;
+pub use restore::{
+    BackupShare, EnterTarget, HeldShareView, PendingConsolidationView, RestorationShareView, RestorationView,
+};
+use restore::{BackupSession, Incoming};
+
+const SNAPSHOT_VERSION: u8 = 2;
 const FILE: &str = "coordinator.bin";
 
 type Res<T> = Result<T, String>;
@@ -32,6 +38,18 @@ type Res<T> = Result<T, String>;
 struct Snapshot {
     /// Coordinator-held half of the share-decryption secret. Compromising only the coordinator
     /// (this file) gives an attacker nothing to sign with: the shares live on the signers.
+    encryption_key: [u8; 32],
+    signers: BTreeMap<DeviceId, String>,
+    history: Vec<Mutation>,
+    esplora_url: Option<String>,
+    /// Backup run: (wallet, share index, backup recorded). Wallets that were restored have no
+    /// entry and count as backed up, like in frostsnap.
+    backups: Vec<(AccessStructureRef, u32, bool)>,
+}
+
+/// Version 1 of the file, from before backups existed.
+#[derive(bincode::Encode, bincode::Decode)]
+struct SnapshotV1 {
     encryption_key: [u8; 32],
     signers: BTreeMap<DeviceId, String>,
     history: Vec<Mutation>,
@@ -67,6 +85,18 @@ pub struct Broadcast {
 pub enum Finished {
     KeyCreated { key_id: String, name: String },
     Signed { txid: String, tx_hex: String },
+    /// A signer displayed its backup and the user confirmed writing it down.
+    BackupRecorded { key_name: String, share_index: u32 },
+    /// A signer's check-backup quiz was passed.
+    BackupChecked { key_name: String, share_index: u32 },
+    /// An entered backup was saved on its signer as part of a restoration.
+    BackupSaved { restoration_id: String, share_index: u32, restorable: bool },
+    /// An entered backup (or a reply for one) was refused; the session is over.
+    BackupRejected { reason: String },
+    /// A signer turned a typed-in backup into a normal share of a wallet.
+    Consolidated { key_name: String, share_index: u32 },
+    /// The shares a signer reported holding.
+    HeldShares { device_name: String, shares: Vec<HeldShareView> },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -101,6 +131,7 @@ enum Session {
     Idle,
     Keygen(KeygenSession),
     Signing(SigningSession),
+    Backup(BackupSession),
 }
 
 pub struct Coordinator {
@@ -115,6 +146,10 @@ pub struct Coordinator {
     dir: Option<PathBuf>,
     wallets: BTreeMap<KeyId, WalletView>,
     prepared: Option<(KeyId, BuiltSend)>,
+    backups: BTreeMap<(AccessStructureRef, u32), bool>,
+    /// What each signer last said it holds (restoration picks shares from here). Not persisted:
+    /// ask the signer again after a restart.
+    held: BTreeMap<DeviceId, Vec<frostsnap_core::message::HeldShare2>>,
 }
 
 impl Coordinator {
@@ -132,6 +167,7 @@ impl Coordinator {
                     signers: Default::default(),
                     history: vec![],
                     esplora_url: None,
+                    backups: vec![],
                 })
             }
             Err(e) => return Err(format!("could not read {}: {e}", path.display())),
@@ -144,7 +180,13 @@ impl Coordinator {
     pub fn in_memory() -> Self {
         let mut key = [0u8; 32];
         OsRng.fill_bytes(&mut key);
-        Self::from_parts(Snapshot { encryption_key: key, signers: Default::default(), history: vec![], esplora_url: None })
+        Self::from_parts(Snapshot {
+            encryption_key: key,
+            signers: Default::default(),
+            history: vec![],
+            esplora_url: None,
+            backups: vec![],
+        })
     }
 
     fn from_parts(snap: Snapshot) -> Self {
@@ -163,17 +205,40 @@ impl Coordinator {
             dir: None,
             wallets: Default::default(),
             prepared: None,
+            backups: snap.backups.into_iter().map(|(a, i, done)| ((a, i), done)).collect(),
+            held: Default::default(),
         }
     }
 
     fn from_snapshot(bytes: &[u8]) -> Res<Self> {
         let (&v, rest) = bytes.split_first().ok_or("empty coordinator file")?;
-        if v != SNAPSHOT_VERSION {
-            return Err(format!("unknown coordinator file version {v}"));
+        let corrupt = |e: bincode::error::DecodeError| format!("corrupt coordinator file: {e}");
+        match v {
+            SNAPSHOT_VERSION => {
+                let (snap, _): (Snapshot, _) =
+                    bincode::decode_from_slice(rest, bincode::config::standard()).map_err(corrupt)?;
+                Ok(Self::from_parts(snap))
+            }
+            1 => {
+                let (old, _): (SnapshotV1, _) =
+                    bincode::decode_from_slice(rest, bincode::config::standard()).map_err(corrupt)?;
+                let mut me = Self::from_parts(Snapshot {
+                    encryption_key: old.encryption_key,
+                    signers: old.signers,
+                    history: old.history,
+                    esplora_url: old.esplora_url,
+                    backups: vec![],
+                });
+                // Wallets from before backups existed were never backed up: say so.
+                let arefs: Vec<_> =
+                    me.inner.iter_keys().map(|k| k.master_access_structure().access_structure_ref()).collect();
+                for aref in arefs {
+                    me.start_backup_run(aref);
+                }
+                Ok(me)
+            }
+            _ => Err(format!("unknown coordinator file version {v}")),
         }
-        let (snap, _): (Snapshot, _) = bincode::decode_from_slice(rest, bincode::config::standard())
-            .map_err(|e| format!("corrupt coordinator file: {e}"))?;
-        Ok(Self::from_parts(snap))
     }
 
     fn snapshot_bytes(&self) -> Vec<u8> {
@@ -182,6 +247,7 @@ impl Coordinator {
             signers: self.signers.clone(),
             history: self.history.clone(),
             esplora_url: self.esplora_url.clone(),
+            backups: self.backups.iter().map(|((a, i), done)| (*a, *i, *done)).collect(),
         };
         let mut out = vec![SNAPSHOT_VERSION];
         out.extend(bincode::encode_to_vec(&snap, bincode::config::standard()).expect("encodes"));
@@ -382,7 +448,7 @@ impl Coordinator {
                     self.inner.cancel_sign_session(id);
                 }
             }
-            Session::Idle => {}
+            Session::Backup(_) | Session::Idle => {}
         }
         self.replied.clear();
         self.save()
@@ -400,24 +466,44 @@ impl Coordinator {
             Session::Idle => Default::default(),
             Session::Keygen(k) => k.devices.iter().copied().collect(),
             Session::Signing(s) => s.devices.clone(),
+            Session::Backup(b) => [b.device()].into(),
         }
     }
 
     /// A reassembled QR payload from a signer.
     pub fn receive(&mut self, payload: &[u8]) -> Res<Update> {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
-        let (from, message) = match packet {
-            Packet::FromDevice { device_id, message } => (device_id, message),
+        let (from, incoming) = match packet {
+            Packet::FromDevice { device_id, message } => (device_id, Incoming::Core(message)),
+            Packet::BackupRecorded { device_id, access_structure_ref, share_index } => {
+                (device_id, Incoming::Recorded(access_structure_ref, share_index))
+            }
+            Packet::BackupChecked { device_id, access_structure_ref, share_index } => {
+                (device_id, Incoming::Checked(access_structure_ref, share_index))
+            }
             Packet::Hello { .. } => return Err("That is an enrolment code, not a reply.".into()),
             _ => return Err("That code is meant for signers.".into()),
         };
         if matches!(self.session, Session::Idle) {
-            return Err("No keygen or signing session is running.".into());
+            return Err("No keygen, signing or backup session is running.".into());
         }
         let expected = self.expected();
         if !expected.contains(&from) {
             return Err(format!("{} is not part of this session.", self.name_of(&from)));
         }
+        if matches!(self.session, Session::Backup(_)) {
+            // A backup session is a short back and forth with one signer: the same signer
+            // answers more than once, so the "already replied" bookkeeping doesn't apply.
+            let mut update = self.receive_backup(from, incoming)?;
+            update.snapshot_saved = {
+                self.save()?;
+                self.dir.is_some()
+            };
+            return Ok(update);
+        }
+        let Incoming::Core(message) = incoming else {
+            return Err("That reply does not belong to this session.".into());
+        };
         if !self.replied.insert(from) {
             let mut u = Update { message: format!("Already have {}'s reply.", self.name_of(&from)), ..Default::default() };
             self.fill_awaiting(&mut u, &expected);
@@ -473,6 +559,7 @@ impl Coordinator {
                 .finalize_keygen(keygen_id, self.encryption_key, &mut OsRng)
                 .map_err(|e| e.to_string())?;
             let key_id = fin.access_structure_ref.key_id;
+            self.start_backup_run(fin.access_structure_ref);
             let name = self.inner.get_frost_key(key_id).map(|k| k.key_name.clone()).unwrap_or_default();
             to_devices.extend(fin);
             self.session = Session::Idle;
