@@ -15,7 +15,9 @@ class WalletsPage extends StatefulWidget {
 class _WalletsPageState extends State<WalletsPage> {
   late Future<List<KeyView>> keys = widget.app.keys();
 
-  void _reload() => setState(() => keys = widget.app.keys());
+  void _reload() => setState(() {
+    keys = widget.app.keys();
+  });
 
   Future<void> _create() async {
     final signers = await widget.app.signers();

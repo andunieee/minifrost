@@ -14,7 +14,9 @@ class SignersPage extends StatefulWidget {
 class _SignersPageState extends State<SignersPage> {
   late Future<List<SignerInfo>> signers = widget.app.signers();
 
-  void _reload() => setState(() => signers = widget.app.signers());
+  void _reload() => setState(() {
+    signers = widget.app.signers();
+  });
 
   Future<void> _add() async {
     await showDialog<void>(context: context, builder: (_) => _EnrollDialog(app: widget.app, onAdded: _reload));

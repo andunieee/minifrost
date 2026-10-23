@@ -21,7 +21,9 @@ class _RestorePageState extends State<RestorePage> {
   Future<(List<RestorationView>, List<PendingConsolidationView>)> _load() async =>
       (await widget.app.restorations(), await widget.app.pendingConsolidations());
 
-  void _reload() => setState(() => data = _load());
+  void _reload() => setState(() {
+    data = _load();
+  });
 
   Future<Finished?> _ceremony(String title, Update update) {
     return Navigator.push<Finished?>(
