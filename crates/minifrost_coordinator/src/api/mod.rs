@@ -1,6 +1,7 @@
 //! The API Flutter sees. Everything here is generated into Dart by flutter_rust_bridge.
 
 pub mod camera;
+pub mod sound;
 
 use std::sync::Mutex;
 

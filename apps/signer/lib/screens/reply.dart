@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:minifrost_ui/minifrost_ui.dart';
 
+import '../qr_backend.dart';
+
 /// Shows QR frames for the coordinator to scan.
 class ReplyScreen extends StatelessWidget {
   const ReplyScreen({super.key, required this.frames, required this.title, required this.what});
@@ -14,7 +16,7 @@ class ReplyScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        Center(child: AnimatedQr(frames: frames, size: size.clamp(200, 420))),
+        Center(child: AnimatedQr(frames: frames, size: size.clamp(200, 420), sound: const RustSoundPlayer())),
         const SizedBox(height: 16),
         Text(what, textAlign: TextAlign.center),
         const SizedBox(height: 8),

@@ -5,9 +5,11 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'mic_permission.dart';
 import 'qr_scan_backend.dart';
 
-/// Camera preview + QR frame assembly + a "paste QR text" fallback. Uses the webcam through the
+/// Camera preview + QR frame assembly + a "paste QR text" fallback, plus a "Listen" button that
+/// receives the same frames as sound (ggwave) from a device that is playing them. Uses the webcam through the
 /// backend on desktop and the `camera` plugin on Android. Calls [onPayload] once per completed
 /// animated code.
 class ScanPanel extends StatefulWidget {
@@ -38,6 +40,9 @@ class _ScanPanelState extends State<ScanPanel> {
   CameraController? phoneCamera;
   bool busy = false;
   final paste = TextEditingController();
+  StreamSubscription<String>? soundSub;
+  bool listening = false;
+  String? soundError;
 
   @override
   void initState() {
@@ -130,6 +135,39 @@ class _ScanPanelState extends State<ScanPanel> {
     );
   }
 
+  Future<void> _toggleListening() async {
+    if (listening) {
+      _stopListening();
+      setState(() {});
+      return;
+    }
+    setState(() => soundError = null);
+    if (!await ensureMicrophone()) {
+      if (mounted) setState(() => soundError = 'Microphone permission is needed to listen.');
+      return;
+    }
+    if (!mounted) return;
+    try {
+      soundSub = widget.backend.listenSound().listen(
+        _push,
+        onError: (Object err) {
+          _stopListening();
+          if (mounted) setState(() => soundError = '$err');
+        },
+      );
+      setState(() => listening = true);
+    } catch (e) {
+      setState(() => soundError = '$e');
+    }
+  }
+
+  void _stopListening() {
+    soundSub?.cancel();
+    soundSub = null;
+    listening = false;
+    widget.backend.stopListeningSound();
+  }
+
   Future<void> _addPasted() async {
     // frames are upper-case, but tolerate pasted text that was lower-cased or run together
     final frames = RegExp(r'MF1:[A-Z0-9:]+', caseSensitive: false)
@@ -175,6 +213,7 @@ class _ScanPanelState extends State<ScanPanel> {
 
   @override
   void dispose() {
+    if (listening) _stopListening();
     sub?.cancel();
     if (Platform.isAndroid) {
       phoneCamera?.dispose();
@@ -221,6 +260,25 @@ class _ScanPanelState extends State<ScanPanel> {
         LinearProgressIndicator(value: received / total),
         Text('$received of $total parts', textAlign: TextAlign.center),
       ],
+      const SizedBox(height: 8),
+      Center(
+        child: OutlinedButton.icon(
+          onPressed: _toggleListening,
+          icon: Icon(listening ? Icons.hearing_disabled : Icons.hearing),
+          label: Text(listening ? 'Stop listening' : 'Listen (sound)'),
+        ),
+      ),
+      if (listening)
+        const Padding(
+          padding: EdgeInsets.only(top: 4),
+          child: Text('Listening… press “Play sound” on the other device and keep it close, in a quiet room.',
+              textAlign: TextAlign.center),
+        ),
+      if (soundError != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(soundError!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ),
       const SizedBox(height: 8),
       TextField(
         controller: paste,

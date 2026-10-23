@@ -8,6 +8,7 @@ pub use crate::engine::{
 };
 
 pub mod camera;
+pub mod sound;
 
 /// The signer. One per app process.
 pub struct SignerApp {

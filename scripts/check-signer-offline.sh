@@ -19,8 +19,8 @@ if [ $# -ge 1 ]; then
   echo "== Permissions in $apk"
   perms=$("$aapt2" dump permissions "$apk" | grep -E "^uses-permission" || true)
   echo "$perms"
-  # Only CAMERA, to read QR codes.
-  extra=$(echo "$perms" | grep -vE "android.permission.(CAMERA)'|DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
+  # Only CAMERA (QR codes) and RECORD_AUDIO (data over sound).
+  extra=$(echo "$perms" | grep -vE "android.permission.(CAMERA|RECORD_AUDIO)'|DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
   if [ -n "$extra" ]; then echo "FAIL: unexpected permissions:"; echo "$extra"; exit 1; fi
-  echo "ok: only camera"
+  echo "ok: only camera and microphone"
 fi

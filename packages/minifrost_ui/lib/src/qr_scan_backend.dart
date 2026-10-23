@@ -16,6 +16,18 @@ abstract class QrScanBackend {
   /// Starts [index] (stopping any previous stream); the stream carries preview JPEGs and QR texts.
   Stream<QrCameraEvent> startCamera(int index);
   void stopCamera();
+
+  /// Listens on the microphone (data over sound); the stream carries the `MF1:` text of each
+  /// frame heard, to be pushed into an assembler like QR texts. Throws if there is no microphone.
+  Stream<String> listenSound();
+  void stopListeningSound();
+}
+
+/// Plays a message through the speaker as an alternative to showing it as a QR code.
+abstract class SoundPlayer {
+  /// Loops the frames of one message until [stop]. Throws if there is no speaker.
+  Future<void> play(List<String> frames);
+  void stop();
 }
 
 abstract class QrAssembler {

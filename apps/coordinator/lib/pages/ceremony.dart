@@ -108,7 +108,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
                 const SizedBox(height: 4),
                 Text(message),
                 const SizedBox(height: 16),
-                Center(child: AnimatedQr(frames: broadcast!.frames, size: 380)),
+                Center(child: AnimatedQr(frames: broadcast!.frames, size: 380, sound: const RustSoundPlayer())),
               ],
               if (update.checkCode != null) ...[
                 const SizedBox(height: 24),

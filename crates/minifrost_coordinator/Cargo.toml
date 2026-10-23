@@ -12,6 +12,7 @@ flutter_rust_bridge = "=2.13.0"
 frostsnap_core = { workspace = true, features = ["std", "coordinator"] }
 minifrost_wire = { path = "../minifrost_wire" }
 qr_transport = { path = "../qr_transport" }
+sound_transport = { path = "../sound_transport" }
 bincode = { workspace = true }
 bitcoin = { workspace = true, features = ["std", "rand-std"] }
 rand = { workspace = true }

@@ -5,6 +5,7 @@
 
 import 'api.dart';
 import 'api/camera.dart';
+import 'api/sound.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -69,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1187087941;
+  int get rustContentHash => 379341258;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -143,7 +144,15 @@ abstract class RustLibApi extends BaseApi {
 
   Stream<CameraEvent> crateApiCameraStartCamera({required int index});
 
+  Stream<String> crateApiSoundStartSoundListening();
+
+  Future<void> crateApiSoundStartSoundPlayback({required List<String> frames});
+
   Future<void> crateApiCameraStopCamera();
+
+  Future<void> crateApiSoundStopSoundListening();
+
+  Future<void> crateApiSoundStopSoundPlayback();
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_QrScanner;
@@ -858,6 +867,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Stream<String> crateApiSoundStartSoundListening() {
+    final frames = RustStreamSink<String>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_String_Sse(frames, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 22,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateApiSoundStartSoundListeningConstMeta,
+          argValues: [frames],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return frames.stream;
+  }
+
+  TaskConstMeta get kCrateApiSoundStartSoundListeningConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_sound_listening",
+        argNames: ["frames"],
+      );
+
+  @override
+  Future<void> crateApiSoundStartSoundPlayback({required List<String> frames}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(frames, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSoundStartSoundPlaybackConstMeta,
+        argValues: [frames],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSoundStartSoundPlaybackConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_sound_playback",
+        argNames: ["frames"],
+      );
+
+  @override
   Future<void> crateApiCameraStopCamera() {
     return handler.executeNormal(
       NormalTask(
@@ -866,7 +941,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 24,
             port: port_,
           );
         },
@@ -883,6 +958,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiCameraStopCameraConstMeta =>
       const TaskConstMeta(debugName: "stop_camera", argNames: []);
+
+  @override
+  Future<void> crateApiSoundStopSoundListening() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSoundStopSoundListeningConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSoundStopSoundListeningConstMeta =>
+      const TaskConstMeta(debugName: "stop_sound_listening", argNames: []);
+
+  @override
+  Future<void> crateApiSoundStopSoundPlayback() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSoundStopSoundPlaybackConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSoundStopSoundPlaybackConstMeta =>
+      const TaskConstMeta(debugName: "stop_sound_playback", argNames: []);
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_QrScanner => wire
@@ -958,6 +1087,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return SignerAppImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
   }
 
   @protected
@@ -1412,6 +1547,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
+  }
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
   }
 
   @protected
@@ -1968,6 +2111,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as SignerAppImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+    RustStreamSink<String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
       serializer,
     );
   }

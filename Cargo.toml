@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/qr_transport",
+    "crates/sound_transport",
     "crates/desktop_camera",
     "crates/minifrost_wire",
     "crates/minifrost_signer",

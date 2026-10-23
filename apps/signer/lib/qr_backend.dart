@@ -4,6 +4,7 @@ import 'package:minifrost_ui/minifrost_ui.dart';
 
 import 'src/rust/api.dart' as rust;
 import 'src/rust/api/camera.dart' as cam;
+import 'src/rust/api/sound.dart' as sound;
 
 /// Hooks the shared scan panel up to this app's flutter_rust_bridge bindings.
 class RustQrBackend implements QrScanBackend {
@@ -30,6 +31,23 @@ class RustQrBackend implements QrScanBackend {
 
   @override
   void stopCamera() => cam.stopCamera();
+
+  @override
+  Stream<String> listenSound() => sound.startSoundListening();
+
+  @override
+  void stopListeningSound() => sound.stopSoundListening();
+}
+
+/// Plays frames through the speaker with ggwave.
+class RustSoundPlayer implements SoundPlayer {
+  const RustSoundPlayer();
+
+  @override
+  Future<void> play(List<String> frames) => sound.startSoundPlayback(frames: frames);
+
+  @override
+  void stop() => sound.stopSoundPlayback();
 }
 
 class _Assembler implements QrAssembler {

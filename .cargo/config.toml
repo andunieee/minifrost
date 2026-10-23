@@ -1,0 +1,7 @@
+# ggwave (C++, via ggwave-rs) must not need libc++_shared.so at runtime: Flutter's Gradle build
+# doesn't bundle it, so the library would fail to load. Link the NDK's libc++ statically.
+[env]
+CXXSTDLIB_aarch64_linux_android = "c++_static"
+CXXSTDLIB_armv7_linux_androideabi = "c++_static"
+CXXSTDLIB_x86_64_linux_android = "c++_static"
+CXXSTDLIB_i686_linux_android = "c++_static"

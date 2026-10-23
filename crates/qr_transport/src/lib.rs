@@ -80,6 +80,58 @@ pub fn split(payload: &[u8], frame_chars: usize) -> Vec<String> {
         .collect()
 }
 
+/// One parsed frame. The compact binary form ([`Frame::to_bytes`]) carries the same data without
+/// base32's 60% overhead, for transports where size matters (sound).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Frame {
+    pub id: u32,
+    /// 1-based.
+    pub index: u16,
+    pub total: u16,
+    pub data: Vec<u8>,
+}
+
+impl Frame {
+    pub fn parse(text: &str) -> Option<Frame> {
+        let mut it = text.trim().splitn(5, ':');
+        if it.next() != Some(PREFIX) {
+            return None;
+        }
+        let id = u32::from_str_radix(it.next()?, 16).ok()?;
+        let index: u16 = it.next()?.parse().ok()?;
+        let total: u16 = it.next()?.parse().ok()?;
+        let data = b32_decode(it.next()?)?;
+        (index != 0 && index <= total).then_some(Frame { id, index, total, data })
+    }
+
+    /// The `MF1:` text form, which an [`Assembler`] accepts.
+    pub fn to_text(&self) -> String {
+        format!("{PREFIX}:{:08X}:{}:{}:{}", self.id, self.index, self.total, b32_encode(&self.data))
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(8 + self.data.len());
+        out.extend_from_slice(&self.id.to_be_bytes());
+        out.extend_from_slice(&self.index.to_be_bytes());
+        out.extend_from_slice(&self.total.to_be_bytes());
+        out.extend_from_slice(&self.data);
+        out
+    }
+
+    pub fn from_bytes(b: &[u8]) -> Option<Frame> {
+        if b.len() < 8 {
+            return None;
+        }
+        let frame = Frame {
+            id: u32::from_be_bytes(b[0..4].try_into().ok()?),
+            index: u16::from_be_bytes(b[4..6].try_into().ok()?),
+            total: u16::from_be_bytes(b[6..8].try_into().ok()?),
+            data: b[8..].to_vec(),
+        };
+        (frame.index != 0 && frame.index <= frame.total).then_some(frame)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PushError {
     NotOurs,
@@ -178,6 +230,24 @@ mod tests {
             }
             assert_eq!(out.unwrap(), payload, "len {len}");
         }
+    }
+
+    #[test]
+    fn binary_frames_roundtrip_through_text() {
+        let payload: Vec<u8> = (0..777).map(|i| (i * 13) as u8).collect();
+        let mut asm = Assembler::new();
+        let mut out = None;
+        // 160 chars = 100 bytes, a multiple of 5 so chunks stay independently decodable
+        for text in split(&payload, 160) {
+            let bytes = Frame::parse(&text).unwrap().to_bytes();
+            assert_eq!(bytes.len() <= 108, true);
+            let again = Frame::from_bytes(&bytes).unwrap().to_text();
+            assert_eq!(again, text);
+            out = asm.push(&again).unwrap().complete.or(out);
+        }
+        assert_eq!(out.unwrap(), payload);
+        assert!(Frame::from_bytes(&[0; 7]).is_none());
+        assert!(Frame::parse("hello").is_none());
     }
 
     #[test]

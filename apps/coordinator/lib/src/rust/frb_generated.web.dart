@@ -8,6 +8,7 @@
 
 import 'api.dart';
 import 'api/camera.dart';
+import 'api/sound.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -72,6 +73,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQrScanner(
     dynamic raw,
   );
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
 
   @protected
   RustStreamSink<CameraEvent> dco_decode_StreamSink_camera_event_Sse(
@@ -253,6 +257,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   QrScanner
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQrScanner(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
     SseDeserializer deserializer,
   );
 
@@ -456,6 +465,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQrScanner(
     QrScanner self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+    RustStreamSink<String> self,
     SseSerializer serializer,
   );
 

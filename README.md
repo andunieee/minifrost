@@ -8,7 +8,7 @@ everything between them and the coordinator travels as **animated QR codes**.
 | App | `apps/coordinator` (Flutter, Linux desktop) | `apps/signer` (Flutter, Android; also runs on Linux desktop for dev/testing) |
 | Rust | `crates/minifrost_coordinator` | `crates/minifrost_signer` |
 | Network | Esplora only (balances, fee estimates, broadcast) | **none** — no `INTERNET` permission, no networking crates |
-| Permissions | webcam | `CAMERA` |
+| Permissions | webcam, microphone | `CAMERA`, `RECORD_AUDIO` |
 | Holds | coordinator half of the share-decryption secret, public wallet data | the secret key share |
 
 The cryptography and protocol are [frostsnap](https://github.com/frostsnap/frostsnap)'s: the
@@ -53,6 +53,16 @@ whole payload is checked against its SHA-256 prefix. Coordinator → signers is 
 Frostsnap pre-shares batches of nonces (a nonce stream) so that, after the first session, step 1
 returns "no new nonces needed" and the nonces already held by the coordinator are used. The round
 trip still happens, which is what binds the transaction review to the signature.
+
+### Sound instead of QR codes
+
+Where a camera is awkward, any QR code can be sent as sound instead ([ggwave](https://github.com/ggerganov/ggwave),
+`crates/sound_transport`). On the screen that shows a code press **Play sound**; on the device that
+scans press **Listen (sound)** first. The player loops the message as audible chirps (`AUDIBLE_FAST`,
+100 payload bytes each, roughly 15 bytes/s), the listener's microphone hears them in any order and
+with repeats, and the frames go into the same assembler and SHA-256 check as scanned QR frames.
+Keep the devices close in a quiet room. The signer asks for the `RECORD_AUDIO` permission the
+first time you press Listen; like the camera it is only used while the screen is open.
 
 ### Backups and restoration
 
