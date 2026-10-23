@@ -47,15 +47,6 @@ struct Snapshot {
     backups: Vec<(AccessStructureRef, u32, bool)>,
 }
 
-/// Version 1 of the file, from before backups existed.
-#[derive(bincode::Encode, bincode::Decode)]
-struct SnapshotV1 {
-    encryption_key: [u8; 32],
-    signers: BTreeMap<DeviceId, String>,
-    history: Vec<Mutation>,
-    esplora_url: Option<String>,
-}
-
 // ---------------------------------------------------------------------------------------------
 // What the UI sees
 // ---------------------------------------------------------------------------------------------
@@ -212,33 +203,12 @@ impl Coordinator {
 
     fn from_snapshot(bytes: &[u8]) -> Res<Self> {
         let (&v, rest) = bytes.split_first().ok_or("empty coordinator file")?;
-        let corrupt = |e: bincode::error::DecodeError| format!("corrupt coordinator file: {e}");
-        match v {
-            SNAPSHOT_VERSION => {
-                let (snap, _): (Snapshot, _) =
-                    bincode::decode_from_slice(rest, bincode::config::standard()).map_err(corrupt)?;
-                Ok(Self::from_parts(snap))
-            }
-            1 => {
-                let (old, _): (SnapshotV1, _) =
-                    bincode::decode_from_slice(rest, bincode::config::standard()).map_err(corrupt)?;
-                let mut me = Self::from_parts(Snapshot {
-                    encryption_key: old.encryption_key,
-                    signers: old.signers,
-                    history: old.history,
-                    esplora_url: old.esplora_url,
-                    backups: vec![],
-                });
-                // Wallets from before backups existed were never backed up: say so.
-                let arefs: Vec<_> =
-                    me.inner.iter_keys().map(|k| k.master_access_structure().access_structure_ref()).collect();
-                for aref in arefs {
-                    me.start_backup_run(aref);
-                }
-                Ok(me)
-            }
-            _ => Err(format!("unknown coordinator file version {v}")),
+        if v != SNAPSHOT_VERSION {
+            return Err(format!("unknown coordinator file version {v}"));
         }
+        let (snap, _): (Snapshot, _) = bincode::decode_from_slice(rest, bincode::config::standard())
+            .map_err(|e| format!("corrupt coordinator file: {e}"))?;
+        Ok(Self::from_parts(snap))
     }
 
     fn snapshot_bytes(&self) -> Vec<u8> {

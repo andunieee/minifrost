@@ -360,29 +360,3 @@ fn backup_and_restoration_state_survive_a_restart() {
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&dir2);
 }
-
-#[test]
-fn a_version_1_coordinator_file_opens_and_its_wallets_need_backing_up() {
-    let dir = temp_dir("v1");
-    let mut coord = Coordinator::open(&dir).unwrap();
-    let (_signers, key_id) = create_wallet(&mut coord, &["alice", "bob", "carol"], 2);
-    drop(coord);
-
-    // Rebuild the file as version 1 wrote it: the same fields without the trailing backup list
-    // (a length byte, then per share a 64 byte wallet reference, the share index and a flag).
-    let path = dir.join("coordinator.bin");
-    let v2 = std::fs::read(&path).unwrap();
-    assert_eq!(v2[0], 2);
-    let backup_list = 1 + 3 * (64 + 1 + 1);
-    let mut v1 = v2[..v2.len() - backup_list].to_vec();
-    v1[0] = 1;
-    std::fs::write(&path, v1).unwrap();
-
-    let mut coord = Coordinator::open(&dir).unwrap();
-    assert_eq!(coord.keys().len(), 1);
-    assert!(coord.backup_shares(&key_id).unwrap().iter().all(|s| !s.complete));
-    // opening rewrote it in the current version
-    assert_eq!(std::fs::read(&path).unwrap()[0], 2);
-    coord.mark_backup_complete(&key_id, 1).unwrap();
-    let _ = std::fs::remove_dir_all(&dir);
-}
