@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:minifrost_ui/minifrost_ui.dart';
 
-import '../scan_panel.dart';
+import '../qr_backend.dart';
 import '../src/rust/api.dart';
 import '../src/rust/engine.dart';
 
@@ -154,7 +154,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
                           ? 'All replies received.'
                           : 'Waiting for: ${update.awaiting.join(', ')}'),
                       const SizedBox(height: 16),
-                      ScanPanel(onPayload: _onPayload),
+                      ScanPanel(backend: const RustQrBackend(), onPayload: _onPayload),
                     ]),
             ),
           ),

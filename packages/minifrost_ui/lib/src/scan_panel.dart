@@ -5,13 +5,19 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'src/rust/api.dart';
-import 'src/rust/api/camera.dart';
+import 'qr_scan_backend.dart';
 
-/// Camera preview + QR frame assembly (Rust webcam capture on desktop, the `camera` plugin on
-/// Android). Calls [onPayload] once per completed animated code.
+/// Camera preview + QR frame assembly + a "paste QR text" fallback. Uses the webcam through the
+/// backend on desktop and the `camera` plugin on Android. Calls [onPayload] once per completed
+/// animated code.
 class ScanPanel extends StatefulWidget {
-  const ScanPanel({super.key, required this.onPayload, this.hint = 'Hold the signer’s screen up to the camera'});
+  const ScanPanel({
+    super.key,
+    required this.backend,
+    required this.onPayload,
+    this.hint = 'Hold the signer’s screen up to the camera',
+  });
+  final QrScanBackend backend;
   final Future<void> Function(Uint8List payload) onPayload;
   final String hint;
 
@@ -20,11 +26,11 @@ class ScanPanel extends StatefulWidget {
 }
 
 class _ScanPanelState extends State<ScanPanel> {
-  List<CameraInfo>? cameras;
+  List<QrCameraInfo>? cameras;
   int? selected;
-  StreamSubscription<CameraEvent>? sub;
+  StreamSubscription<QrCameraEvent>? sub;
   Uint8List? preview;
-  QrScanner? scanner;
+  QrAssembler? assembler;
   int received = 0, total = 0;
   String? problem;
   String? error;
@@ -40,12 +46,21 @@ class _ScanPanelState extends State<ScanPanel> {
   }
 
   Future<void> _init() async {
-    scanner = await newQrScanner();
+    assembler = await widget.backend.newAssembler();
     if (Platform.isAndroid) return _initPhone();
-    final cams = await listCameras();
-    if (!mounted) return;
-    setState(() => cameras = cams);
-    if (cams.isNotEmpty) _start(cams.first.index);
+    try {
+      final cams = await widget.backend.listCameras();
+      if (!mounted) return;
+      setState(() => cameras = cams);
+      if (cams.isNotEmpty) _start(cams.first.index);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          cameras = [];
+          error = '$e';
+        });
+      }
+    }
   }
 
   Future<void> _initPhone() async {
@@ -64,7 +79,7 @@ class _ScanPanelState extends State<ScanPanel> {
       }
       setState(() {
         phoneCamera = ctrl;
-        cameras = [CameraInfo(index: 0, name: cam.name)];
+        cameras = [QrCameraInfo(index: 0, name: cam.name)];
       });
       await ctrl.startImageStream((img) {
         if (busy) return;
@@ -87,7 +102,7 @@ class _ScanPanelState extends State<ScanPanel> {
 
   Future<void> _decodeFrame(CameraImage img) async {
     final y = img.planes[0];
-    final texts = await decodeQrLuma(width: img.width, height: img.height, rowStride: y.bytesPerRow, luma: y.bytes);
+    final texts = await widget.backend.decodeLuma(width: img.width, height: img.height, rowStride: y.bytesPerRow, luma: y.bytes);
     for (final t in texts) {
       if (!mounted) return;
       await _push(t);
@@ -100,13 +115,13 @@ class _ScanPanelState extends State<ScanPanel> {
       selected = index;
       error = null;
     });
-    sub = startCamera(index: index).listen(
+    sub = widget.backend.startCamera(index).listen(
       (e) {
         switch (e) {
-          case CameraEvent_Preview(:final field0):
-            if (mounted) setState(() => preview = field0);
-          case CameraEvent_Qr(:final field0):
-            _push(field0);
+          case QrCameraPreview(:final jpeg):
+            if (mounted) setState(() => preview = jpeg);
+          case QrCameraText(:final text):
+            _push(text);
         }
       },
       onError: (Object err) {
@@ -115,9 +130,25 @@ class _ScanPanelState extends State<ScanPanel> {
     );
   }
 
+  Future<void> _addPasted() async {
+    // frames are upper-case, but tolerate pasted text that was lower-cased or run together
+    final frames = RegExp(r'MF1:[A-Z0-9:]+', caseSensitive: false)
+        .allMatches(paste.text)
+        .map((m) => m.group(0)!.toUpperCase())
+        .toList();
+    if (frames.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No QR frames (MF1:…) found in that text.')));
+      return;
+    }
+    paste.clear();
+    for (final f in frames) {
+      await _push(f);
+    }
+  }
+
   Future<void> _push(String text) async {
     if (handling) return;
-    final p = await scanner!.push(text: text);
+    final p = await assembler!.push(text);
     if (!mounted) return;
     if (p.payload != null) {
       handling = true;
@@ -148,7 +179,7 @@ class _ScanPanelState extends State<ScanPanel> {
     if (Platform.isAndroid) {
       phoneCamera?.dispose();
     } else {
-      stopCamera();
+      widget.backend.stopCamera();
     }
     paste.dispose();
     super.dispose();
@@ -199,15 +230,7 @@ class _ScanPanelState extends State<ScanPanel> {
       ),
       Align(
         alignment: Alignment.centerRight,
-        child: TextButton(
-          onPressed: () {
-            for (final line in paste.text.split(RegExp(r'\s+'))) {
-              if (line.isNotEmpty) _push(line);
-            }
-            paste.clear();
-          },
-          child: const Text('Add'),
-        ),
+        child: TextButton(onPressed: _addPasted, child: const Text('Add')),
       ),
     ]);
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:minifrost_ui/minifrost_ui.dart';
 
-import '../scan_panel.dart';
+import '../qr_backend.dart';
 import '../src/rust/api.dart';
 import '../src/rust/engine.dart';
 
@@ -95,6 +96,7 @@ class _EnrollDialogState extends State<_EnrollDialog> {
         child: added != null
             ? Text('Added “${added!.name}”.')
             : ScanPanel(
+                backend: const RustQrBackend(),
                 hint: 'Show the signer’s enrolment code to the camera',
                 onPayload: (bytes) async {
                   try {
