@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16243f"/><stop offset="1" stop-color="#0a1020"/></linearGradient>
+<linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6f7ff"/><stop offset="1" stop-color="#6cc4f5"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<rect x="244.00" y="200.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(0.0 256.00 212.00)"/>
+<rect x="244.00" y="168.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(0.0 256.00 180.00)"/>
+<rect x="244.00" y="136.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(0.0 256.00 148.00)"/>
+<rect x="244.00" y="104.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(0.0 256.00 116.00)"/>
+<rect x="242.00" y="70.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(0.0 256.00 84.00)"/>
+<rect x="220.02" y="123.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(-60.0 230.02 133.00)"/>
+<rect x="194.04" y="108.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(-60.0 204.04 118.00)"/>
+<rect x="271.98" y="123.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(60.0 281.98 133.00)"/>
+<rect x="297.96" y="108.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(60.0 307.96 118.00)"/>
+<rect x="282.11" y="222.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(60.0 294.11 234.00)"/>
+<rect x="309.82" y="206.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(60.0 321.82 218.00)"/>
+<rect x="337.53" y="190.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(60.0 349.53 202.00)"/>
+<rect x="365.24" y="174.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(60.0 377.24 186.00)"/>
+<rect x="390.96" y="156.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(60.0 404.96 170.00)"/>
+<rect x="339.53" y="162.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(0.0 349.53 172.00)"/>
+<rect x="339.53" y="132.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(0.0 349.53 142.00)"/>
+<rect x="365.51" y="207.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(120.0 375.51 217.00)"/>
+<rect x="391.49" y="222.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(120.0 401.49 232.00)"/>
+<rect x="282.11" y="266.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(120.0 294.11 278.00)"/>
+<rect x="309.82" y="282.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(120.0 321.82 294.00)"/>
+<rect x="337.53" y="298.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(120.0 349.53 310.00)"/>
+<rect x="365.24" y="314.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(120.0 377.24 326.00)"/>
+<rect x="390.96" y="328.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(120.0 404.96 342.00)"/>
+<rect x="365.51" y="285.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(60.0 375.51 295.00)"/>
+<rect x="391.49" y="270.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(60.0 401.49 280.00)"/>
+<rect x="339.53" y="330.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(180.0 349.53 340.00)"/>
+<rect x="339.53" y="360.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(180.0 349.53 370.00)"/>
+<rect x="244.00" y="288.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(180.0 256.00 300.00)"/>
+<rect x="244.00" y="320.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(180.0 256.00 332.00)"/>
+<rect x="244.00" y="352.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(180.0 256.00 364.00)"/>
+<rect x="244.00" y="384.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(180.0 256.00 396.00)"/>
+<rect x="242.00" y="414.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(180.0 256.00 428.00)"/>
+<rect x="271.98" y="369.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(120.0 281.98 379.00)"/>
+<rect x="297.96" y="384.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(120.0 307.96 394.00)"/>
+<rect x="220.02" y="369.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(240.0 230.02 379.00)"/>
+<rect x="194.04" y="384.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(240.0 204.04 394.00)"/>
+<rect x="205.89" y="266.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(240.0 217.89 278.00)"/>
+<rect x="178.18" y="282.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(240.0 190.18 294.00)"/>
+<rect x="150.47" y="298.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(240.0 162.47 310.00)"/>
+<rect x="122.76" y="314.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(240.0 134.76 326.00)"/>
+<rect x="93.04" y="328.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(240.0 107.04 342.00)"/>
+<rect x="152.47" y="330.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(180.0 162.47 340.00)"/>
+<rect x="152.47" y="360.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(180.0 162.47 370.00)"/>
+<rect x="126.49" y="285.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(300.0 136.49 295.00)"/>
+<rect x="100.51" y="270.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(300.0 110.51 280.00)"/>
+<rect x="205.89" y="222.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(300.0 217.89 234.00)"/>
+<rect x="178.18" y="206.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(300.0 190.18 218.00)"/>
+<rect x="150.47" y="190.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(300.0 162.47 202.00)"/>
+<rect x="122.76" y="174.00" width="24" height="24" rx="4.3" fill="url(#ice)" transform="rotate(300.0 134.76 186.00)"/>
+<rect x="93.04" y="156.00" width="28" height="28" rx="5.0" fill="url(#ice)" transform="rotate(300.0 107.04 170.00)"/>
+<rect x="126.49" y="207.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(240.0 136.49 217.00)"/>
+<rect x="100.51" y="222.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(240.0 110.51 232.00)"/>
+<rect x="152.47" y="162.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(360.0 162.47 172.00)"/>
+<rect x="152.47" y="132.00" width="20" height="20" rx="3.6" fill="url(#ice)" transform="rotate(360.0 162.47 142.00)"/>
+<rect x="236.00" y="236.00" width="40" height="40" rx="7.2" fill="#f7931a" transform="rotate(45.0 256.00 256.00)"/>
+</svg>
