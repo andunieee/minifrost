@@ -59,3 +59,16 @@ setup:
 devices:
     adb devices -l
     flutter devices
+
+# --- packaging -------------------------------------------------------------------------------
+
+# Build the release bundle of a Linux desktop app (coordinator|signer) and install it, with its
+# launcher entry and icon, under ~/.local.
+install-desktop app:
+    cd apps/{{app}} && flutter build linux --release
+    rm -rf ~/.local/opt/minifrost_{{app}}
+    mkdir -p ~/.local/opt ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor/512x512/apps
+    cp -r apps/{{app}}/build/linux/x64/release/bundle ~/.local/opt/minifrost_{{app}}
+    ln -sf ~/.local/opt/minifrost_{{app}}/minifrost_{{app}} ~/.local/bin/minifrost_{{app}}
+    cp assets/logo.png ~/.local/share/icons/hicolor/512x512/apps/minifrost.png
+    cp packaging/minifrost_{{app}}.desktop ~/.local/share/applications/

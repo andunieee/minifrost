@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Minifrost Coordinator
+Comment=Minifrost FROST threshold wallet coordinator
+Exec=minifrost_coordinator
+Icon=minifrost
+Terminal=false
+Categories=Finance;Utility;
+StartupWMClass=dev.minifrost.minifrost_coordinator

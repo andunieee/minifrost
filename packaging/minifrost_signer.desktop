@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Minifrost Signer
+Comment=Minifrost FROST threshold wallet signer
+Exec=minifrost_signer
+Icon=minifrost
+Terminal=false
+Categories=Finance;Utility;
+StartupWMClass=dev.minifrost.minifrost_signer
