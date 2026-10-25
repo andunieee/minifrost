@@ -29,6 +29,38 @@ const GAP_SECONDS: f32 = 0.4;
 /// ggwave's internal frame; the decoder is fed whole multiples of it.
 const SAMPLES_PER_FRAME: usize = 1024;
 
+/// cpal's Android backend reads the `JavaVM` and the application `Context` from `ndk_context`,
+/// which a Flutter app never fills in (the library is `dlopen`ed by Dart, so `JNI_OnLoad` does not
+/// run) and panics without. The activity hands them over through a native method, see the
+/// `Java_…_initAudio` exports of the app crates.
+#[cfg(target_os = "android")]
+pub mod android {
+    use std::ffi::c_void;
+    use std::sync::Once;
+
+    // Indices into the JNIEnv function table (jni.h).
+    const NEW_GLOBAL_REF: usize = 21;
+    const GET_JAVA_VM: usize = 219;
+
+    /// # Safety
+    /// `env` must be the `JNIEnv*` of the calling thread and `context` a live `android.content.Context`.
+    pub unsafe fn init(env: *mut c_void, context: *mut c_void) {
+        static ONCE: Once = Once::new();
+        ONCE.call_once(|| unsafe {
+            let table = *(env as *const *const *const c_void);
+            let new_global_ref: unsafe extern "system" fn(*mut c_void, *mut c_void) -> *mut c_void =
+                std::mem::transmute(*table.add(NEW_GLOBAL_REF));
+            let get_java_vm: unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
+                std::mem::transmute(*table.add(GET_JAVA_VM));
+            let mut vm = std::ptr::null_mut();
+            if get_java_vm(env, &mut vm) == 0 {
+                // the global reference is kept for the life of the process
+                ndk_context::initialize_android_context(vm, new_global_ref(env, context));
+            }
+        });
+    }
+}
+
 static GGWAVE: Mutex<()> = Mutex::new(());
 
 struct Codec(ManuallyDrop<GgWave>);

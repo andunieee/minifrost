@@ -9,3 +9,7 @@ description = "Send and receive qr_transport frames as sound (ggwave data-over-s
 qr_transport = { path = "../qr_transport" }
 ggwave-rs = "0.1"
 cpal = "0.18"
+
+# cpal's AAudio backend asks Java (through `ndk_context`) for audio devices and permissions.
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-context = "0.1"

@@ -2138,6 +2138,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "ggwave-rs",
+ "ndk-context",
  "qr_transport",
 ]
 
