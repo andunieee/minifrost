@@ -111,74 +111,124 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
     );
   }
 
-  Widget _backupCard(ThemeData theme) {
-    final missing = backups.where((b) => !b.complete).length;
+  Widget _section(ThemeData theme, {required String title, IconData? icon, Color? iconColor, required List<Widget> children}) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(missing > 0 ? Icons.warning_amber_rounded : Icons.verified_outlined,
-                color: missing > 0 ? theme.colorScheme.error : Colors.green),
-            const SizedBox(width: 8),
-            Expanded(child: Text('Backups', style: theme.textTheme.titleMedium)),
+            if (icon != null) ...[Icon(icon, color: iconColor), const SizedBox(width: 10)],
+            Expanded(child: Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
           ]),
-          const SizedBox(height: 4),
-          Text(
-            missing > 0
-                ? 'Write down every signer’s 25 words. Without backups, losing ${wallet.signers.length - wallet.threshold + 1} '
-                    'signer(s) loses the wallet.'
-                : 'Every key has a recorded backup. Check them from time to time.',
+          const SizedBox(height: 16),
+          ...children,
+        ]),
+      ),
+    );
+  }
+
+  Widget _backupRow(ThemeData theme, BackupShare b) {
+    final color = b.complete ? Colors.green : theme.colorScheme.error;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(b.complete ? Icons.check_circle : Icons.radio_button_unchecked, color: color, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${b.name} · key #${b.shareIndex}', style: theme.textTheme.bodyLarge),
+              Text(b.complete ? 'Backed up' : 'Not backed up', style: theme.textTheme.bodySmall?.copyWith(color: color)),
+            ]),
           ),
-          for (final b in backups)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(b.complete ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: b.complete ? Colors.green : theme.colorScheme.error),
-              title: Text('${b.name} · key #${b.shareIndex}'),
-              subtitle: Text(b.complete ? 'Backed up' : 'Not backed up'),
-              trailing: Wrap(spacing: 4, children: [
-                if (!b.complete)
-                  TextButton(onPressed: () => _markBackedUp(b), child: const Text('Mark as backed up')),
-                if (b.complete)
-                  OutlinedButton(
-                    onPressed: () => _session(
-                      'Check ${b.name}’s backup',
-                      () => widget.app.startCheckBackup(keyId: wallet.keyId, deviceId: b.deviceId),
-                    ),
-                    child: const Text('Check'),
-                  ),
-                FilledButton.tonal(
-                  onPressed: () => _session(
-                    'Back up ${b.name}',
-                    () => widget.app.startDisplayBackup(keyId: wallet.keyId, deviceId: b.deviceId),
-                  ),
-                  child: Text(b.complete ? 'Show again' : 'Show backup'),
+        ]),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 34),
+          child: Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.tonal(
+              onPressed: () => _session(
+                'Back up ${b.name}',
+                () => widget.app.startDisplayBackup(keyId: wallet.keyId, deviceId: b.deviceId),
+              ),
+              child: Text(b.complete ? 'Show again' : 'Show backup'),
+            ),
+            if (b.complete)
+              OutlinedButton(
+                onPressed: () => _session(
+                  'Check ${b.name}’s backup',
+                  () => widget.app.startCheckBackup(keyId: wallet.keyId, deviceId: b.deviceId),
+                ),
+                child: const Text('Check'),
+              )
+            else
+              TextButton(onPressed: () => _markBackedUp(b), child: const Text('Mark as backed up')),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _backupCard(ThemeData theme) {
+    final missing = backups.where((b) => !b.complete).length;
+    return _section(
+      theme,
+      title: 'Backups',
+      icon: missing > 0 ? Icons.warning_amber_rounded : Icons.verified_outlined,
+      iconColor: missing > 0 ? theme.colorScheme.error : Colors.green,
+      children: [
+        Text(
+          missing > 0
+              ? 'Write down every signer’s 25 words. Without backups, losing ${wallet.signers.length - wallet.threshold + 1} '
+                  'signer(s) loses the wallet.'
+              : 'Every key has a recorded backup. Check them from time to time.',
+          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        for (final b in backups) ...[
+          const Divider(height: 16),
+          _backupRow(theme, b),
+        ],
+        for (final p in pending) ...[
+          const Divider(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.hourglass_bottom, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${p.deviceName} · key #${p.shareIndex} is waiting to be finished', style: theme.textTheme.bodyLarge),
+                    Text('Its typed-in backup becomes a normal share once it is finished.', style: theme.textTheme.bodySmall),
+                  ]),
                 ),
               ]),
-            ),
-          for (final p in pending)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.hourglass_bottom),
-              title: Text('${p.deviceName} · key #${p.shareIndex} is waiting to be finished'),
-              subtitle: const Text('Its typed-in backup becomes a normal share once it is finished.'),
-              trailing: FilledButton(
-                onPressed: () => _session(
-                  'Finish ${p.deviceName}',
-                  () => widget.app.startConsolidate(keyId: p.keyId, deviceId: p.deviceId),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 34),
+                child: FilledButton(
+                  onPressed: () => _session(
+                    'Finish ${p.deviceName}',
+                    () => widget.app.startConsolidate(keyId: p.keyId, deviceId: p.deviceId),
+                  ),
+                  child: const Text('Finish'),
                 ),
-                child: const Text('Finish'),
               ),
-            ),
-          const SizedBox(height: 4),
-          TextButton.icon(
+            ]),
+          ),
+        ],
+        const Divider(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
             onPressed: _addSignerFromBackup,
             icon: const Icon(Icons.edit_note),
             label: const Text('Add a signer from a backup'),
           ),
-        ]),
-      ),
+        ),
+      ],
     );
   }
 
@@ -248,88 +298,162 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
     }
   }
 
+  Widget _balanceCard(ThemeData theme, WalletSummary s) {
+    final scheme = theme.colorScheme;
+    final pendingSats = s.balanceSats.toInt() - s.confirmedSats.toInt();
+    return Card(
+      margin: EdgeInsets.zero,
+      color: scheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Balance', style: theme.textTheme.labelLarge?.copyWith(color: scheme.onPrimaryContainer.withValues(alpha: 0.7))),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(formatBtc(s.balanceSats.toInt()),
+                style: theme.textTheme.displaySmall?.copyWith(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 4),
+          Text(formatSats(s.balanceSats.toInt()), style: theme.textTheme.titleMedium?.copyWith(color: scheme.onPrimaryContainer)),
+          const SizedBox(height: 16),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _chip('${s.nCoins} coin(s)'),
+            _chip('${formatSats(s.confirmedSats.toInt())} confirmed'),
+            if (pendingSats > 0) _chip('${formatSats(pendingSats)} pending'),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Widget _chip(String label) => Chip(label: Text(label), visualDensity: VisualDensity.compact, side: BorderSide.none);
+
+  Widget _receiveCard(ThemeData theme, WalletSummary s) {
+    final qr = Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.all(12),
+      child: QrImageView(data: s.receiveAddress.toUpperCase(), size: 200),
+    );
+    final details = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SelectableText(groupAddress(s.receiveAddress), style: const TextStyle(fontFamily: 'monospace', fontSize: 16, height: 1.5)),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: () {
+          Clipboard.setData(ClipboardData(text: s.receiveAddress));
+          _toast('Address copied');
+        },
+        icon: const Icon(Icons.copy, size: 18),
+        label: const Text('Copy address'),
+      ),
+    ]);
+    return _section(theme, title: 'Receive', icon: Icons.south_west, children: [
+      LayoutBuilder(builder: (context, c) {
+        if (c.maxWidth < 480) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Center(child: qr),
+            const SizedBox(height: 16),
+            details,
+          ]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          qr,
+          const SizedBox(width: 24),
+          Expanded(child: details),
+        ]);
+      }),
+    ]);
+  }
+
+  Widget _sendCard(ThemeData theme, WalletSummary? s) {
+    return _section(theme, title: 'Send', icon: Icons.north_east, children: [
+      TextField(
+        controller: to,
+        decoration: const InputDecoration(labelText: 'Recipient address', border: OutlineInputBorder()),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: amount,
+        enabled: !sendMax,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'Amount', suffixText: 'sats', border: OutlineInputBorder()),
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        dense: true,
+        title: const Text('Send everything'),
+        value: sendMax,
+        onChanged: (v) => setState(() => sendMax = v ?? false),
+      ),
+      const SizedBox(height: 8),
+      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
+          child: TextField(
+            controller: feeRate,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Fee rate', suffixText: 'sat/vB', border: OutlineInputBorder()),
+          ),
+        ),
+        const SizedBox(width: 12),
+        TextButton.icon(onPressed: _suggestFee, icon: const Icon(Icons.auto_fix_high, size: 18), label: const Text('Suggest')),
+      ]),
+      const SizedBox(height: 20),
+      SizedBox(
+        height: 48,
+        child: FilledButton.icon(
+          onPressed: busy || s == null ? null : _send,
+          icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+          label: const Text('Review & sign'),
+        ),
+      ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = wallet;
     final s = summary;
     final theme = Theme.of(context);
+    final backupsMissing = backups.any((b) => !b.complete);
+    const gap = SizedBox(height: 16);
     return Scaffold(
       appBar: AppBar(
         title: Text(w.name),
         actions: [IconButton(onPressed: loading ? null : _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh from Esplora')],
       ),
-      body: ListView(padding: const EdgeInsets.all(24), children: [
-        Text('${w.threshold}-of-${w.signers.length} · ${w.network} · ${w.signers.map((s) => s.name).join(', ')}'),
-        const SizedBox(height: 16),
-        _backupCard(theme),
-        const SizedBox(height: 16),
-        if (loading) const LinearProgressIndicator(),
-        if (error != null) Text(error!, style: TextStyle(color: theme.colorScheme.error)),
-        if (s != null) ...[
-          Text(formatBtc(s.balanceSats.toInt()), style: theme.textTheme.displaySmall),
-          Text('${formatSats(s.balanceSats.toInt())} · ${s.nCoins} coin(s) · ${formatSats(s.confirmedSats.toInt())} confirmed'),
-          const SizedBox(height: 24),
-          Text('Receive', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(8),
-              child: QrImageView(data: s.receiveAddress.toUpperCase(), size: 180),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SelectableText(groupAddress(s.receiveAddress), style: const TextStyle(fontFamily: 'monospace', fontSize: 16)),
-                TextButton.icon(
-                  onPressed: () => Clipboard.setData(ClipboardData(text: s.receiveAddress)),
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy address'),
-                ),
-                Text('QR contains: ${s.receiveAddress.toUpperCase()}',
-                    style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
-              ]),
-            ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
+            Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              _chip('${w.threshold}-of-${w.signers.length}'),
+              _chip(w.network),
+              Text(w.signers.map((s) => s.name).join(', '),
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ]),
+            const SizedBox(height: 8),
+            SizedBox(height: 4, child: loading ? const LinearProgressIndicator() : null),
+            const SizedBox(height: 8),
+            if (error != null) ...[
+              Text(error!, style: TextStyle(color: theme.colorScheme.error)),
+              gap,
+            ],
+            if (s != null) ...[
+              _balanceCard(theme, s),
+              gap,
+            ],
+            if (backupsMissing) ...[_backupCard(theme), gap],
+            if (s != null) ...[
+              _receiveCard(theme, s),
+              gap,
+            ],
+            _sendCard(theme, s),
+            if (!backupsMissing) ...[gap, _backupCard(theme)],
           ]),
-        ],
-        const Divider(height: 48),
-        Text('Send', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        TextField(controller: to, decoration: const InputDecoration(labelText: 'Recipient address')),
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: TextField(
-              controller: amount,
-              enabled: !sendMax,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Amount (sats)'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Row(children: [
-            Checkbox(value: sendMax, onChanged: (v) => setState(() => sendMax = v ?? false)),
-            const Text('Send everything'),
-          ]),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: [
-          SizedBox(
-            width: 180,
-            child: TextField(controller: feeRate, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fee rate (sat/vB)')),
-          ),
-          TextButton(onPressed: _suggestFee, child: const Text('Suggest')),
-        ]),
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.icon(
-            onPressed: busy || s == null ? null : _send,
-            icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
-            label: const Text('Review & sign'),
-          ),
         ),
-      ]),
+      ),
     );
   }
 }
