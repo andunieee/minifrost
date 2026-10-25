@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:minifrost_ui/minifrost_ui.dart';
 
 import '../controller.dart';
 import '../src/rust/engine.dart';
@@ -89,7 +90,7 @@ class _KeyTile extends StatelessWidget {
         child: ListTile(
           leading: const Icon(Icons.vpn_key_outlined),
           title: Text(k.name),
-          subtitle: Text('${k.threshold}-of-? · ${k.network}\n${k.keyId.substring(0, 16)}…'),
+          subtitle: Text('${k.threshold}-of-? · ${networkLabel(k.network)}\n${k.keyId.substring(0, 16)}…'),
           isThreeLine: true,
         ),
       );

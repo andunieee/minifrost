@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:minifrost_ui/minifrost_ui.dart';
 
 import '../src/rust/api.dart';
 import '../src/rust/engine.dart';
@@ -245,7 +246,7 @@ class _RestorationCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${view.name} · ${view.network}', style: theme.textTheme.titleMedium),
+          Text('${view.name} · ${networkLabel(view.network)}', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(progress),
           if (needed != null && got != null) ...[
@@ -337,7 +338,7 @@ class _NewRestorationDialogState extends State<_NewRestorationDialog> {
               initialValue: network,
               decoration: const InputDecoration(labelText: 'Network'),
               items: const [
-                DropdownMenuItem(value: 'signet', child: Text('Signet (Mutinynet)')),
+                DropdownMenuItem(value: 'signet', child: Text('Mutinynet')),
                 DropdownMenuItem(value: 'testnet', child: Text('Testnet')),
                 DropdownMenuItem(value: 'bitcoin', child: Text('Bitcoin mainnet')),
               ],
@@ -395,7 +396,7 @@ class _HeldShareDialog extends StatelessWidget {
               title: Text('Key #${s.shareIndex}${s.keyName == null ? '' : ' of “${s.keyName}”'}'),
               subtitle: Text([
                 if (s.threshold != null) '${s.threshold} signatures needed',
-                if (s.network != null) s.network!,
+                if (s.network != null) networkLabel(s.network!),
                 if (s.needsConsolidation) 'typed-in backup, not yet a normal share',
                 if (s.knownWallet != null) 'already part of “${s.knownWallet}” here',
               ].join(' · ')),

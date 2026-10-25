@@ -32,7 +32,7 @@ class _PromptScreenState extends State<PromptScreen> {
     final (title, body, approve) = switch (p) {
       Prompt_JoinKeygen(:final keyName, :final threshold, :final nSigners, :final network) => (
           'New key',
-          _text('Create the ${network.toUpperCase()} wallet “$keyName”.\n\n'
+          _text('Create the ${networkLabel(network).toUpperCase()} wallet “$keyName”.\n\n'
               '$threshold of $nSigners signers will be needed to spend from it. '
               'Approve only if you started this on your coordinator.'),
           'Join'
@@ -60,25 +60,28 @@ class _PromptScreenState extends State<PromptScreen> {
     };
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        body,
-        const SizedBox(height: 24),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: busy ? null : () => _run(widget.onReject),
-              child: const Text('Reject'),
+      body: ListView(padding: const EdgeInsets.all(16), children: [body]),
+      // pinned, so the buttons stay reachable on small screens however long the content is
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: busy ? null : () => _run(widget.onReject),
+                child: const Text('Reject'),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton(
-              onPressed: busy ? null : () => _run(widget.onApprove),
-              child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(approve),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: busy ? null : () => _run(widget.onApprove),
+                child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(approve),
+              ),
             ),
-          ),
-        ]),
-      ]),
+          ]),
+        ),
+      ),
     );
   }
 
@@ -131,7 +134,7 @@ class _PromptScreenState extends State<PromptScreen> {
       ]);
 
   Widget _tx(TxSummary s, String note) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Wallet “${s.keyName}” · ${s.network}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text('Wallet “${s.keyName}” · ${networkLabel(s.network)}', style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TxCard(
           outputs: [for (final o in s.outputs) TxOutputRow(address: o.address, sats: o.amountSats.toInt(), ownLabel: o.ownLabel)],

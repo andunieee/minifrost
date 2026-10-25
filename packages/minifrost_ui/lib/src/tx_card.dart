@@ -45,7 +45,8 @@ class TxCard extends StatelessWidget {
             const SizedBox(height: 4),
             if (o.ownLabel != null)
               Chip(label: Text('Back to this wallet · ${o.ownLabel}'), visualDensity: VisualDensity.compact),
-            SelectableText(groupAddress(o.address), style: const TextStyle(fontFamily: 'monospace', fontSize: 15)),
+            if (o.address.isNotEmpty)
+              SelectableText(groupAddress(o.address), style: const TextStyle(fontFamily: 'monospace', fontSize: 15)),
             const Divider(height: 24),
           ],
           Row(children: [

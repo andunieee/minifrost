@@ -71,7 +71,8 @@ class _AnimatedQrState extends State<AnimatedQr> {
     _timer?.cancel();
     if (widget.frames.length > 1) {
       _timer = Timer.periodic(Duration(milliseconds: (1000 / widget.fps).round()), (_) {
-        if (mounted) setState(() => _i = (_i + 1) % widget.frames.length);
+        // the raw text lists every part, so the code holds still while it is being read
+        if (mounted && !_showRaw) setState(() => _i = (_i + 1) % widget.frames.length);
       });
     }
   }

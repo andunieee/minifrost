@@ -100,15 +100,18 @@ class _CeremonyPageState extends State<CeremonyPage> {
           title: Text(widget.title),
           leading: IconButton(icon: const Icon(Icons.close), onPressed: _cancel),
         ),
-        body: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: ListView(padding: const EdgeInsets.all(24), children: [
-              if (broadcast != null) ...[
+        body: LayoutBuilder(builder: (context, box) {
+          final narrow = box.maxWidth < 900;
+          final qrSize = narrow ? (box.maxWidth - 80).clamp(200.0, 380.0) : 380.0;
+          final shown = <Widget>[
+              // a finished signing or backup session has nothing left to show to the signers;
+              // key creation still shows its last code so every signer can store its share
+              if (broadcast != null && (f == null || f is Finished_KeyCreated)) ...[
                 Text(broadcast!.title, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 4),
                 Text(message),
                 const SizedBox(height: 16),
-                Center(child: AnimatedQr(frames: broadcast!.frames, size: 380, sound: const RustSoundPlayer())),
+                Center(child: AnimatedQr(frames: broadcast!.frames, size: qrSize, sound: const RustSoundPlayer())),
               ],
               if (update.checkCode != null) ...[
                 const SizedBox(height: 24),
@@ -138,27 +141,33 @@ class _CeremonyPageState extends State<CeremonyPage> {
               ],
               if (f is Finished_Signed) ..._signedSection(f),
               if (f != null && f is! Finished_KeyCreated && f is! Finished_Signed) ..._backupSection(f),
-            ]),
-          ),
-          const VerticalDivider(width: 1),
-          SizedBox(
-            width: 460,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: finished
-                  ? const SizedBox()
-                  : ListView(children: [
-                      Text('Signers', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(update.awaiting.isEmpty
-                          ? 'All replies received.'
-                          : 'Waiting for: ${update.awaiting.join(', ')}'),
-                      const SizedBox(height: 16),
-                      ScanPanel(backend: const RustQrBackend(), onPayload: _onPayload),
-                    ]),
+          ];
+          final scan = <Widget>[
+            Text('Signers', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(update.awaiting.isEmpty ? 'All replies received.' : 'Waiting for: ${update.awaiting.join(', ')}'),
+            const SizedBox(height: 16),
+            ScanPanel(backend: const RustQrBackend(), onPayload: _onPayload),
+          ];
+          // a phone has no room for two columns: show the code first, the scanner below it
+          if (narrow) {
+            return ListView(padding: const EdgeInsets.all(16), children: [
+              ...shown,
+              if (!finished) ...[const Divider(height: 32), ...scan],
+            ]);
+          }
+          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: ListView(padding: const EdgeInsets.all(24), children: shown)),
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: 460,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: finished ? const SizedBox() : ListView(children: scan),
+              ),
             ),
-          ),
-        ]),
+          ]);
+        }),
       ),
     );
   }

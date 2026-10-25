@@ -429,7 +429,7 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
             Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
               _chip('${w.threshold}-of-${w.signers.length}'),
-              _chip(w.network),
+              _chip(networkLabel(w.network)),
               Text(w.signers.map((s) => s.name).join(', '),
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             ]),
@@ -482,7 +482,7 @@ class _ConfirmSendDialogState extends State<_ConfirmSendDialog> {
             TxCard(
               outputs: [
                 TxOutputRow(address: p.recipient, sats: p.amountSats.toInt()),
-                if (p.changeSats != null) TxOutputRow(address: 'change (back to this wallet)', sats: p.changeSats!.toInt(), ownLabel: 'Change'),
+                if (p.changeSats != null) TxOutputRow(address: '', sats: p.changeSats!.toInt(), ownLabel: 'Change'),
               ],
               feeSats: p.feeSats.toInt(),
               feeRate: p.feeRate,

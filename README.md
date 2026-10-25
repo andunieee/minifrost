@@ -61,7 +61,9 @@ Where a camera is awkward, any QR code can be sent as sound instead ([ggwave](ht
 scans press **Listen (sound)** first. The player loops the message as audible chirps (`AUDIBLE_FAST`,
 100 payload bytes each, roughly 15 bytes/s), the listener's microphone hears them in any order and
 with repeats, and the frames go into the same assembler and SHA-256 check as scanned QR frames.
-Keep the devices close in a quiet room. The signer asks for the `RECORD_AUDIO` permission the
+Keep the devices close in a quiet room. Raise the phone's media volume first (many phones keep
+it at 0 for the speaker). A desktop without a microphone can play sound but not listen: feed it the
+phone's "Show raw" text through the **Paste QR text** field instead. The signer asks for the `RECORD_AUDIO` permission the
 first time you press Listen; like the camera it is only used while the screen is open.
 
 ### Backups and restoration
@@ -109,7 +111,7 @@ signer phones), and knowing the wallet's name, network and threshold to check th
   is effectively plaintext: the phone's storage alone can sign.
 - Rust hands the app a snapshot, which `lib/vault.dart` writes **unencrypted** to a file in the
   app-private directory (atomic temp file + rename). Backups and device transfer are disabled;
-  `FLAG_SECURE` blocks screenshots. Minimum Android is 7 (API 24). No screen lock, biometrics or
+  `FLAG_SECURE` blocks screenshots (release builds only). Minimum Android is 7 (API 24). No screen lock, biometrics or
   Keystore are involved, so anyone with file access to the phone (root, forensics) can read the share.
 - State is persisted **before** any QR derived from it is shown (`controller.dart`). After
   signing, the snapshot contains the burned nonce — so a crash cannot lead to nonce reuse.

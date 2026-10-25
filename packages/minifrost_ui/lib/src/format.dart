@@ -27,3 +27,10 @@ String groupAddress(String a, {int group = 4}) {
   }
   return out.toString();
 }
+
+/// The user-facing name of a network id as stored by the Rust side (`signet` is Mutinynet here).
+String networkLabel(String network) => switch (network) {
+      'signet' => 'mutinynet',
+      'bitcoin' => 'mainnet',
+      _ => network,
+    };

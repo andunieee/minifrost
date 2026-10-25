@@ -62,7 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
           if (saved != null) Padding(padding: const EdgeInsets.only(left: 12), child: Text(saved!)),
         ]),
         const SizedBox(height: 8),
-        const Text('The URL applies to all wallets. Defaults per network: mempool.space (mainnet, testnet), mutinynet.com (signet).',
+        const Text('The URL applies to all wallets. Defaults per network: mempool.space (mainnet, testnet), mutinynet.com (mutinynet).',
             style: TextStyle(fontSize: 12)),
       ]),
     );
