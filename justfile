@@ -14,11 +14,11 @@ default:
 coordinator-desktop:
     cd apps/coordinator && flutter run -d linux
 
-# Build the coordinator debug APK and install it on the connected phone.
+# Build the coordinator debug APK and install it on all connected phones.
 # Install only, no attached shell (no logcat / hot reload). For logs:
-# `adb -s <device> logcat`. Picks the first connected android device (see `just devices`).
+# `adb -s <device> logcat`. Loops over all connected android devices (see `just devices`).
 coordinator-android:
-    cd apps/coordinator && flutter build apk --debug && adb -s "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')" install -r -t build/app/outputs/flutter-apk/app-debug.apk
+    cd apps/coordinator && flutter build apk --debug && for d in $(adb devices -l | awk 'NR > 1 && $2 == "device" {print $1}'); do adb -s "$d" install -r -t build/app/outputs/flutter-apk/app-debug.apk; done
 
 # --- signer ----------------------------------------------------------------------------------
 # On desktop the key share lives in a plain file (see lib/vault.dart), webcam scanning
@@ -28,11 +28,11 @@ coordinator-android:
 signer-desktop:
     cd apps/signer && flutter run -d linux
 
-# Build the signer debug APK and install it on the connected phone.
+# Build the signer debug APK and install it on all connected phones.
 # Install only, no attached shell (no logcat / hot reload). For logs:
-# `adb -s <device> logcat`. Picks the first connected android device (see `just devices`).
+# `adb -s <device> logcat`. Loops over all connected android devices (see `just devices`).
 signer-android:
-    cd apps/signer && flutter build apk --debug && adb -s "$(flutter devices --machine | jq -r '[.[] | select(.targetPlatform | startswith("android-")) | .id] | first')" install -r -t build/app/outputs/flutter-apk/app-debug.apk
+    cd apps/signer && flutter build apk --debug && for d in $(adb devices -l | awk 'NR > 1 && $2 == "device" {print $1}'); do adb -s "$d" install -r -t build/app/outputs/flutter-apk/app-debug.apk; done
 
 # --- development -----------------------------------------------------------------------------
 
