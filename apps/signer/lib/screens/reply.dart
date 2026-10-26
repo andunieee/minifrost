@@ -16,7 +16,7 @@ class ReplyScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        Center(child: AnimatedQr(frames: frames, size: size.clamp(200, 420), sound: const RustSoundPlayer())),
+        Center(child: AnimatedQr(frames: frames, label: 'Showing: $what', size: size.clamp(200, 420), sound: const RustSoundPlayer())),
         const SizedBox(height: 16),
         Text(what, textAlign: TextAlign.center),
         const SizedBox(height: 8),

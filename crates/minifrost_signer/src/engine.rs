@@ -572,7 +572,12 @@ impl Signer {
         for send in sends {
             match send {
                 DeviceSend::ToCoordinator(m) => {
-                    step = Some(reply(me, *m, "Show this to the coordinator"));
+                    let what = match &*m {
+                        DeviceToCoordinatorMessage::KeyGen(_) => "Reply · Key generation",
+                        DeviceToCoordinatorMessage::Signing(_) => "Reply · Signing",
+                        DeviceToCoordinatorMessage::Restoration(_) => "Reply · Backup / restoration",
+                    };
+                    step = Some(reply(me, *m, what));
                 }
                 DeviceSend::ToUser(u) => match *u {
                     DeviceToUserMessage::CheckKeyGen { phase } => {
@@ -620,7 +625,7 @@ impl Signer {
                     .inner
                     .keygen_ack(*phase, &mut self.derivation, &mut OsRng)
                     .map_err(|e| e.to_string())?;
-                reply(me, DeviceToCoordinatorMessage::KeyGen(frostsnap_core::message::keygen::DeviceKeygen::Ack(ack)), "Show this to the coordinator")
+                reply(me, DeviceToCoordinatorMessage::KeyGen(frostsnap_core::message::keygen::DeviceKeygen::Ack(ack)), "Reply · Key generation acknowledgement")
             }
             Pending::Nonces(msg, txid, key_id) => {
                 let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
@@ -646,12 +651,12 @@ impl Signer {
                     DeviceToCoordinatorMessage::Signing(
                         frostsnap_core::message::signing::DeviceSigning::NonceResponse { segments },
                     ),
-                    "Nonces — show this to the coordinator",
+                    "Reply · Nonces for signing",
                 )
             }
             Pending::DisplayBackup { access_structure_ref, share_index } => reply_packet(
                 Packet::BackupRecorded { device_id: me, access_structure_ref, share_index },
-                "Backup recorded — show this to the coordinator",
+                "Reply · Backup recorded",
             ),
             Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
             Pending::Sign(phase) => {
@@ -669,7 +674,7 @@ impl Signer {
                         _ => None,
                     })
                     .ok_or("signing produced no signature share")?;
-                reply(me, m, "Partial signature — show this to the coordinator")
+                reply(me, m, "Reply · Partial signature")
             }
         };
         Ok(self.result(step))
@@ -737,7 +742,7 @@ impl Signer {
                 };
                 let step = reply_packet(
                     Packet::BackupChecked { device_id: me, access_structure_ref, share_index },
-                    "Backup checked — show this to the coordinator",
+                    "Reply · Backup checked",
                 );
                 Ok(QuizAnswer { correct: true, next: None, done: Some(self.result(step)) })
             }

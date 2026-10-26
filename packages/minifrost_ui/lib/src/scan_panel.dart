@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'mic_permission.dart';
 import 'qr_scan_backend.dart';
+import 'toast.dart';
 
 /// Camera preview + QR frame assembly + a "paste QR text" fallback, plus a "Listen" button that
 /// receives the same frames as sound (ggwave) from a device that is playing them. Uses the webcam through the
@@ -18,10 +19,14 @@ class ScanPanel extends StatefulWidget {
     required this.backend,
     required this.onPayload,
     this.hint = 'Hold the signer’s screen up to the camera',
+    this.expecting,
   });
   final QrScanBackend backend;
   final Future<void> Function(Uint8List payload) onPayload;
   final String hint;
+
+  /// The kind of message this scan is waiting for, shown above the camera.
+  final String? expecting;
 
   @override
   State<ScanPanel> createState() => _ScanPanelState();
@@ -228,6 +233,10 @@ class _ScanPanelState extends State<ScanPanel> {
   Widget build(BuildContext context) {
     final cams = cameras;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (widget.expecting != null) ...[
+        QrKindLabel('Expecting: ${widget.expecting}', icon: Icons.qr_code_scanner),
+        const SizedBox(height: 8),
+      ],
       if (cams == null) const Center(child: CircularProgressIndicator()),
       if (cams != null && cams.isEmpty)
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(Platform.isAndroid ? 'No camera available. You can paste QR text below instead.' : 'No camera found (/dev/video*). You can paste QR text below instead.'))),

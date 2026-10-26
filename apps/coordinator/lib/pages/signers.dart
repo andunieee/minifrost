@@ -98,11 +98,14 @@ class _EnrollDialogState extends State<_EnrollDialog> {
             : ScanPanel(
                 backend: const RustQrBackend(),
                 hint: 'Show the signer’s enrolment code to the camera',
+                expecting: 'signer enrolment code',
                 onPayload: (bytes) async {
                   try {
                     final s = await widget.app.enroll(payload: bytes);
                     widget.onAdded();
-                    if (mounted) setState(() => added = s);
+                    if (!mounted) return;
+                    showSuccessToast(this.context, 'Read enrolment code: added “${s.name}”.');
+                    setState(() => added = s);
                   } catch (e) {
                     if (mounted) setState(() => error = '$e');
                   }

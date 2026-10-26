@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
+import 'package:minifrost_ui/minifrost_ui.dart';
 
 import '../controller.dart';
 import '../src/rust/engine.dart';
@@ -14,8 +15,28 @@ import 'scan.dart';
 Future<void> runScanFlow(BuildContext context, SignerController c) async {
   final payload = await Navigator.push<Uint8List>(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
   if (payload == null || !context.mounted) return;
-  await _handle(context, c, () => c.receive(payload));
+  await _handle(context, c, () async {
+    final r = await c.receive(payload);
+    final kind = _readKind(r.step);
+    if (kind != null && context.mounted) showSuccessToast(context, 'Read from coordinator: $kind');
+    return r;
+  });
 }
+
+/// What the coordinator code that was just read asked for; null when it needs nothing.
+String? _readKind(Step step) => switch (step) {
+      Step_Confirm(:final field0) => switch (field0) {
+          Prompt_JoinKeygen() => 'key generation invitation',
+          Prompt_VerifyKeygen() => 'key generation check code',
+          Prompt_ReviewTransaction() => 'transaction to review',
+          Prompt_SignTransaction() => 'transaction to sign',
+          Prompt_DisplayBackup() => 'backup request',
+        },
+      Step_EnterBackup() => 'request to enter a backup',
+      Step_CheckBackup() => 'request to check a backup',
+      Step_Reply() || Step_Done() => 'coordinator message',
+      Step_Ignored() => null,
+    };
 
 Future<void> _handle(BuildContext context, SignerController c, Future<StepResult> Function() action) async {
   final nav = Navigator.of(context);

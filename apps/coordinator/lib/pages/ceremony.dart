@@ -42,6 +42,12 @@ class _CeremonyPageState extends State<CeremonyPage> {
     try {
       final u = await widget.app.receive(payload: bytes);
       if (!mounted) return;
+      final stepDone = u.finished != null || u.broadcast != null || u.awaiting.isEmpty;
+      if (u.message.startsWith('Already have')) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u.message)));
+      } else {
+        showSuccessToast(context, stepDone ? '${u.message} All replies received: step complete.' : u.message);
+      }
       setState(() {
         update = u;
         message = u.message;
@@ -111,7 +117,14 @@ class _CeremonyPageState extends State<CeremonyPage> {
                 const SizedBox(height: 4),
                 Text(message),
                 const SizedBox(height: 16),
-                Center(child: AnimatedQr(frames: broadcast!.frames, size: qrSize, sound: const RustSoundPlayer())),
+                Center(
+                  child: AnimatedQr(
+                    frames: broadcast!.frames,
+                    size: qrSize,
+                    label: 'Showing: ${broadcast!.title}',
+                    sound: const RustSoundPlayer(),
+                  ),
+                ),
               ],
               if (update.checkCode != null) ...[
                 const SizedBox(height: 24),
@@ -147,7 +160,11 @@ class _CeremonyPageState extends State<CeremonyPage> {
             const SizedBox(height: 4),
             Text(update.awaiting.isEmpty ? 'All replies received.' : 'Waiting for: ${update.awaiting.join(', ')}'),
             const SizedBox(height: 16),
-            ScanPanel(backend: const RustQrBackend(), onPayload: _onPayload),
+            ScanPanel(
+              backend: const RustQrBackend(),
+              onPayload: _onPayload,
+              expecting: broadcast == null ? 'signer reply' : 'signer reply to “${broadcast!.title}”',
+            ),
           ];
           // a phone has no room for two columns: show the code first, the scanner below it
           if (narrow) {

@@ -5,16 +5,20 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'qr_scan_backend.dart';
+import 'toast.dart';
 
 /// Shows a list of text frames as a looping QR code. A single frame is shown still. With a
 /// [sound] player it also offers to play the same frames as sound for a listening device.
 class AnimatedQr extends StatefulWidget {
-  const AnimatedQr({super.key, required this.frames, this.size = 320, this.fps = 4, this.sound});
+  const AnimatedQr({super.key, required this.frames, this.size = 320, this.fps = 4, this.sound, this.label});
 
   final List<String> frames;
   final double size;
   final double fps;
   final SoundPlayer? sound;
+
+  /// What kind of message this code carries, shown above it.
+  final String? label;
 
   @override
   State<AnimatedQr> createState() => _AnimatedQrState();
@@ -89,6 +93,10 @@ class _AnimatedQrState extends State<AnimatedQr> {
     if (widget.frames.isEmpty) return SizedBox(width: widget.size, height: widget.size);
     final i = _i % widget.frames.length;
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (widget.label != null) ...[
+        QrKindLabel(widget.label!),
+        const SizedBox(height: 8),
+      ],
       Container(
         color: Colors.white, // QR needs a light quiet zone in dark mode too
         padding: const EdgeInsets.all(12),

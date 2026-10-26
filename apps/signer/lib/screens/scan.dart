@@ -8,8 +8,13 @@ import '../qr_backend.dart';
 /// Scans an animated QR code (webcam on desktop, phone camera on Android) or takes pasted QR
 /// text. Pops with the completed payload.
 class ScanScreen extends StatelessWidget {
-  const ScanScreen({super.key, this.hint = 'Point the camera at the coordinator’s QR code'});
+  const ScanScreen({
+    super.key,
+    this.hint = 'Point the camera at the coordinator’s QR code',
+    this.expecting = 'coordinator message (key generation, transaction, backup request…)',
+  });
   final String hint;
+  final String expecting;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +29,7 @@ class ScanScreen extends StatelessWidget {
               child: ScanPanel(
                 backend: const RustQrBackend(),
                 hint: hint,
+                expecting: expecting,
                 onPayload: (bytes) async => Navigator.pop<Uint8List>(context, bytes),
               ),
             ),
