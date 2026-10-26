@@ -134,8 +134,11 @@ class Update {
   /// QR to show to *all* signers next. `None` while there is nothing new to show.
   final Broadcast? broadcast;
 
-  /// Names of the signers whose reply this round is still missing.
-  final List<String> awaiting;
+  /// The signers whose reply this round is still missing.
+  final List<SignerInfo> awaiting;
+
+  /// The signers whose reply this round has already been received.
+  final List<SignerInfo> received;
 
   /// Keygen only: signers show the same code; the humans compare.
   final String? checkCode;
@@ -146,6 +149,7 @@ class Update {
     required this.message,
     this.broadcast,
     required this.awaiting,
+    required this.received,
     this.checkCode,
     this.finished,
     required this.snapshotSaved,
@@ -156,6 +160,7 @@ class Update {
       message.hashCode ^
       broadcast.hashCode ^
       awaiting.hashCode ^
+      received.hashCode ^
       checkCode.hashCode ^
       finished.hashCode ^
       snapshotSaved.hashCode;
@@ -168,6 +173,7 @@ class Update {
           message == other.message &&
           broadcast == other.broadcast &&
           awaiting == other.awaiting &&
+          received == other.received &&
           checkCode == other.checkCode &&
           finished == other.finished &&
           snapshotSaved == other.snapshotSaved;

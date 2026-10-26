@@ -158,7 +158,12 @@ class _CeremonyPageState extends State<CeremonyPage> {
           final scan = <Widget>[
             Text('Signers', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text(update.awaiting.isEmpty ? 'All replies received.' : 'Waiting for: ${update.awaiting.join(', ')}'),
+            Text(update.awaiting.isEmpty ? 'All replies received.' : 'Waiting for ${update.awaiting.length}:'),
+            const SizedBox(height: 4),
+            Wrap(spacing: 8, runSpacing: 4, children: [
+              for (final s in update.awaiting) SignerChip(deviceId: s.deviceId, name: s.name),
+              for (final s in update.received) SignerChip(deviceId: s.deviceId, name: s.name, done: true),
+            ]),
             const SizedBox(height: 16),
             ScanPanel(
               backend: const RustQrBackend(),

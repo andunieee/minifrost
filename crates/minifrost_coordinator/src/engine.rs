@@ -95,8 +95,10 @@ pub struct Update {
     pub message: String,
     /// QR to show to *all* signers next. `None` while there is nothing new to show.
     pub broadcast: Option<Broadcast>,
-    /// Names of the signers whose reply this round is still missing.
-    pub awaiting: Vec<String>,
+    /// The signers whose reply this round is still missing.
+    pub awaiting: Vec<SignerInfo>,
+    /// The signers whose reply this round has already been received.
+    pub received: Vec<SignerInfo>,
     /// Keygen only: signers show the same code; the humans compare.
     pub check_code: Option<String>,
     pub finished: Option<Finished>,
@@ -427,8 +429,10 @@ impl Coordinator {
     // ------------------------------------------------------------------ receiving -----------
 
     fn fill_awaiting(&self, update: &mut Update, expected: &BTreeSet<DeviceId>) {
-        update.awaiting =
-            expected.iter().filter(|d| !self.replied.contains(d)).map(|d| self.name_of(d)).collect();
+        let (received, awaiting): (Vec<_>, Vec<_>) = expected.iter().partition(|d| self.replied.contains(d));
+        let info = |d: &DeviceId| SignerInfo { device_id: d.to_string(), name: self.name_of(d) };
+        update.awaiting = awaiting.into_iter().map(info).collect();
+        update.received = received.into_iter().map(info).collect();
     }
 
     fn expected(&self) -> BTreeSet<DeviceId> {

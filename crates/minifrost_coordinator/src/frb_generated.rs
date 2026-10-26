@@ -2772,7 +2772,8 @@ impl SseDecode for crate::engine::Update {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_message = <String>::sse_decode(deserializer);
         let mut var_broadcast = <Option<crate::engine::Broadcast>>::sse_decode(deserializer);
-        let mut var_awaiting = <Vec<String>>::sse_decode(deserializer);
+        let mut var_awaiting = <Vec<crate::engine::SignerInfo>>::sse_decode(deserializer);
+        let mut var_received = <Vec<crate::engine::SignerInfo>>::sse_decode(deserializer);
         let mut var_checkCode = <Option<String>>::sse_decode(deserializer);
         let mut var_finished = <Option<crate::engine::Finished>>::sse_decode(deserializer);
         let mut var_snapshotSaved = <bool>::sse_decode(deserializer);
@@ -2780,6 +2781,7 @@ impl SseDecode for crate::engine::Update {
             message: var_message,
             broadcast: var_broadcast,
             awaiting: var_awaiting,
+            received: var_received,
             check_code: var_checkCode,
             finished: var_finished,
             snapshot_saved: var_snapshotSaved,
@@ -3352,6 +3354,7 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Update {
             self.message.into_into_dart().into_dart(),
             self.broadcast.into_into_dart().into_dart(),
             self.awaiting.into_into_dart().into_dart(),
+            self.received.into_into_dart().into_dart(),
             self.check_code.into_into_dart().into_dart(),
             self.finished.into_into_dart().into_dart(),
             self.snapshot_saved.into_into_dart().into_dart(),
@@ -3863,7 +3866,8 @@ impl SseEncode for crate::engine::Update {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.message, serializer);
         <Option<crate::engine::Broadcast>>::sse_encode(self.broadcast, serializer);
-        <Vec<String>>::sse_encode(self.awaiting, serializer);
+        <Vec<crate::engine::SignerInfo>>::sse_encode(self.awaiting, serializer);
+        <Vec<crate::engine::SignerInfo>>::sse_encode(self.received, serializer);
         <Option<String>>::sse_encode(self.check_code, serializer);
         <Option<crate::engine::Finished>>::sse_encode(self.finished, serializer);
         <bool>::sse_encode(self.snapshot_saved, serializer);

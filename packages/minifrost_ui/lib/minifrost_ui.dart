@@ -1,3 +1,4 @@
+export 'src/signer_color.dart';
 export 'src/animated_qr.dart';
 export 'src/format.dart';
 export 'src/mic_permission.dart';

@@ -21,10 +21,14 @@ class Home extends StatelessWidget {
             future: Future.wait([controller.signer.name(), controller.signer.deviceId()]),
             builder: (context, snap) {
               final d = snap.data;
+              final color = d == null ? null : signerColor(d[1], Theme.of(context).brightness);
               return Card(
+                shape: color == null
+                    ? null
+                    : RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: color, width: 2)),
                 child: ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: Text(d?[0] ?? '…'),
+                  leading: Icon(Icons.shield_outlined, color: color),
+                  title: d == null ? const Text('…') : SignerName(deviceId: d[1], name: d[0], style: Theme.of(context).textTheme.titleMedium),
                   subtitle: Text(d == null ? '' : 'id ${d[1].substring(0, 16)}…',
                       style: const TextStyle(fontFamily: 'monospace')),
                 ),

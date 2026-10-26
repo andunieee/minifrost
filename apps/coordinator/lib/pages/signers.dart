@@ -51,8 +51,8 @@ class _SignersPageState extends State<SignersPage> {
             for (final s in list)
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.phone_android),
-                  title: Text(s.name),
+                  leading: Icon(Icons.phone_android, color: signerColor(s.deviceId, Theme.of(context).brightness)),
+                  title: SignerName(deviceId: s.deviceId, name: s.name),
                   subtitle: Text('${s.deviceId.substring(0, 24)}…', style: const TextStyle(fontFamily: 'monospace')),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),

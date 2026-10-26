@@ -2396,15 +2396,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Update dco_decode_update(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return Update(
       message: dco_decode_String(arr[0]),
       broadcast: dco_decode_opt_box_autoadd_broadcast(arr[1]),
-      awaiting: dco_decode_list_String(arr[2]),
-      checkCode: dco_decode_opt_String(arr[3]),
-      finished: dco_decode_opt_box_autoadd_finished(arr[4]),
-      snapshotSaved: dco_decode_bool(arr[5]),
+      awaiting: dco_decode_list_signer_info(arr[2]),
+      received: dco_decode_list_signer_info(arr[3]),
+      checkCode: dco_decode_opt_String(arr[4]),
+      finished: dco_decode_opt_box_autoadd_finished(arr[5]),
+      snapshotSaved: dco_decode_bool(arr[6]),
     );
   }
 
@@ -3044,7 +3045,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_message = sse_decode_String(deserializer);
     var var_broadcast = sse_decode_opt_box_autoadd_broadcast(deserializer);
-    var var_awaiting = sse_decode_list_String(deserializer);
+    var var_awaiting = sse_decode_list_signer_info(deserializer);
+    var var_received = sse_decode_list_signer_info(deserializer);
     var var_checkCode = sse_decode_opt_String(deserializer);
     var var_finished = sse_decode_opt_box_autoadd_finished(deserializer);
     var var_snapshotSaved = sse_decode_bool(deserializer);
@@ -3052,6 +3054,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       message: var_message,
       broadcast: var_broadcast,
       awaiting: var_awaiting,
+      received: var_received,
       checkCode: var_checkCode,
       finished: var_finished,
       snapshotSaved: var_snapshotSaved,
@@ -3671,7 +3674,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
     sse_encode_opt_box_autoadd_broadcast(self.broadcast, serializer);
-    sse_encode_list_String(self.awaiting, serializer);
+    sse_encode_list_signer_info(self.awaiting, serializer);
+    sse_encode_list_signer_info(self.received, serializer);
     sse_encode_opt_String(self.checkCode, serializer);
     sse_encode_opt_box_autoadd_finished(self.finished, serializer);
     sse_encode_bool(self.snapshotSaved, serializer);

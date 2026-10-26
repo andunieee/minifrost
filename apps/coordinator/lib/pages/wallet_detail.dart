@@ -430,8 +430,7 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
             Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
               _chip('${w.threshold}-of-${w.signers.length}'),
               _chip(networkLabel(w.network)),
-              Text(w.signers.map((s) => s.name).join(', '),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              for (final s in w.signers) SignerName(deviceId: s.deviceId, name: s.name, style: theme.textTheme.bodySmall),
             ]),
             const SizedBox(height: 8),
             SizedBox(height: 4, child: loading ? const LinearProgressIndicator() : null),
@@ -494,7 +493,7 @@ class _ConfirmSendDialogState extends State<_ConfirmSendDialog> {
             for (final s in widget.wallet.signers)
               CheckboxListTile(
                 dense: true,
-                title: Text(s.name),
+                title: SignerName(deviceId: s.deviceId, name: s.name),
                 value: chosen.contains(s.deviceId),
                 onChanged: (v) => setState(() => v == true ? chosen.add(s.deviceId) : chosen.remove(s.deviceId)),
               ),

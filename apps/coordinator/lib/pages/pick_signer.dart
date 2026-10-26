@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:minifrost_ui/minifrost_ui.dart';
+
 import '../src/rust/engine.dart';
 
 /// Ask which enrolled signer a backup action is for. Returns null if cancelled.
@@ -21,8 +23,8 @@ Future<SignerInfo?> pickSigner(
                 if (hint != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(hint)),
                 for (final s in signers)
                   ListTile(
-                    leading: const Icon(Icons.phone_android),
-                    title: Text(s.name),
+                    leading: Icon(Icons.phone_android, color: signerColor(s.deviceId, Theme.of(context).brightness)),
+                    title: SignerName(deviceId: s.deviceId, name: s.name),
                     onTap: () => Navigator.pop(context, s),
                   ),
               ]),
