@@ -28,6 +28,9 @@ tracing = { version = "0.1", default-features = false }
 
 [profile.dev]
 opt-level = 2
+# Debug Android builds fail to link (`undefined hidden symbol: anon.*`) with split codegen units.
+codegen-units = 1
+incremental = false
 
 [profile.release]
 codegen-units = 1
