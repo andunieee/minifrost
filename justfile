@@ -70,5 +70,5 @@ install-desktop app:
     mkdir -p ~/.local/opt ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor/512x512/apps
     cp -r apps/{{app}}/build/linux/x64/release/bundle ~/.local/opt/minifrost_{{app}}
     ln -sf ~/.local/opt/minifrost_{{app}}/minifrost_{{app}} ~/.local/bin/minifrost_{{app}}
-    cp assets/logo.png ~/.local/share/icons/hicolor/512x512/apps/minifrost.png
+    magick assets/logo.png -gravity center -crop 800x800+0+0 +repage -resize 512x512 ~/.local/share/icons/hicolor/512x512/apps/minifrost.png
     cp packaging/minifrost_{{app}}.desktop ~/.local/share/applications/
