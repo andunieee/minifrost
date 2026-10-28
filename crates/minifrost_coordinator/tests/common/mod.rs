@@ -91,11 +91,14 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
+    // the coordinator's camera can still catch a signer's previous reply after the round moved on
+    assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b2 = frames_of(&up);
     let replies: Vec<_> = signers.iter_mut().map(|s| auto_reply(s, &b2)).collect();
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
+    assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b3 = frames_of(&up);
     let acks: Vec<_> = signers
         .iter_mut()

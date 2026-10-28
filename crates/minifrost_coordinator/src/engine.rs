@@ -15,7 +15,9 @@ use frostsnap_core::{
         CoordinatorToUserSigningMessage, FrostCoordinator, Mutation,
     },
     device::KeyPurpose,
-    message::{signing::OpenNonceStreams, CoordinatorToDeviceMessage, DeviceToCoordinatorMessage},
+    message::{
+        keygen::DeviceKeygen, signing::OpenNonceStreams, CoordinatorToDeviceMessage, DeviceToCoordinatorMessage,
+    },
     AccessStructureRef, DeviceId, KeyId, KeygenId, SignSessionId, SymmetricKey, WireSignTask,
 };
 use minifrost_wire::{Packet, SignPrepare};
@@ -114,6 +116,26 @@ pub struct Update {
 struct KeygenSession {
     id: KeygenId,
     devices: Vec<DeviceId>,
+    round: KeygenRound,
+}
+
+/// The keygen reply the coordinator is waiting for.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum KeygenRound {
+    Responses,
+    Certificates,
+    Acks,
+}
+
+impl KeygenRound {
+    /// Which round a signer's keygen reply answers, and for which keygen.
+    fn of(message: &DeviceKeygen) -> (Self, KeygenId) {
+        match message {
+            DeviceKeygen::Response(r) => (Self::Responses, r.keygen_id),
+            DeviceKeygen::Certify { keygen_id, .. } => (Self::Certificates, *keygen_id),
+            DeviceKeygen::Ack(a) => (Self::Acks, a.keygen_id),
+        }
+    }
 }
 
 struct SigningSession {
@@ -350,7 +372,8 @@ impl Coordinator {
         );
         let keygen_id = begin.keygen_id;
         let sends = self.inner.begin_keygen(begin, &mut OsRng).map_err(|e| e.to_string())?;
-        self.session = Session::Keygen(KeygenSession { id: keygen_id, devices: devices.clone() });
+        self.session =
+            Session::Keygen(KeygenSession { id: keygen_id, devices: devices.clone(), round: KeygenRound::Responses });
         self.replied.clear();
         let mut update = Update {
             message: format!("Show this to all {} signers and have each approve it.", devices.len()),
@@ -483,6 +506,23 @@ impl Coordinator {
         let Incoming::Core(message) = incoming else {
             return Err("That reply does not belong to this session.".into());
         };
+        // frostsnap_core drops the whole pending keygen when it rejects a keygen message, so a
+        // signer's reply to an earlier round (its old QR still on screen) must not reach it.
+        if let (Session::Keygen(k), DeviceToCoordinatorMessage::KeyGen(m)) = (&self.session, &message) {
+            if KeygenRound::of(m) != (k.round, k.id) {
+                let mut u = Update {
+                    message: format!(
+                        "That is {}'s reply to an earlier step. Show it the current code.",
+                        self.name_of(&from)
+                    ),
+                    from: Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) }),
+                    repeat: true,
+                    ..Default::default()
+                };
+                self.fill_awaiting(&mut u, &expected);
+                return Ok(u);
+            }
+        }
         if !self.replied.insert(from) {
             let mut u = Update {
                 message: format!("Already have {}'s reply.", self.name_of(&from)),
@@ -561,6 +601,9 @@ impl Coordinator {
                 _ => "Step 2 · Aggregated nonces".to_string(),
             };
             update.broadcast = Some(self.broadcast(to_devices, &title));
+            if let Session::Keygen(k) = &mut self.session {
+                k.round = if update.check_code.is_some() { KeygenRound::Acks } else { KeygenRound::Certificates };
+            }
             if !matches!(self.session, Session::Idle) {
                 self.replied.clear();
                 update.message = match &self.session {
