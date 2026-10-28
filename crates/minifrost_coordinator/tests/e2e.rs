@@ -211,3 +211,26 @@ fn signer_refuses_swapped_transaction() {
         assert!(err.contains("NOT the transaction you reviewed"), "{err}");
     }
 }
+
+#[test]
+fn signer_refuses_a_code_whose_title_does_not_fit_its_step() {
+    let mut coord = Coordinator::in_memory();
+    let mut signer = Signer::create("a".into());
+    coord.enroll(&scan(&signer.hello_frames())).unwrap();
+    let ids: Vec<String> = coord.signers().into_iter().map(|s| s.device_id).collect();
+    let up = coord.start_keygen("k".into(), 1, ids, Network::Signet).unwrap();
+
+    // relabel the round 1 code as a later round, so the signer's reply would claim to answer it
+    let minifrost_wire::Packet::ToDevices { entries, .. } =
+        minifrost_wire::Packet::from_bytes(&scan(&frames_of(&up))).unwrap()
+    else {
+        panic!("keygen round 1 is a ToDevices packet")
+    };
+    let relabelled =
+        minifrost_wire::Packet::ToDevices { step: minifrost_wire::Step::KeygenCertify, entries };
+    let err = signer.receive(&relabelled.to_bytes()).unwrap_err();
+    assert!(err.contains("labelled “Round 2 · Certify”"), "{err}");
+
+    // the real code still works
+    assert!(matches!(signer_step(&mut signer, &frames_of(&up)), Step::Confirm(Prompt::JoinKeygen { .. })));
+}

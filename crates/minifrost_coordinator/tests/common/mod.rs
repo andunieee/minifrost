@@ -77,15 +77,27 @@ pub fn auto_reply(s: &mut Signer, frames: &[String]) -> Vec<String> {
     }
 }
 
+/// A signer's reply to the coordinator broadcast in `to`, labelled with that broadcast's title.
+pub fn reply_to(step: Step, to: &Update) -> Vec<String> {
+    let title = &to.broadcast.as_ref().expect("a broadcast").title;
+    match step {
+        Step::Reply { frames, what } => {
+            assert_eq!(what, minifrost_wire::reply_label(title));
+            frames
+        }
+        other => panic!("expected reply, got {other:?}"),
+    }
+}
+
 /// Drive a keygen from the coordinator's first broadcast to the last "check code" acks.
 pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update) -> Update {
-    let mut up = first;
+    let mut up = first.clone();
     let b1 = frames_of(&up);
     let replies: Vec<_> = signers
         .iter_mut()
         .map(|s| {
             assert!(matches!(signer_step(s, &b1), Step::Confirm(Prompt::JoinKeygen { .. })));
-            approve_to_reply(s)
+            reply_to(s.approve().unwrap().step, &first)
         })
         .collect();
     for r in &replies {
@@ -94,7 +106,7 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     // the coordinator's camera can still catch a signer's previous reply after the round moved on
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b2 = frames_of(&up);
-    let replies: Vec<_> = signers.iter_mut().map(|s| auto_reply(s, &b2)).collect();
+    let replies: Vec<_> = signers.iter_mut().map(|s| reply_to(signer_step(s, &b2), &up)).collect();
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
@@ -104,7 +116,7 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
         .iter_mut()
         .map(|s| {
             assert!(matches!(signer_step(s, &b3), Step::Confirm(Prompt::VerifyKeygen { .. })));
-            approve_to_reply(s)
+            reply_to(s.approve().unwrap().step, &up)
         })
         .collect();
     for a in &acks {

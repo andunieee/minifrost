@@ -24,6 +24,7 @@ use frostsnap_core::{
     schnorr_fun::frost::ShareIndex,
     AccessStructureRef, DeviceId, EnterPhysicalId, KeyId, RestorationId,
 };
+use minifrost_wire::Step as WireStep;
 use rand::rngs::OsRng;
 
 use super::{purpose_network, Coordinator, Finished, Res, Session, Update};
@@ -182,7 +183,7 @@ impl Coordinator {
         &mut self,
         session: BackupSession,
         sends: Vec<CoordinatorSend>,
-        title: &str,
+        step: WireStep,
         message: &str,
     ) -> Res<Update> {
         let device = session.device();
@@ -191,7 +192,7 @@ impl Coordinator {
         self.save()?;
         let mut update = Update {
             message: message.to_string(),
-            broadcast: Some(self.broadcast(sends, title)),
+            broadcast: Some(self.broadcast(sends, step)),
             ..Default::default()
         };
         self.fill_awaiting(&mut update, &[device].into());
@@ -246,7 +247,7 @@ impl Coordinator {
         self.start_backup_session(
             BackupSession::Display { device, access_structure_ref: aref, share_index },
             sends,
-            "Show the secret backup",
+            WireStep::ShowBackup,
             "Show this to the signer. It will display 25 words: write them down in order, then confirm.",
         )
     }
@@ -264,7 +265,7 @@ impl Coordinator {
         self.start_backup_session(
             BackupSession::Check { device, access_structure_ref: aref, share_index },
             sends,
-            "Check the backup",
+            WireStep::CheckBackup,
             "Show this to the signer. The user answers its quiz using the paper backup.",
         )
     }
@@ -359,7 +360,7 @@ impl Coordinator {
         self.start_backup_session(
             BackupSession::Enter { device, enter_id, target, stage: EnterStage::WaitingForWords },
             sends,
-            "Enter a backup",
+            WireStep::EnterBackup,
             "Show this to the signer, then type the key number and 25 words into it.",
         )
     }
@@ -395,7 +396,7 @@ impl Coordinator {
         self.start_backup_session(
             BackupSession::HeldShares { device },
             sends,
-            "Which shares does this signer hold?",
+            WireStep::HeldShares,
             "Show this to the signer; it answers by itself.",
         )
     }
@@ -487,7 +488,7 @@ impl Coordinator {
         self.start_backup_session(
             BackupSession::Consolidate { device, access_structure_ref: aref },
             vec![send],
-            "Finish restoring this signer",
+            WireStep::FinishRestoring,
             "Show this to the signer; it turns the typed-in backup into its normal encrypted share by itself.",
         )
     }
@@ -691,7 +692,7 @@ impl Coordinator {
                 Ok(self.next_step(
                     device,
                     sends,
-                    "Add the backup to the wallet",
+                    WireStep::AddBackupToWallet,
                     "The backup fits this wallet. Show this to the signer to finish adding it.",
                 ))
             }
@@ -728,17 +729,17 @@ impl Coordinator {
                 Ok(self.next_step(
                     device,
                     sends,
-                    "Save the backup on the signer",
+                    WireStep::SaveBackup,
                     "The backup is accepted. Show this to the signer so it keeps it.",
                 ))
             }
         }
     }
 
-    fn next_step(&mut self, device: DeviceId, sends: Vec<CoordinatorSend>, title: &str, message: &str) -> Update {
+    fn next_step(&mut self, device: DeviceId, sends: Vec<CoordinatorSend>, step: WireStep, message: &str) -> Update {
         let mut update = Update {
             message: message.to_string(),
-            broadcast: Some(self.broadcast(sends, title)),
+            broadcast: Some(self.broadcast(sends, step)),
             ..Default::default()
         };
         self.fill_awaiting(&mut update, &[device].into());

@@ -10,7 +10,7 @@ use frostsnap_core::{
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 2;
+pub const WIRE_VERSION: u8 = 3;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -18,7 +18,11 @@ pub enum Packet {
     Hello { device_id: DeviceId, name: String },
     /// coordinator -> all signers. Each signer acts on the entries addressed to its device id.
     /// Used for every keygen round and for the signing round that carries the aggregated nonces.
-    ToDevices(Vec<(Vec<DeviceId>, CoordinatorToDeviceMessage)>),
+    ToDevices {
+        /// Which coordinator step this is. The signer labels its reply with the step's title.
+        step: Step,
+        entries: Vec<(Vec<DeviceId>, CoordinatorToDeviceMessage)>,
+    },
     /// coordinator -> all signers, signing round 1: the transaction to review, plus a request for
     /// fresh nonces. The signer only releases nonces after its user looked at the transaction.
     SignPrepare(SignPrepare),
@@ -47,6 +51,8 @@ pub enum Packet {
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub struct SignPrepare {
+    /// As in [`Packet::ToDevices`]; always [`Step::SignReview`].
+    pub step: Step,
     pub key_id: KeyId,
     /// What will be signed. The same task has to come back, bit for bit, in round 2.
     pub sign_task: WireSignTask,
@@ -92,6 +98,95 @@ impl Packet {
         }
         Ok(packet)
     }
+}
+
+/// A coordinator step. Only this one-byte code crosses the air gap: each side turns it into the
+/// step's title itself, so the coordinator can't put arbitrary text on the signer's screen. Each
+/// step belongs to one kind of message, and the signer refuses a code whose step doesn't fit what
+/// it carries (see [`Step::check`]), so a reply's label always names the step actually answered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bincode::Encode, bincode::Decode)]
+pub enum Step {
+    KeygenJoin,
+    KeygenCertify,
+    KeygenCheck,
+    KeygenFinalize,
+    SignReview,
+    SignNonces,
+    ShowBackup,
+    CheckBackup,
+    EnterBackup,
+    SaveBackup,
+    AddBackupToWallet,
+    FinishRestoring,
+    HeldShares,
+}
+
+impl Step {
+    pub fn title(self) -> &'static str {
+        match self {
+            Step::KeygenJoin => "Round 1 · Join key generation",
+            Step::KeygenCertify => "Round 2 · Certify",
+            Step::KeygenCheck => "Round 3 · Compare the check code",
+            Step::KeygenFinalize => "Final · Store the key",
+            Step::SignReview => "Step 1 · Transaction to review",
+            Step::SignNonces => "Step 2 · Aggregated nonces",
+            Step::ShowBackup => "Show the secret backup",
+            Step::CheckBackup => "Check the backup",
+            Step::EnterBackup => "Enter a backup",
+            Step::SaveBackup => "Save the backup on the signer",
+            Step::AddBackupToWallet => "Add the backup to the wallet",
+            Step::FinishRestoring => "Finish restoring this signer",
+            Step::HeldShares => "Which shares does this signer hold?",
+        }
+    }
+
+    /// Whether a coordinator step carrying `message` can be this step. A [`SignPrepare`] is
+    /// always [`Step::SignReview`], which no `message` fits.
+    fn fits(self, message: &CoordinatorToDeviceMessage) -> bool {
+        use frostsnap_core::message::{
+            keygen::Keygen, signing::CoordinatorSigning, CoordinatorRestoration as R,
+        };
+        use CoordinatorToDeviceMessage as M;
+        match (self, message) {
+            (Step::KeygenJoin, M::KeyGen(Keygen::Begin(_)))
+            | (Step::KeygenCertify, M::KeyGen(Keygen::CertifyPlease { .. }))
+            | (Step::KeygenCheck, M::KeyGen(Keygen::Check { .. }))
+            | (Step::KeygenFinalize, M::KeyGen(Keygen::Finalize { .. }))
+            | (Step::SignNonces, M::Signing(CoordinatorSigning::RequestSign(_)))
+            | (Step::ShowBackup, M::Restoration(R::DisplayBackup { .. }))
+            | (Step::CheckBackup, M::Restoration(R::CheckBackup { .. }))
+            | (Step::EnterBackup, M::Restoration(R::EnterPhysicalBackup { .. }))
+            | (Step::SaveBackup, M::Restoration(R::SavePhysicalBackup { .. } | R::SavePhysicalBackup2(_)))
+            | (Step::HeldShares, M::Restoration(R::RequestHeldShares)) => true,
+            // the same request finishes both flows
+            (Step::AddBackupToWallet | Step::FinishRestoring, M::Restoration(R::Consolidate(_))) => true,
+            _ => false,
+        }
+    }
+
+    /// Refuse a coordinator code whose step doesn't match the message it carries.
+    pub fn check(self, message: &CoordinatorToDeviceMessage) -> Result<(), String> {
+        if self.fits(message) {
+            Ok(())
+        } else {
+            Err(format!("This code is labelled “{}” but does not carry that step. Refusing it.", self.title()))
+        }
+    }
+
+    /// As [`Step::check`], for the step of a [`SignPrepare`].
+    pub fn check_sign_prepare(self) -> Result<(), String> {
+        if self == Step::SignReview {
+            Ok(())
+        } else {
+            Err(format!("This code is labelled “{}” but carries a transaction to review. Refusing it.", self.title()))
+        }
+    }
+}
+
+/// What a signer calls its reply to the coordinator step titled `title`, so the user can see it
+/// answers the step the coordinator is waiting for.
+pub fn reply_label(title: &str) -> String {
+    format!("Reply to “{title}”")
 }
 
 /// The keygen verification code. Every signer and the coordinator show this; the humans compare

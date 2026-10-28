@@ -270,6 +270,8 @@ pub struct Signer {
     /// transactions the user reviewed in round 1, by key
     reviewed: BTreeMap<KeyId, bitcoin::Txid>,
     dirty: bool,
+    /// The coordinator step being answered; replies are labelled with its title.
+    step: Option<minifrost_wire::Step>,
 }
 
 fn build(
@@ -294,6 +296,7 @@ fn build(
         name,
         history,
         pending: None,
+        step: None,
         reviewed: reviewed
             .into_iter()
             .map(|(k, t)| (KeyId(k), bitcoin::Txid::from_byte_array(t)))
@@ -411,10 +414,14 @@ impl Signer {
                 reason: "This code is meant for a coordinator, not for a signer.".into(),
             },
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
-            Packet::ToDevices(entries) => {
+            Packet::ToDevices { step, entries } => {
                 match entries.into_iter().find(|(to, _)| to.contains(&me)) {
                     None => Step::Ignored { reason: "This code is not addressed to this signer.".into() },
-                    Some((_, msg)) => self.receive_message(msg)?,
+                    Some((_, msg)) => {
+                        step.check(&msg)?;
+                        self.step = Some(step);
+                        self.receive_message(msg)?
+                    }
                 }
             }
         };
@@ -425,6 +432,8 @@ impl Signer {
         let Some((_, open)) = prep.open_nonce_streams.into_iter().find(|(d, _)| *d == me) else {
             return Ok(Step::Ignored { reason: "This signing request is not addressed to this signer.".into() });
         };
+        prep.step.check_sign_prepare()?;
+        self.step = Some(prep.step);
         let key = self
             .keys()
             .into_iter()
@@ -566,19 +575,24 @@ impl Signer {
         Ok(Step::Confirm(Prompt::SignTransaction(summary)))
     }
 
+    fn reply(&self, me: DeviceId, message: DeviceToCoordinatorMessage) -> Step {
+        self.reply_packet(Packet::FromDevice { device_id: me, message })
+    }
+
+    fn reply_packet(&self, packet: Packet) -> Step {
+        let bytes = packet.to_bytes();
+        Step::Reply {
+            frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
+            what: self.step.map_or("Reply".to_string(), |s| minifrost_wire::reply_label(s.title())),
+        }
+    }
+
     fn handle_sends(&mut self, sends: Vec<DeviceSend>) -> Res<Step> {
         let me = self.device_id();
         let mut step = None;
         for send in sends {
             match send {
-                DeviceSend::ToCoordinator(m) => {
-                    let what = match &*m {
-                        DeviceToCoordinatorMessage::KeyGen(_) => "Reply · Key generation",
-                        DeviceToCoordinatorMessage::Signing(_) => "Reply · Signing",
-                        DeviceToCoordinatorMessage::Restoration(_) => "Reply · Backup / restoration",
-                    };
-                    step = Some(reply(me, *m, what));
-                }
+                DeviceSend::ToCoordinator(m) => step = Some(self.reply(me, *m)),
                 DeviceSend::ToUser(u) => match *u {
                     DeviceToUserMessage::CheckKeyGen { phase } => {
                         let (t, n) = phase.t_of_n();
@@ -625,7 +639,7 @@ impl Signer {
                     .inner
                     .keygen_ack(*phase, &mut self.derivation, &mut OsRng)
                     .map_err(|e| e.to_string())?;
-                reply(me, DeviceToCoordinatorMessage::KeyGen(frostsnap_core::message::keygen::DeviceKeygen::Ack(ack)), "Reply · Key generation acknowledgement")
+                self.reply(me, DeviceToCoordinatorMessage::KeyGen(frostsnap_core::message::keygen::DeviceKeygen::Ack(ack)))
             }
             Pending::Nonces(msg, txid, key_id) => {
                 let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
@@ -646,18 +660,16 @@ impl Signer {
                 }
                 self.reviewed.insert(key_id, txid);
                 self.dirty = true; // nonce slots changed
-                reply(
+                self.reply(
                     me,
                     DeviceToCoordinatorMessage::Signing(
                         frostsnap_core::message::signing::DeviceSigning::NonceResponse { segments },
                     ),
-                    "Reply · Nonces for signing",
                 )
             }
-            Pending::DisplayBackup { access_structure_ref, share_index } => reply_packet(
-                Packet::BackupRecorded { device_id: me, access_structure_ref, share_index },
-                "Reply · Backup recorded",
-            ),
+            Pending::DisplayBackup { access_structure_ref, share_index } => {
+                self.reply_packet(Packet::BackupRecorded { device_id: me, access_structure_ref, share_index })
+            }
             Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();
@@ -674,7 +686,7 @@ impl Signer {
                         _ => None,
                     })
                     .ok_or("signing produced no signature share")?;
-                reply(me, m, "Reply · Partial signature")
+                self.reply(me, m)
             }
         };
         Ok(self.result(step))
@@ -740,10 +752,8 @@ impl Signer {
                 let Some(Pending::Quiz { access_structure_ref, share_index, .. }) = self.pending.take() else {
                     unreachable!()
                 };
-                let step = reply_packet(
-                    Packet::BackupChecked { device_id: me, access_structure_ref, share_index },
-                    "Reply · Backup checked",
-                );
+                let step =
+                    self.reply_packet(Packet::BackupChecked { device_id: me, access_structure_ref, share_index });
                 Ok(QuizAnswer { correct: true, next: None, done: Some(self.result(step)) })
             }
         }
@@ -787,17 +797,6 @@ fn network_name(p: &KeyPurpose) -> String {
     }
 }
 
-fn reply(me: DeviceId, message: DeviceToCoordinatorMessage, what: &str) -> Step {
-    reply_packet(Packet::FromDevice { device_id: me, message }, what)
-}
-
-fn reply_packet(packet: Packet, what: &str) -> Step {
-    let bytes = packet.to_bytes();
-    Step::Reply {
-        frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
-        what: what.to_string(),
-    }
-}
 
 fn preview_summary(
     key_name: &str,

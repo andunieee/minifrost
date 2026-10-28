@@ -20,7 +20,7 @@ use frostsnap_core::{
     },
     AccessStructureRef, DeviceId, KeyId, KeygenId, SignSessionId, SymmetricKey, WireSignTask,
 };
-use minifrost_wire::{Packet, SignPrepare};
+use minifrost_wire::{Packet, SignPrepare, Step as WireStep};
 use rand::{rngs::OsRng, RngCore};
 
 use crate::wallet::{self, Amt, BuiltSend, HttpEsplora, WalletView};
@@ -377,7 +377,7 @@ impl Coordinator {
         self.replied.clear();
         let mut update = Update {
             message: format!("Show this to all {} signers and have each approve it.", devices.len()),
-            broadcast: Some(self.broadcast(sends.into_iter().collect(), "Round 1 · Join key generation")),
+            broadcast: Some(self.broadcast(sends.into_iter().collect(), WireStep::KeygenJoin)),
             ..Default::default()
         };
         self.fill_awaiting(&mut update, &devices.iter().copied().collect());
@@ -414,6 +414,7 @@ impl Coordinator {
         let request = self.inner.maybe_request_nonce_replenishment(&devices, 1, &mut OsRng);
         let open: Vec<(DeviceId, OpenNonceStreams)> = request.into_open_nonce_streams().collect();
         let packet = Packet::SignPrepare(SignPrepare {
+            step: WireStep::SignReview,
             key_id,
             sign_task: WireSignTask::BitcoinTransaction(built.template.clone()),
             open_nonce_streams: open,
@@ -430,7 +431,7 @@ impl Coordinator {
         let mut update = Update {
             message: "Show this to the chosen signers. Each reviews the transaction and shows nonces back.".into(),
             broadcast: Some(Broadcast {
-                title: "Step 1 · Transaction to review".into(),
+                title: WireStep::SignReview.title().into(),
                 frames: qr_transport::split(&packet.to_bytes(), qr_transport::DEFAULT_FRAME_CHARS),
             }),
             ..Default::default()
@@ -594,13 +595,13 @@ impl Coordinator {
         }
 
         if !to_devices.is_empty() {
-            let title = match (&self.session, update.finished.is_some()) {
-                (_, true) => "Final · Store the key".to_string(),
-                (Session::Keygen(_), _) if update.check_code.is_some() => "Round 3 · Compare the check code".to_string(),
-                (Session::Keygen(_), _) => "Round 2 · Certify".to_string(),
-                _ => "Step 2 · Aggregated nonces".to_string(),
+            let step = match (&self.session, update.finished.is_some()) {
+                (_, true) => WireStep::KeygenFinalize,
+                (Session::Keygen(_), _) if update.check_code.is_some() => WireStep::KeygenCheck,
+                (Session::Keygen(_), _) => WireStep::KeygenCertify,
+                _ => WireStep::SignNonces,
             };
-            update.broadcast = Some(self.broadcast(to_devices, &title));
+            update.broadcast = Some(self.broadcast(to_devices, step));
             if let Session::Keygen(k) = &mut self.session {
                 k.round = if update.check_code.is_some() { KeygenRound::Acks } else { KeygenRound::Certificates };
             }
@@ -647,7 +648,7 @@ impl Coordinator {
         Ok(update)
     }
 
-    fn broadcast(&self, sends: Vec<CoordinatorSend>, title: &str) -> Broadcast {
+    fn broadcast(&self, sends: Vec<CoordinatorSend>, step: WireStep) -> Broadcast {
         let entries: Vec<(Vec<DeviceId>, CoordinatorToDeviceMessage)> = sends
             .into_iter()
             .filter_map(|s| match s {
@@ -657,8 +658,8 @@ impl Coordinator {
                 _ => None,
             })
             .collect();
-        let bytes = Packet::ToDevices(entries).to_bytes();
-        Broadcast { title: title.to_string(), frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS) }
+        let bytes = Packet::ToDevices { step, entries }.to_bytes();
+        Broadcast { title: step.title().to_string(), frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS) }
     }
 
     fn start_signing_round(&mut self) -> Res<Broadcast> {
@@ -678,7 +679,7 @@ impl Coordinator {
             .into_iter()
             .map(|d| self.inner.request_device_sign(session_id, d, self.encryption_key).into())
             .collect();
-        Ok(self.broadcast(sends, "Step 2 · Aggregated nonces"))
+        Ok(self.broadcast(sends, WireStep::SignNonces))
     }
 
     // ------------------------------------------------------------------ wallet --------------
