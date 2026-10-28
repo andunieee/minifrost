@@ -29,6 +29,9 @@ class _CeremonyPageState extends State<CeremonyPage> {
   String? broadcastError;
   bool broadcasting = false;
 
+  /// The signer the toast on screen is about, so rescanning its reply doesn't toast again.
+  String? toastFrom;
+
   @override
   void initState() {
     super.initState();
@@ -43,18 +46,29 @@ class _CeremonyPageState extends State<CeremonyPage> {
       final u = await widget.app.receive(payload: bytes);
       if (!mounted) return;
       final stepDone = u.finished != null || u.broadcast != null || u.awaiting.isEmpty;
-      if (u.message.startsWith('Already have')) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u.message)));
+      final from = u.from;
+      final color = from == null ? null : signerColor(from.deviceId, Theme.of(context).brightness);
+      if (u.repeat) {
+        // the camera keeps reading the same reply while it's in view: say so once, then stay quiet
+        if (toastFrom != from?.deviceId) showInfoToast(context, u.message, color: color);
       } else {
-        showSuccessToast(context, stepDone ? '${u.message} All replies received: step complete.' : u.message);
+        showSuccessToast(context, stepDone ? '${u.message} All replies received: step complete.' : u.message,
+            color: color);
       }
+      toastFrom = from?.deviceId;
+      // a repeat carries nothing new (no check code, no broadcast): keep what is on screen
+      if (u.repeat) return;
       setState(() {
         update = u;
         message = u.message;
         if (u.broadcast != null) broadcast = u.broadcast;
       });
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (!mounted) return;
+      toastFrom = null;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 

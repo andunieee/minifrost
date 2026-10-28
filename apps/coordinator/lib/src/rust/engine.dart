@@ -131,6 +131,12 @@ class SignerInfo {
 class Update {
   final String message;
 
+  /// The signer whose reply produced this update, when there is one.
+  final SignerInfo? from;
+
+  /// The reply had already been received this round; nothing changed.
+  final bool repeat;
+
   /// QR to show to *all* signers next. `None` while there is nothing new to show.
   final Broadcast? broadcast;
 
@@ -147,6 +153,8 @@ class Update {
 
   const Update({
     required this.message,
+    this.from,
+    required this.repeat,
     this.broadcast,
     required this.awaiting,
     required this.received,
@@ -158,6 +166,8 @@ class Update {
   @override
   int get hashCode =>
       message.hashCode ^
+      from.hashCode ^
+      repeat.hashCode ^
       broadcast.hashCode ^
       awaiting.hashCode ^
       received.hashCode ^
@@ -171,6 +181,8 @@ class Update {
       other is Update &&
           runtimeType == other.runtimeType &&
           message == other.message &&
+          from == other.from &&
+          repeat == other.repeat &&
           broadcast == other.broadcast &&
           awaiting == other.awaiting &&
           received == other.received &&

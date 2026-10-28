@@ -2612,6 +2612,17 @@ impl SseDecode for Option<i64> {
     }
 }
 
+impl SseDecode for Option<crate::engine::SignerInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::engine::SignerInfo>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<u16> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2771,6 +2782,8 @@ impl SseDecode for crate::engine::Update {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_message = <String>::sse_decode(deserializer);
+        let mut var_from = <Option<crate::engine::SignerInfo>>::sse_decode(deserializer);
+        let mut var_repeat = <bool>::sse_decode(deserializer);
         let mut var_broadcast = <Option<crate::engine::Broadcast>>::sse_decode(deserializer);
         let mut var_awaiting = <Vec<crate::engine::SignerInfo>>::sse_decode(deserializer);
         let mut var_received = <Vec<crate::engine::SignerInfo>>::sse_decode(deserializer);
@@ -2779,6 +2792,8 @@ impl SseDecode for crate::engine::Update {
         let mut var_snapshotSaved = <bool>::sse_decode(deserializer);
         return crate::engine::Update {
             message: var_message,
+            from: var_from,
+            repeat: var_repeat,
             broadcast: var_broadcast,
             awaiting: var_awaiting,
             received: var_received,
@@ -3352,6 +3367,8 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Update {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.message.into_into_dart().into_dart(),
+            self.from.into_into_dart().into_dart(),
+            self.repeat.into_into_dart().into_dart(),
             self.broadcast.into_into_dart().into_dart(),
             self.awaiting.into_into_dart().into_dart(),
             self.received.into_into_dart().into_dart(),
@@ -3750,6 +3767,16 @@ impl SseEncode for Option<i64> {
     }
 }
 
+impl SseEncode for Option<crate::engine::SignerInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::engine::SignerInfo>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<u16> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3865,6 +3892,8 @@ impl SseEncode for crate::engine::Update {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.message, serializer);
+        <Option<crate::engine::SignerInfo>>::sse_encode(self.from, serializer);
+        <bool>::sse_encode(self.repeat, serializer);
         <Option<crate::engine::Broadcast>>::sse_encode(self.broadcast, serializer);
         <Vec<crate::engine::SignerInfo>>::sse_encode(self.awaiting, serializer);
         <Vec<crate::engine::SignerInfo>>::sse_encode(self.received, serializer);

@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 
-/// A green "it worked" snackbar, replacing any toast still on screen.
-void showSuccessToast(BuildContext context, String message) {
+/// A green "it worked" snackbar, replacing any toast still on screen. [color] overrides the
+/// green, e.g. with the colour of the signer the toast is about.
+void showSuccessToast(BuildContext context, String message, {Color? color}) {
+  _showToast(context, message, color ?? Colors.green.shade800, Icons.check_circle);
+}
+
+/// A neutral "nothing new" snackbar, replacing any toast still on screen so repeats never queue
+/// up behind each other and delay the next real result.
+void showInfoToast(BuildContext context, String message, {Color? color}) {
+  _showToast(context, message, color ?? Colors.blueGrey.shade700, Icons.info_outline,
+      duration: const Duration(seconds: 2));
+}
+
+void _showToast(BuildContext context, String message, Color background, IconData icon,
+    {Duration duration = const Duration(seconds: 4)}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
+  // white text needs a dark enough background: signer colours are light in dark mode
+  final foreground = ThemeData.estimateBrightnessForColor(background) == Brightness.dark ? Colors.white : Colors.black;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      backgroundColor: Colors.green.shade800,
+      backgroundColor: background,
+      duration: duration,
       content: Row(children: [
-        const Icon(Icons.check_circle, color: Colors.white),
+        Icon(icon, color: foreground),
         const SizedBox(width: 12),
-        Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+        Expanded(child: Text(message, style: TextStyle(color: foreground))),
       ]),
     ));
 }

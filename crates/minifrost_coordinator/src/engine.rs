@@ -93,6 +93,10 @@ pub enum Finished {
 #[derive(Debug, Clone, Default)]
 pub struct Update {
     pub message: String,
+    /// The signer whose reply produced this update, when there is one.
+    pub from: Option<SignerInfo>,
+    /// The reply had already been received this round; nothing changed.
+    pub repeat: bool,
     /// QR to show to *all* signers next. `None` while there is nothing new to show.
     pub broadcast: Option<Broadcast>,
     /// The signers whose reply this round is still missing.
@@ -469,6 +473,7 @@ impl Coordinator {
             // A backup session is a short back and forth with one signer: the same signer
             // answers more than once, so the "already replied" bookkeeping doesn't apply.
             let mut update = self.receive_backup(from, incoming)?;
+            update.from = Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) });
             update.snapshot_saved = {
                 self.save()?;
                 self.dir.is_some()
@@ -479,7 +484,12 @@ impl Coordinator {
             return Err("That reply does not belong to this session.".into());
         };
         if !self.replied.insert(from) {
-            let mut u = Update { message: format!("Already have {}'s reply.", self.name_of(&from)), ..Default::default() };
+            let mut u = Update {
+                message: format!("Already have {}'s reply.", self.name_of(&from)),
+                from: Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) }),
+                repeat: true,
+                ..Default::default()
+            };
             self.fill_awaiting(&mut u, &expected);
             return Ok(u);
         }
@@ -489,6 +499,7 @@ impl Coordinator {
             self.replied.remove(&from);
         }
         let mut update = result?;
+        update.from = Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) });
         update.snapshot_saved = {
             self.save()?;
             self.dir.is_some()
