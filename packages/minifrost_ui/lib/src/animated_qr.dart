@@ -5,12 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'qr_scan_backend.dart';
+import 'signer_color.dart';
 import 'toast.dart';
 
 /// Shows a list of text frames as a looping QR code. A single frame is shown still. With a
 /// [sound] player it also offers to play the same frames as sound for a listening device.
 class AnimatedQr extends StatefulWidget {
-  const AnimatedQr({super.key, required this.frames, this.size = 320, this.fps = 4, this.sound, this.label});
+  const AnimatedQr({super.key, required this.frames, this.size = 320, this.fps = 4, this.sound, this.label, this.color});
 
   final List<String> frames;
   final double size;
@@ -19,6 +20,10 @@ class AnimatedQr extends StatefulWidget {
 
   /// What kind of message this code carries, shown above it.
   final String? label;
+
+  /// Whose code this is: frames the code and tints its modules, so the scanning side can tell
+  /// at a glance which device it is pointed at.
+  final Color? color;
 
   @override
   State<AnimatedQr> createState() => _AnimatedQrState();
@@ -92,19 +97,27 @@ class _AnimatedQrState extends State<AnimatedQr> {
   Widget build(BuildContext context) {
     if (widget.frames.isEmpty) return SizedBox(width: widget.size, height: widget.size);
     final i = _i % widget.frames.length;
+    final color = widget.color;
+    final ink = color == null ? Colors.black : qrInk(color);
     return Column(mainAxisSize: MainAxisSize.min, children: [
       if (widget.label != null) ...[
         QrKindLabel(widget.label!),
         const SizedBox(height: 8),
       ],
       Container(
-        color: Colors.white, // QR needs a light quiet zone in dark mode too
+        decoration: BoxDecoration(
+          color: Colors.white, // QR needs a light quiet zone in dark mode too
+          border: color == null ? null : Border.all(color: color, width: 8),
+          borderRadius: color == null ? null : BorderRadius.circular(16),
+        ),
         padding: const EdgeInsets.all(12),
         child: QrImageView(
           data: widget.frames[i],
           size: widget.size,
           errorCorrectionLevel: QrErrorCorrectLevel.M,
           backgroundColor: Colors.white,
+          eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: ink),
+          dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: ink),
           gapless: false,
         ),
       ),

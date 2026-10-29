@@ -70,6 +70,7 @@ class Home extends StatelessWidget {
                     frames: frames,
                     title: 'Enrolment code',
                     what: 'Let the coordinator scan this to add you as a signer.',
+                    deviceId: controller.deviceId,
                   ),
                 ),
               );

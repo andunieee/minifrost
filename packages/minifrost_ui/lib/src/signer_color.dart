@@ -10,6 +10,24 @@ Color signerColor(String deviceId, Brightness brightness) {
   return HSLColor.fromAHSL(1, hue, 0.65, dark ? 0.68 : 0.38).toColor();
 }
 
+/// A dark shade of [color] that still reads as that hue but keeps enough contrast against white
+/// for a camera to pick out QR modules drawn in it (yellows are the worst case).
+Color qrInk(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  return hsl.withLightness(hsl.lightness.clamp(0.0, 0.26)).toColor();
+}
+
+/// An app theme built around a signer's colour, so every screen of that signer wears it.
+ThemeData signerTheme(String deviceId, Brightness brightness) => ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: signerColor(deviceId, brightness),
+        brightness: brightness,
+        // keep the primary close to the seed so buttons match the colour the coordinator shows
+        dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+      ),
+    );
+
 /// A signer's name drawn in its own colour.
 class SignerName extends StatelessWidget {
   const SignerName({super.key, required this.deviceId, required this.name, this.style});

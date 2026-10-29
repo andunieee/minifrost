@@ -27,7 +27,7 @@ class _SetupState extends State<Setup> {
       final signer = await newSigner(name: name.text.trim());
       // Store before doing anything else.
       await widget.vault.save(await signer.snapshot());
-      final c = SignerController(signer, widget.vault);
+      final c = SignerController(signer, widget.vault, await signer.deviceId());
       await c.refresh();
       widget.onCreated(c);
     } catch (e) {

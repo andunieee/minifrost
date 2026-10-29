@@ -10,10 +10,11 @@ import 'vault.dart';
 /// result (and therefore before any QR code is shown). After a partial signature the snapshot
 /// contains the burned nonce; showing the signature first would risk nonce reuse after a crash.
 class SignerController extends ChangeNotifier {
-  SignerController(this.signer, this.vault);
+  SignerController(this.signer, this.vault, this.deviceId);
 
   final SignerApp signer;
   final Vault vault;
+  final String deviceId;
   List<KeyInfo> keys = [];
   List<PendingBackup> pendingBackups = [];
 

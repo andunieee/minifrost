@@ -81,7 +81,7 @@ Future<void> _handle(BuildContext context, SignerController c, Future<StepResult
       if (!context.mounted) return;
       await _handle(context, c, () async => next);
     case Step_Reply(:final frames, :final what):
-      await nav.push(MaterialPageRoute(builder: (_) => ReplyScreen(frames: frames, title: 'Show to coordinator', what: what)));
+      await nav.push(MaterialPageRoute(builder: (_) => ReplyScreen(frames: frames, title: 'Show to coordinator', what: what, deviceId: c.deviceId)));
     case Step_Confirm(:final field0):
       await nav.push(MaterialPageRoute(
         builder: (promptContext) => PromptScreen(
