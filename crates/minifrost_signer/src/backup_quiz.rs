@@ -7,8 +7,8 @@
 //! The signer decrypts its own share to build the expected answers, so nothing the coordinator
 //! sends decides what counts as correct.
 
-use frost_backup::{bip39_words::BIP39_WORDS, ShareBackup};
-use rand::{seq::SliceRandom, RngCore};
+use frost_backup::{ShareBackup, bip39_words::BIP39_WORDS};
+use rand::{RngCore, seq::SliceRandom};
 
 /// 1 question for the key number + 25 words.
 pub const TOTAL_SCREENS: usize = 26;
@@ -36,11 +36,18 @@ pub struct Quiz {
 
 impl Quiz {
     pub fn new(backup: &ShareBackup, rng: &mut impl RngCore) -> Self {
-        let share_index: u32 =
-            backup.index().try_into().expect("share indices of real wallets fit in a u32");
+        let share_index: u32 = backup
+            .index()
+            .try_into()
+            .expect("share indices of real wallets fit in a u32");
         let word_indices = backup.to_word_indices();
         let current = question(0, share_index, &word_indices, rng);
-        Self { word_indices, share_index, screen: 0, current }
+        Self {
+            word_indices,
+            share_index,
+            screen: 0,
+            current,
+        }
     }
 
     pub fn question(&self) -> &Question {
@@ -65,7 +72,12 @@ impl Quiz {
     }
 }
 
-fn question(screen: usize, share_index: u32, words: &[u16; 25], rng: &mut impl RngCore) -> Question {
+fn question(
+    screen: usize,
+    share_index: u32,
+    words: &[u16; 25],
+    rng: &mut impl RngCore,
+) -> Question {
     let (title, mut options, correct) = if screen == 0 {
         // Neighbouring key numbers, never 0 (share indices start at 1).
         let mut options = vec![share_index];
@@ -80,16 +92,34 @@ fn question(screen: usize, share_index: u32, words: &[u16; 25], rng: &mut impl R
             offset += 1;
         }
         let labels = options.iter().map(|i| format!("#{i}")).collect::<Vec<_>>();
-        ("Select key number".to_string(), labels, format!("#{share_index}"))
+        (
+            "Select key number".to_string(),
+            labels,
+            format!("#{share_index}"),
+        )
     } else {
         let right = words[screen - 1];
         let [a, b] = closest_distractors(right);
-        let options = [right, a, b].iter().map(|&i| BIP39_WORDS[i as usize].to_string()).collect();
-        (format!("Select word {screen}"), options, BIP39_WORDS[right as usize].to_string())
+        let options = [right, a, b]
+            .iter()
+            .map(|&i| BIP39_WORDS[i as usize].to_string())
+            .collect();
+        (
+            format!("Select word {screen}"),
+            options,
+            BIP39_WORDS[right as usize].to_string(),
+        )
     };
     options.shuffle(rng);
-    let correct = options.iter().position(|o| *o == correct).expect("correct option is present");
-    Question { title, options, correct }
+    let correct = options
+        .iter()
+        .position(|o| *o == correct)
+        .expect("correct option is present");
+    Question {
+        title,
+        options,
+        correct,
+    }
 }
 
 fn levenshtein(a: &[u8], b: &[u8]) -> usize {
@@ -107,7 +137,11 @@ fn levenshtein(a: &[u8], b: &[u8]) -> usize {
 }
 
 fn shared_suffix_len(a: &[u8], b: &[u8]) -> usize {
-    a.iter().rev().zip(b.iter().rev()).take_while(|(x, y)| x == y).count()
+    a.iter()
+        .rev()
+        .zip(b.iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count()
 }
 
 /// Same scoring as the device: edit distance counts most, a shared ending helps.

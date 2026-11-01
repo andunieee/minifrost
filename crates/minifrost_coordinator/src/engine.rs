@@ -10,26 +10,28 @@ use std::path::{Path, PathBuf};
 
 use bitcoin::Network;
 use frostsnap_core::{
+    AccessStructureRef, DeviceId, KeyId, KeygenId, SignSessionId, SymmetricKey, WireSignTask,
     coordinator::{
         BeginKeygen, CoordinatorSend, CoordinatorToUserKeyGenMessage, CoordinatorToUserMessage,
         CoordinatorToUserSigningMessage, FrostCoordinator, Mutation,
     },
     device::KeyPurpose,
     message::{
-        keygen::DeviceKeygen, signing::OpenNonceStreams, CoordinatorToDeviceMessage, DeviceToCoordinatorMessage,
+        CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, keygen::DeviceKeygen,
+        signing::OpenNonceStreams,
     },
-    AccessStructureRef, DeviceId, KeyId, KeygenId, SignSessionId, SymmetricKey, WireSignTask,
 };
 use minifrost_wire::{Packet, SignPrepare, Step as WireStep};
-use rand::{rngs::OsRng, RngCore};
+use rand::{RngCore, rngs::OsRng};
 
 use crate::wallet::{self, Amt, BuiltSend, HttpEsplora, WalletView};
 
 pub mod restore;
-pub use restore::{
-    BackupShare, EnterTarget, HeldShareView, PendingConsolidationView, RestorationShareView, RestorationView,
-};
 use restore::{BackupSession, Incoming};
+pub use restore::{
+    BackupShare, EnterTarget, HeldShareView, PendingConsolidationView, RestorationShareView,
+    RestorationView,
+};
 
 const SNAPSHOT_VERSION: u8 = 2;
 const FILE: &str = "coordinator.bin";
@@ -76,20 +78,44 @@ pub struct Broadcast {
 
 #[derive(Debug, Clone)]
 pub enum Finished {
-    KeyCreated { key_id: String, name: String },
-    Signed { txid: String, tx_hex: String },
+    KeyCreated {
+        key_id: String,
+        name: String,
+    },
+    Signed {
+        txid: String,
+        tx_hex: String,
+    },
     /// A signer displayed its backup and the user confirmed writing it down.
-    BackupRecorded { key_name: String, share_index: u32 },
+    BackupRecorded {
+        key_name: String,
+        share_index: u32,
+    },
     /// A signer's check-backup quiz was passed.
-    BackupChecked { key_name: String, share_index: u32 },
+    BackupChecked {
+        key_name: String,
+        share_index: u32,
+    },
     /// An entered backup was saved on its signer as part of a restoration.
-    BackupSaved { restoration_id: String, share_index: u32, restorable: bool },
+    BackupSaved {
+        restoration_id: String,
+        share_index: u32,
+        restorable: bool,
+    },
     /// An entered backup (or a reply for one) was refused; the session is over.
-    BackupRejected { reason: String },
+    BackupRejected {
+        reason: String,
+    },
     /// A signer turned a typed-in backup into a normal share of a wallet.
-    Consolidated { key_name: String, share_index: u32 },
+    Consolidated {
+        key_name: String,
+        share_index: u32,
+    },
     /// The shares a signer reported holding.
-    HeldShares { device_name: String, shares: Vec<HeldShareView> },
+    HeldShares {
+        device_name: String,
+        shares: Vec<HeldShareView>,
+    },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -224,7 +250,11 @@ impl Coordinator {
             dir: None,
             wallets: Default::default(),
             prepared: None,
-            backups: snap.backups.into_iter().map(|(a, i, done)| ((a, i), done)).collect(),
+            backups: snap
+                .backups
+                .into_iter()
+                .map(|(a, i, done)| ((a, i), done))
+                .collect(),
             held: Default::default(),
         }
     }
@@ -234,8 +264,9 @@ impl Coordinator {
         if v != SNAPSHOT_VERSION {
             return Err(format!("unknown coordinator file version {v}"));
         }
-        let (snap, _): (Snapshot, _) = bincode::decode_from_slice(rest, bincode::config::standard())
-            .map_err(|e| format!("corrupt coordinator file: {e}"))?;
+        let (snap, _): (Snapshot, _) =
+            bincode::decode_from_slice(rest, bincode::config::standard())
+                .map_err(|e| format!("corrupt coordinator file: {e}"))?;
         Ok(Self::from_parts(snap))
     }
 
@@ -245,7 +276,11 @@ impl Coordinator {
             signers: self.signers.clone(),
             history: self.history.clone(),
             esplora_url: self.esplora_url.clone(),
-            backups: self.backups.iter().map(|((a, i), done)| (*a, *i, *done)).collect(),
+            backups: self
+                .backups
+                .iter()
+                .map(|((a, i), done)| (*a, *i, *done))
+                .collect(),
         };
         let mut out = vec![SNAPSHOT_VERSION];
         out.extend(bincode::encode_to_vec(&snap, bincode::config::standard()).expect("encodes"));
@@ -267,7 +302,8 @@ impl Coordinator {
             #[cfg(unix)]
             opts.mode(0o600);
             let mut f = opts.open(&tmp).map_err(|e| e.to_string())?;
-            f.write_all(&self.snapshot_bytes()).map_err(|e| e.to_string())?;
+            f.write_all(&self.snapshot_bytes())
+                .map_err(|e| e.to_string())?;
             f.sync_all().map_err(|e| e.to_string())?;
         }
         std::fs::rename(&tmp, dir.join(FILE)).map_err(|e| e.to_string())
@@ -278,12 +314,18 @@ impl Coordinator {
     pub fn signers(&self) -> Vec<SignerInfo> {
         self.signers
             .iter()
-            .map(|(id, name)| SignerInfo { device_id: id.to_string(), name: name.clone() })
+            .map(|(id, name)| SignerInfo {
+                device_id: id.to_string(),
+                name: name.clone(),
+            })
             .collect()
     }
 
     fn name_of(&self, id: &DeviceId) -> String {
-        self.signers.get(id).cloned().unwrap_or_else(|| id.to_string()[..8].to_string())
+        self.signers
+            .get(id)
+            .cloned()
+            .unwrap_or_else(|| id.to_string()[..8].to_string())
     }
 
     pub fn keys(&self) -> Vec<KeyView> {
@@ -299,7 +341,10 @@ impl Coordinator {
                     signers: acc
                         .devices_by_share_index()
                         .into_iter()
-                        .map(|d| SignerInfo { device_id: d.to_string(), name: self.name_of(&d) })
+                        .map(|d| SignerInfo {
+                            device_id: d.to_string(),
+                            name: self.name_of(&d),
+                        })
                         .collect(),
                 }
             })
@@ -313,7 +358,10 @@ impl Coordinator {
                 let name = name.trim().chars().take(40).collect::<String>();
                 self.signers.insert(device_id, name.clone());
                 self.save()?;
-                Ok(SignerInfo { device_id: device_id.to_string(), name })
+                Ok(SignerInfo {
+                    device_id: device_id.to_string(),
+                    name,
+                })
             }
             _ => Err("That is not a signer enrolment code.".into()),
         }
@@ -321,7 +369,11 @@ impl Coordinator {
 
     pub fn forget_signer(&mut self, device_id: &str) -> Res<()> {
         let id: DeviceId = device_id.parse().map_err(|_| "bad device id")?;
-        if self.inner.iter_keys().any(|k| k.master_access_structure().contains_device(id)) {
+        if self
+            .inner
+            .iter_keys()
+            .any(|k| k.master_access_structure().contains_device(id))
+        {
             return Err("This signer holds a share of an existing key.".into());
         }
         self.signers.remove(&id);
@@ -347,7 +399,9 @@ impl Coordinator {
         network: Network,
     ) -> Res<Update> {
         if !matches!(self.session, Session::Idle) {
-            return Err("Another keygen or signing session is in progress. Cancel it first.".into());
+            return Err(
+                "Another keygen or signing session is in progress. Cancel it first.".into(),
+            );
         }
         let devices: Vec<DeviceId> = device_ids
             .iter()
@@ -371,12 +425,21 @@ impl Coordinator {
             &mut OsRng,
         );
         let keygen_id = begin.keygen_id;
-        let sends = self.inner.begin_keygen(begin, &mut OsRng).map_err(|e| e.to_string())?;
-        self.session =
-            Session::Keygen(KeygenSession { id: keygen_id, devices: devices.clone(), round: KeygenRound::Responses });
+        let sends = self
+            .inner
+            .begin_keygen(begin, &mut OsRng)
+            .map_err(|e| e.to_string())?;
+        self.session = Session::Keygen(KeygenSession {
+            id: keygen_id,
+            devices: devices.clone(),
+            round: KeygenRound::Responses,
+        });
         self.replied.clear();
         let mut update = Update {
-            message: format!("Show this to all {} signers and have each approve it.", devices.len()),
+            message: format!(
+                "Show this to all {} signers and have each approve it.",
+                devices.len()
+            ),
             broadcast: Some(self.broadcast(sends.into_iter().collect(), WireStep::KeygenJoin)),
             ..Default::default()
         };
@@ -388,7 +451,9 @@ impl Coordinator {
 
     pub fn begin_signing(&mut self, key_id: &str, device_ids: Vec<String>) -> Res<Update> {
         if !matches!(self.session, Session::Idle) {
-            return Err("Another keygen or signing session is in progress. Cancel it first.".into());
+            return Err(
+                "Another keygen or signing session is in progress. Cancel it first.".into(),
+            );
         }
         let key = self
             .inner
@@ -411,7 +476,9 @@ impl Coordinator {
         if let Some(d) = devices.iter().find(|d| !acc.contains_device(**d)) {
             return Err(format!("{} holds no share of this key.", self.name_of(d)));
         }
-        let request = self.inner.maybe_request_nonce_replenishment(&devices, 1, &mut OsRng);
+        let request = self
+            .inner
+            .maybe_request_nonce_replenishment(&devices, 1, &mut OsRng);
         let open: Vec<(DeviceId, OpenNonceStreams)> = request.into_open_nonce_streams().collect();
         let packet = Packet::SignPrepare(SignPrepare {
             step: WireStep::SignReview,
@@ -457,8 +524,12 @@ impl Coordinator {
     // ------------------------------------------------------------------ receiving -----------
 
     fn fill_awaiting(&self, update: &mut Update, expected: &BTreeSet<DeviceId>) {
-        let (received, awaiting): (Vec<_>, Vec<_>) = expected.iter().partition(|d| self.replied.contains(d));
-        let info = |d: &DeviceId| SignerInfo { device_id: d.to_string(), name: self.name_of(d) };
+        let (received, awaiting): (Vec<_>, Vec<_>) =
+            expected.iter().partition(|d| self.replied.contains(d));
+        let info = |d: &DeviceId| SignerInfo {
+            device_id: d.to_string(),
+            name: self.name_of(d),
+        };
         update.awaiting = awaiting.into_iter().map(info).collect();
         update.received = received.into_iter().map(info).collect();
     }
@@ -477,12 +548,22 @@ impl Coordinator {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let (from, incoming) = match packet {
             Packet::FromDevice { device_id, message } => (device_id, Incoming::Core(message)),
-            Packet::BackupRecorded { device_id, access_structure_ref, share_index } => {
-                (device_id, Incoming::Recorded(access_structure_ref, share_index))
-            }
-            Packet::BackupChecked { device_id, access_structure_ref, share_index } => {
-                (device_id, Incoming::Checked(access_structure_ref, share_index))
-            }
+            Packet::BackupRecorded {
+                device_id,
+                access_structure_ref,
+                share_index,
+            } => (
+                device_id,
+                Incoming::Recorded(access_structure_ref, share_index),
+            ),
+            Packet::BackupChecked {
+                device_id,
+                access_structure_ref,
+                share_index,
+            } => (
+                device_id,
+                Incoming::Checked(access_structure_ref, share_index),
+            ),
             Packet::Hello { .. } => return Err("That is an enrolment code, not a reply.".into()),
             _ => return Err("That code is meant for signers.".into()),
         };
@@ -491,13 +572,19 @@ impl Coordinator {
         }
         let expected = self.expected();
         if !expected.contains(&from) {
-            return Err(format!("{} is not part of this session.", self.name_of(&from)));
+            return Err(format!(
+                "{} is not part of this session.",
+                self.name_of(&from)
+            ));
         }
         if matches!(self.session, Session::Backup(_)) {
             // A backup session is a short back and forth with one signer: the same signer
             // answers more than once, so the "already replied" bookkeeping doesn't apply.
             let mut update = self.receive_backup(from, incoming)?;
-            update.from = Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) });
+            update.from = Some(SignerInfo {
+                device_id: from.to_string(),
+                name: self.name_of(&from),
+            });
             update.snapshot_saved = {
                 self.save()?;
                 self.dir.is_some()
@@ -509,25 +596,32 @@ impl Coordinator {
         };
         // frostsnap_core drops the whole pending keygen when it rejects a keygen message, so a
         // signer's reply to an earlier round (its old QR still on screen) must not reach it.
-        if let (Session::Keygen(k), DeviceToCoordinatorMessage::KeyGen(m)) = (&self.session, &message) {
-            if KeygenRound::of(m) != (k.round, k.id) {
-                let mut u = Update {
-                    message: format!(
-                        "That is {}'s reply to an earlier step. Show it the current code.",
-                        self.name_of(&from)
-                    ),
-                    from: Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) }),
-                    repeat: true,
-                    ..Default::default()
-                };
-                self.fill_awaiting(&mut u, &expected);
-                return Ok(u);
-            }
+        if let (Session::Keygen(k), DeviceToCoordinatorMessage::KeyGen(m)) =
+            (&self.session, &message)
+            && KeygenRound::of(m) != (k.round, k.id)
+        {
+            let mut u = Update {
+                message: format!(
+                    "That is {}'s reply to an earlier step. Show it the current code.",
+                    self.name_of(&from)
+                ),
+                from: Some(SignerInfo {
+                    device_id: from.to_string(),
+                    name: self.name_of(&from),
+                }),
+                repeat: true,
+                ..Default::default()
+            };
+            self.fill_awaiting(&mut u, &expected);
+            return Ok(u);
         }
         if !self.replied.insert(from) {
             let mut u = Update {
                 message: format!("Already have {}'s reply.", self.name_of(&from)),
-                from: Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) }),
+                from: Some(SignerInfo {
+                    device_id: from.to_string(),
+                    name: self.name_of(&from),
+                }),
                 repeat: true,
                 ..Default::default()
             };
@@ -540,7 +634,10 @@ impl Coordinator {
             self.replied.remove(&from);
         }
         let mut update = result?;
-        update.from = Some(SignerInfo { device_id: from.to_string(), name: self.name_of(&from) });
+        update.from = Some(SignerInfo {
+            device_id: from.to_string(),
+            name: self.name_of(&from),
+        });
         update.snapshot_saved = {
             self.save()?;
             self.dir.is_some()
@@ -552,9 +649,19 @@ impl Coordinator {
         Ok(update)
     }
 
-    fn handle_device_message(&mut self, from: DeviceId, message: DeviceToCoordinatorMessage) -> Res<Update> {
-        let sends = self.inner.recv_device_message(from, message).map_err(|e| e.to_string())?;
-        let mut update = Update { message: format!("Got reply from {}.", self.name_of(&from)), ..Default::default() };
+    fn handle_device_message(
+        &mut self,
+        from: DeviceId,
+        message: DeviceToCoordinatorMessage,
+    ) -> Res<Update> {
+        let sends = self
+            .inner
+            .recv_device_message(from, message)
+            .map_err(|e| e.to_string())?;
+        let mut update = Update {
+            message: format!("Got reply from {}.", self.name_of(&from)),
+            ..Default::default()
+        };
         let mut to_devices = vec![];
         let mut signed = None;
         let mut finalize = None;
@@ -564,16 +671,20 @@ impl Coordinator {
                 CoordinatorSend::ToUser(u) => match u {
                     CoordinatorToUserMessage::KeyGen { keygen_id, inner } => match inner {
                         CoordinatorToUserKeyGenMessage::CheckKeyGen { session_hash } => {
-                            update.check_code = Some(minifrost_wire::format_check_code(&session_hash.0));
+                            update.check_code =
+                                Some(minifrost_wire::format_check_code(&session_hash.0));
                         }
-                        CoordinatorToUserKeyGenMessage::KeyGenAck { all_acks_received: true, .. } => {
+                        CoordinatorToUserKeyGenMessage::KeyGenAck {
+                            all_acks_received: true,
+                            ..
+                        } => {
                             finalize = Some(keygen_id);
                         }
                         _ => {}
                     },
-                    CoordinatorToUserMessage::Signing(CoordinatorToUserSigningMessage::Signed {
-                        signatures, ..
-                    }) => signed = Some(signatures),
+                    CoordinatorToUserMessage::Signing(
+                        CoordinatorToUserSigningMessage::Signed { signatures, .. },
+                    ) => signed = Some(signatures),
                     _ => {}
                 },
             }
@@ -586,12 +697,21 @@ impl Coordinator {
                 .map_err(|e| e.to_string())?;
             let key_id = fin.access_structure_ref.key_id;
             self.start_backup_run(fin.access_structure_ref);
-            let name = self.inner.get_frost_key(key_id).map(|k| k.key_name.clone()).unwrap_or_default();
+            let name = self
+                .inner
+                .get_frost_key(key_id)
+                .map(|k| k.key_name.clone())
+                .unwrap_or_default();
             to_devices.extend(fin);
             self.session = Session::Idle;
             self.replied.clear();
-            update.finished = Some(Finished::KeyCreated { key_id: key_id.to_string(), name: name.clone() });
-            update.message = format!("Key “{name}” created. Show the last code so every signer stores its share.");
+            update.finished = Some(Finished::KeyCreated {
+                key_id: key_id.to_string(),
+                name: name.clone(),
+            });
+            update.message = format!(
+                "Key “{name}” created. Show the last code so every signer stores its share."
+            );
         }
 
         if !to_devices.is_empty() {
@@ -603,7 +723,11 @@ impl Coordinator {
             };
             update.broadcast = Some(self.broadcast(to_devices, step));
             if let Session::Keygen(k) = &mut self.session {
-                k.round = if update.check_code.is_some() { KeygenRound::Acks } else { KeygenRound::Certificates };
+                k.round = if update.check_code.is_some() {
+                    KeygenRound::Acks
+                } else {
+                    KeygenRound::Certificates
+                };
             }
             if !matches!(self.session, Session::Idle) {
                 self.replied.clear();
@@ -618,20 +742,26 @@ impl Coordinator {
         }
 
         // signing: once every chosen signer returned nonces, build the bundle
-        if let Session::Signing(s) = &self.session {
-            if s.session_id.is_none() && self.replied.len() == s.devices.len() {
-                let bundle = self.start_signing_round()?;
-                update.broadcast = Some(bundle);
-                update.message = "All nonces received. Show this bundle to the signers.".into();
-                self.replied.clear();
-            }
+        if let Session::Signing(s) = &self.session
+            && s.session_id.is_none()
+            && self.replied.len() == s.devices.len()
+        {
+            let bundle = self.start_signing_round()?;
+            update.broadcast = Some(bundle);
+            update.message = "All nonces received. Show this bundle to the signers.".into();
+            self.replied.clear();
         }
 
         if let Some(sigs) = signed {
             let Session::Signing(s) = std::mem::replace(&mut self.session, Session::Idle) else {
                 return Err("signature completed without a signing session".into());
             };
-            let master = self.inner.get_frost_key(s.key_id).ok_or("key vanished")?.complete_key.master_appkey;
+            let master = self
+                .inner
+                .get_frost_key(s.key_id)
+                .ok_or("key vanished")?
+                .complete_key
+                .master_appkey;
             let tx = s
                 .built
                 .template
@@ -652,18 +782,24 @@ impl Coordinator {
         let entries: Vec<(Vec<DeviceId>, CoordinatorToDeviceMessage)> = sends
             .into_iter()
             .filter_map(|s| match s {
-                CoordinatorSend::ToDevice { message, destinations } => {
-                    Some((destinations.into_iter().collect(), message))
-                }
+                CoordinatorSend::ToDevice {
+                    message,
+                    destinations,
+                } => Some((destinations.into_iter().collect(), message)),
                 _ => None,
             })
             .collect();
         let bytes = Packet::ToDevices { step, entries }.to_bytes();
-        Broadcast { title: step.title().to_string(), frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS) }
+        Broadcast {
+            title: step.title().to_string(),
+            frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
+        }
     }
 
     fn start_signing_round(&mut self) -> Res<Broadcast> {
-        let Session::Signing(s) = &mut self.session else { unreachable!() };
+        let Session::Signing(s) = &mut self.session else {
+            unreachable!()
+        };
         let session_id = self
             .inner
             .start_sign(
@@ -677,7 +813,11 @@ impl Coordinator {
         let devices = s.devices.clone();
         let sends: Vec<CoordinatorSend> = devices
             .into_iter()
-            .map(|d| self.inner.request_device_sign(session_id, d, self.encryption_key).into())
+            .map(|d| {
+                self.inner
+                    .request_device_sign(session_id, d, self.encryption_key)
+                    .into()
+            })
             .collect();
         Ok(self.broadcast(sends, WireStep::SignNonces))
     }
@@ -685,8 +825,16 @@ impl Coordinator {
     // ------------------------------------------------------------------ wallet --------------
 
     fn key_and_network(&self, key_id: &str) -> Res<(KeyId, frostsnap_core::MasterAppkey, Network)> {
-        let k = self.inner.iter_keys().find(|k| k.key_id.to_string() == key_id).ok_or("unknown key")?;
-        Ok((k.key_id, k.complete_key.master_appkey, purpose_network(&k.purpose)))
+        let k = self
+            .inner
+            .iter_keys()
+            .find(|k| k.key_id.to_string() == key_id)
+            .ok_or("unknown key")?;
+        Ok((
+            k.key_id,
+            k.complete_key.master_appkey,
+            purpose_network(&k.purpose),
+        ))
     }
 
     pub fn wallet_params(&self, key_id: &str) -> Res<(frostsnap_core::MasterAppkey, Network)> {
@@ -706,7 +854,13 @@ impl Coordinator {
     }
 
     /// Build a payment from the last synced wallet view and remember it for `begin_signing`.
-    pub fn prepare_send(&mut self, key_id: &str, to: &str, amount: Amt, fee_rate: f64) -> Res<BuiltSend> {
+    pub fn prepare_send(
+        &mut self,
+        key_id: &str,
+        to: &str,
+        amount: Amt,
+        fee_rate: f64,
+    ) -> Res<BuiltSend> {
         let (id, master, network) = self.key_and_network(key_id)?;
         let view = self.wallets.get(&id).ok_or("Refresh the wallet first.")?;
         let built = wallet::build_send(view, master, network, to, amount, fee_rate)?;
@@ -715,7 +869,11 @@ impl Coordinator {
     }
 
     pub fn esplora(&self, network: Network) -> HttpEsplora {
-        HttpEsplora::new(self.esplora_url.as_deref().unwrap_or(default_esplora(network)))
+        HttpEsplora::new(
+            self.esplora_url
+                .as_deref()
+                .unwrap_or(default_esplora(network)),
+        )
     }
 }
 

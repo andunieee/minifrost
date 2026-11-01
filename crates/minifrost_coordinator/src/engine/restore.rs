@@ -15,19 +15,19 @@
 
 use bitcoin::Network;
 use frostsnap_core::{
+    AccessStructureRef, DeviceId, EnterPhysicalId, KeyId, RestorationId,
     coordinator::{
-        restoration::{PhysicalBackupPhase, RecoverShare, ShareCompatibility, ToUserRestoration},
         CoordinatorSend, CoordinatorToUserMessage,
+        restoration::{PhysicalBackupPhase, RecoverShare, ShareCompatibility, ToUserRestoration},
     },
     device::KeyPurpose,
     message::{DeviceToCoordinatorMessage, HeldShare2},
     schnorr_fun::frost::ShareIndex,
-    AccessStructureRef, DeviceId, EnterPhysicalId, KeyId, RestorationId,
 };
 use minifrost_wire::Step as WireStep;
 use rand::rngs::OsRng;
 
-use super::{purpose_network, Coordinator, Finished, Res, Session, Update};
+use super::{Coordinator, Finished, Res, Session, Update, purpose_network};
 
 // ---------------------------------------------------------------------------------------------
 // What the UI sees
@@ -99,7 +99,11 @@ pub struct PendingConsolidationView {
 #[derive(Debug, Clone)]
 pub enum EnterTarget {
     /// Start a brand new restoration (created when the first backup is accepted).
-    NewWallet { name: String, network: Network, threshold: Option<u16> },
+    NewWallet {
+        name: String,
+        network: Network,
+        threshold: Option<u16>,
+    },
     Restoration(RestorationId),
     /// Add a share to a wallet this coordinator already has (a replaced or wiped signer).
     Wallet(AccessStructureRef),
@@ -114,11 +118,29 @@ pub enum EnterStage {
 
 #[derive(Debug, Clone)]
 pub enum BackupSession {
-    Display { device: DeviceId, access_structure_ref: AccessStructureRef, share_index: ShareIndex },
-    Check { device: DeviceId, access_structure_ref: AccessStructureRef, share_index: ShareIndex },
-    Enter { device: DeviceId, enter_id: EnterPhysicalId, target: EnterTarget, stage: EnterStage },
-    Consolidate { device: DeviceId, access_structure_ref: AccessStructureRef },
-    HeldShares { device: DeviceId },
+    Display {
+        device: DeviceId,
+        access_structure_ref: AccessStructureRef,
+        share_index: ShareIndex,
+    },
+    Check {
+        device: DeviceId,
+        access_structure_ref: AccessStructureRef,
+        share_index: ShareIndex,
+    },
+    Enter {
+        device: DeviceId,
+        enter_id: EnterPhysicalId,
+        target: EnterTarget,
+        stage: EnterStage,
+    },
+    Consolidate {
+        device: DeviceId,
+        access_structure_ref: AccessStructureRef,
+    },
+    HeldShares {
+        device: DeviceId,
+    },
 }
 
 impl BackupSession {
@@ -164,18 +186,27 @@ impl Coordinator {
     }
 
     fn access_ref_of(&self, key_id: &str) -> Res<AccessStructureRef> {
-        let key = self.inner.iter_keys().find(|k| k.key_id.to_string() == key_id).ok_or("unknown wallet")?;
+        let key = self
+            .inner
+            .iter_keys()
+            .find(|k| k.key_id.to_string() == key_id)
+            .ok_or("unknown wallet")?;
         Ok(key.master_access_structure().access_structure_ref())
     }
 
     fn key_name(&self, key_id: KeyId) -> String {
-        self.inner.get_frost_key(key_id).map(|k| k.key_name.clone()).unwrap_or_default()
+        self.inner
+            .get_frost_key(key_id)
+            .map(|k| k.key_name.clone())
+            .unwrap_or_default()
     }
 
     fn require_idle(&self) -> Res<()> {
         match self.session {
             Session::Idle => Ok(()),
-            _ => Err("Another keygen, signing or backup session is in progress. Cancel it first.".into()),
+            _ => Err(
+                "Another keygen, signing or backup session is in progress. Cancel it first.".into(),
+            ),
         }
     }
 
@@ -204,7 +235,10 @@ impl Coordinator {
     /// Every share of the wallet with its backup status.
     pub fn backup_shares(&self, key_id: &str) -> Res<Vec<BackupShare>> {
         let aref = self.access_ref_of(key_id)?;
-        let acc = self.inner.get_access_structure(aref).ok_or("unknown wallet")?;
+        let acc = self
+            .inner
+            .get_access_structure(aref)
+            .ok_or("unknown wallet")?;
         Ok(acc
             .device_to_share_indicies()
             .into_iter()
@@ -228,7 +262,9 @@ impl Coordinator {
     }
 
     pub(super) fn start_backup_run(&mut self, aref: AccessStructureRef) {
-        let Some(acc) = self.inner.get_access_structure(aref) else { return };
+        let Some(acc) = self.inner.get_access_structure(aref) else {
+            return;
+        };
         for (_, index) in acc.iter_shares() {
             self.backups.insert((aref, index_u32(index)), false);
         }
@@ -263,7 +299,11 @@ impl Coordinator {
             .request_device_check_backup(device, aref, self.encryption_key)
             .map_err(|e| e.to_string())?;
         self.start_backup_session(
-            BackupSession::Check { device, access_structure_ref: aref, share_index },
+            BackupSession::Check {
+                device,
+                access_structure_ref: aref,
+                share_index,
+            },
             sends,
             WireStep::CheckBackup,
             "Show this to the signer. The user answers its quiz using the paper backup.",
@@ -342,23 +382,34 @@ impl Coordinator {
         let device = self.parse_device(device_id)?;
         match &target {
             EnterTarget::NewWallet { name, .. } if name.trim().is_empty() => {
-                return Err("Give the wallet a name.".into())
+                return Err("Give the wallet a name.".into());
             }
-            EnterTarget::NewWallet { threshold: Some(t), .. } if *t == 0 => {
-                return Err("The threshold must be at least 1.".into())
-            }
-            EnterTarget::Restoration(id) if !self.inner.restoring().any(|r| r.restoration_id == *id) => {
-                return Err("That restoration no longer exists.".into())
+            EnterTarget::NewWallet {
+                threshold: Some(t), ..
+            } if *t == 0 => return Err("The threshold must be at least 1.".into()),
+            EnterTarget::Restoration(id)
+                if !self.inner.restoring().any(|r| r.restoration_id == *id) =>
+            {
+                return Err("That restoration no longer exists.".into());
             }
             EnterTarget::Wallet(aref) if self.inner.get_access_structure(*aref).is_none() => {
-                return Err("That wallet is not known to this coordinator.".into())
+                return Err("That wallet is not known to this coordinator.".into());
             }
             _ => {}
         }
         let enter_id = EnterPhysicalId::new(&mut OsRng);
-        let sends: Vec<_> = self.inner.tell_device_to_load_physical_backup(enter_id, device).into_iter().collect();
+        let sends: Vec<_> = self
+            .inner
+            .tell_device_to_load_physical_backup(enter_id, device)
+            .into_iter()
+            .collect();
         self.start_backup_session(
-            BackupSession::Enter { device, enter_id, target, stage: EnterStage::WaitingForWords },
+            BackupSession::Enter {
+                device,
+                enter_id,
+                target,
+                stage: EnterStage::WaitingForWords,
+            },
             sends,
             WireStep::EnterBackup,
             "Show this to the signer, then type the key number and 25 words into it.",
@@ -372,10 +423,21 @@ impl Coordinator {
         network: Network,
         threshold: Option<u16>,
     ) -> Res<Update> {
-        self.start_enter_backup(device_id, EnterTarget::NewWallet { name: name.trim().to_string(), network, threshold })
+        self.start_enter_backup(
+            device_id,
+            EnterTarget::NewWallet {
+                name: name.trim().to_string(),
+                network,
+                threshold,
+            },
+        )
     }
 
-    pub fn start_enter_backup_restoration(&mut self, device_id: &str, restoration_id: &str) -> Res<Update> {
+    pub fn start_enter_backup_restoration(
+        &mut self,
+        device_id: &str,
+        restoration_id: &str,
+    ) -> Res<Update> {
         let id = self.parse_restoration(restoration_id)?;
         self.start_enter_backup(device_id, EnterTarget::Restoration(id))
     }
@@ -405,20 +467,31 @@ impl Coordinator {
         let held = self
             .held
             .get(&device)
-            .and_then(|shares| shares.iter().find(|s| index_u32(s.share_image.index) == share_index))
+            .and_then(|shares| {
+                shares
+                    .iter()
+                    .find(|s| index_u32(s.share_image.index) == share_index)
+            })
             .ok_or("That signer has not reported this share. Ask it again.")?;
-        Ok(RecoverShare { held_by: device, held_share: held.clone() })
+        Ok(RecoverShare {
+            held_by: device,
+            held_share: held.clone(),
+        })
     }
 
     /// Start a restoration from a share a signer reported (needs the signer's own wallet name
     /// and network, which only a consolidated share or a saved backup with metadata carries).
-    pub fn start_restoration_from_held_share(&mut self, device_id: &str, share_index: u32) -> Res<String> {
+    pub fn start_restoration_from_held_share(
+        &mut self,
+        device_id: &str,
+        share_index: u32,
+    ) -> Res<String> {
         let device = self.parse_device(device_id)?;
         let share = self.held_share(device, share_index)?;
-        if let Some(aref) = share.held_share.access_structure_ref {
-            if self.inner.get_access_structure(aref).is_some() {
-                return Err("This coordinator already has that wallet.".into());
-            }
+        if let Some(aref) = share.held_share.access_structure_ref
+            && self.inner.get_access_structure(aref).is_some()
+        {
+            return Err("This coordinator already has that wallet.".into());
         }
         let id = RestorationId::new(&mut OsRng);
         self.inner
@@ -444,11 +517,18 @@ impl Coordinator {
     }
 
     /// Give a wallet this coordinator already has a signer that holds one of its shares.
-    pub fn add_held_share_to_wallet(&mut self, key_id: &str, device_id: &str, share_index: u32) -> Res<()> {
+    pub fn add_held_share_to_wallet(
+        &mut self,
+        key_id: &str,
+        device_id: &str,
+        share_index: u32,
+    ) -> Res<()> {
         let aref = self.access_ref_of(key_id)?;
         let device = self.parse_device(device_id)?;
         let share = self.held_share(device, share_index)?;
-        self.inner.recover_share(aref, &share, self.encryption_key).map_err(|e| e.to_string())?;
+        self.inner
+            .recover_share(aref, &share, self.encryption_key)
+            .map_err(|e| e.to_string())?;
         self.save()
     }
 
@@ -456,14 +536,17 @@ impl Coordinator {
 
     /// Signers restored from a typed-in backup whose share still has to be consolidated.
     pub fn pending_consolidations(&self) -> Vec<PendingConsolidationView> {
-        let mut devices: std::collections::BTreeSet<DeviceId> = self.signers.keys().copied().collect();
+        let mut devices: std::collections::BTreeSet<DeviceId> =
+            self.signers.keys().copied().collect();
         for k in self.inner.iter_keys() {
             devices.extend(k.master_access_structure().devices());
         }
         let mut out = vec![];
         for device in devices {
             for aref in self.inner.pending_physical_consolidations(device) {
-                let Some(share_index) = self.share_index_of(aref, device).ok() else { continue };
+                let Some(share_index) = self.share_index_of(aref, device).ok() else {
+                    continue;
+                };
                 out.push(PendingConsolidationView {
                     key_id: aref.key_id.to_string(),
                     key_name: self.key_name(aref.key_id),
@@ -499,18 +582,26 @@ impl Coordinator {
         self.session = Session::Idle;
         Update {
             message: "The backup was not accepted.".into(),
-            finished: Some(Finished::BackupRejected { reason: reason.into() }),
+            finished: Some(Finished::BackupRejected {
+                reason: reason.into(),
+            }),
             ..Default::default()
         }
     }
 
     pub(super) fn receive_backup(&mut self, from: DeviceId, incoming: Incoming) -> Res<Update> {
-        let Session::Backup(session) = &self.session else { unreachable!("checked by the caller") };
+        let Session::Backup(session) = &self.session else {
+            unreachable!("checked by the caller")
+        };
         let session = session.clone();
         let name = self.name_of(&from);
         let update = match (session, incoming) {
             (
-                BackupSession::Display { access_structure_ref, share_index, .. },
+                BackupSession::Display {
+                    access_structure_ref,
+                    share_index,
+                    ..
+                },
                 Incoming::Recorded(aref, index),
             ) => {
                 if aref != access_structure_ref || index != share_index {
@@ -527,7 +618,14 @@ impl Coordinator {
                     ..Default::default()
                 }
             }
-            (BackupSession::Check { access_structure_ref, share_index, .. }, Incoming::Checked(aref, index)) => {
+            (
+                BackupSession::Check {
+                    access_structure_ref,
+                    share_index,
+                    ..
+                },
+                Incoming::Checked(aref, index),
+            ) => {
                 if aref != access_structure_ref || index != share_index {
                     return Err("That reply is for a different backup.".into());
                 }
@@ -541,12 +639,32 @@ impl Coordinator {
                     ..Default::default()
                 }
             }
-            (BackupSession::Enter { enter_id, target, stage, device }, Incoming::Core(message)) => {
-                let sends = self.inner.recv_device_message(from, message).map_err(|e| e.to_string())?;
+            (
+                BackupSession::Enter {
+                    enter_id,
+                    target,
+                    stage,
+                    device,
+                },
+                Incoming::Core(message),
+            ) => {
+                let sends = self
+                    .inner
+                    .recv_device_message(from, message)
+                    .map_err(|e| e.to_string())?;
                 self.receive_enter(device, enter_id, target, stage, sends)?
             }
-            (BackupSession::Consolidate { access_structure_ref, .. }, Incoming::Core(message)) => {
-                let sends = self.inner.recv_device_message(from, message).map_err(|e| e.to_string())?;
+            (
+                BackupSession::Consolidate {
+                    access_structure_ref,
+                    ..
+                },
+                Incoming::Core(message),
+            ) => {
+                let sends = self
+                    .inner
+                    .recv_device_message(from, message)
+                    .map_err(|e| e.to_string())?;
                 let done = sends.into_iter().find_map(|s| match s {
                     CoordinatorSend::ToUser(CoordinatorToUserMessage::Restoration(
                         ToUserRestoration::FinishedConsolidation { share_index, .. },
@@ -567,7 +685,10 @@ impl Coordinator {
                 }
             }
             (BackupSession::HeldShares { .. }, Incoming::Core(message)) => {
-                let sends = self.inner.recv_device_message(from, message).map_err(|e| e.to_string())?;
+                let sends = self
+                    .inner
+                    .recv_device_message(from, message)
+                    .map_err(|e| e.to_string())?;
                 let shares = sends.into_iter().find_map(|s| match s {
                     CoordinatorSend::ToUser(CoordinatorToUserMessage::Restoration(
                         ToUserRestoration::GotHeldShares { held_by, shares },
@@ -582,11 +703,18 @@ impl Coordinator {
                 self.session = Session::Idle;
                 Update {
                     message: format!("{name} reported {} share(s).", views.len()),
-                    finished: Some(Finished::HeldShares { device_name: name, shares: views }),
+                    finished: Some(Finished::HeldShares {
+                        device_name: name,
+                        shares: views,
+                    }),
                     ..Default::default()
                 }
             }
-            _ => return Err("That reply does not belong to what this session is waiting for.".into()),
+            _ => {
+                return Err(
+                    "That reply does not belong to what this session is waiting for.".into(),
+                );
+            }
         };
         Ok(update)
     }
@@ -624,13 +752,19 @@ impl Coordinator {
             _ => None,
         });
         match (stage, to_user) {
-            (EnterStage::WaitingForWords, Some(ToUserRestoration::PhysicalBackupEntered(phase))) => {
+            (
+                EnterStage::WaitingForWords,
+                Some(ToUserRestoration::PhysicalBackupEntered(phase)),
+            ) => {
                 if phase.backup.enter_physical_id != enter_id || phase.from != device {
                     return Err("That is not the backup this session asked for.".into());
                 }
                 self.handle_entered_backup(device, enter_id, target, *phase)
             }
-            (EnterStage::Saving(restoration_id), Some(ToUserRestoration::PhysicalBackupSaved { share_index, .. })) => {
+            (
+                EnterStage::Saving(restoration_id),
+                Some(ToUserRestoration::PhysicalBackupSaved { share_index, .. }),
+            ) => {
                 let restorable = self
                     .inner
                     .get_restoration_state(restoration_id)
@@ -649,7 +783,11 @@ impl Coordinator {
             }
             (
                 EnterStage::Consolidating,
-                Some(ToUserRestoration::FinishedConsolidation { access_structure_ref, share_index, .. }),
+                Some(ToUserRestoration::FinishedConsolidation {
+                    access_structure_ref,
+                    share_index,
+                    ..
+                }),
             ) => {
                 self.session = Session::Idle;
                 Ok(Update {
@@ -677,7 +815,10 @@ impl Coordinator {
         let key = self.encryption_key;
         match target.clone() {
             EnterTarget::Wallet(aref) => {
-                let tell = match self.inner.tell_device_to_consolidate_physical_backup(phase, aref, key) {
+                let tell = match self
+                    .inner
+                    .tell_device_to_consolidate_physical_backup(phase, aref, key)
+                {
                     Ok(t) => t,
                     Err(e) => return Ok(self.rejected(e.to_string())),
                 };
@@ -698,7 +839,11 @@ impl Coordinator {
             }
             EnterTarget::NewWallet { .. } | EnterTarget::Restoration(_) => {
                 let (restoration_id, created) = match &target {
-                    EnterTarget::NewWallet { name, network, threshold } => {
+                    EnterTarget::NewWallet {
+                        name,
+                        network,
+                        threshold,
+                    } => {
                         let id = RestorationId::new(&mut OsRng);
                         self.inner.start_restoring_key(
                             name.clone(),
@@ -711,14 +856,21 @@ impl Coordinator {
                     EnterTarget::Restoration(id) => (*id, false),
                     EnterTarget::Wallet(_) => unreachable!(),
                 };
-                if let Err(e) = self.inner.check_physical_backup_compatible_with_restoration(restoration_id, phase, key) {
+                if let Err(e) = self
+                    .inner
+                    .check_physical_backup_compatible_with_restoration(restoration_id, phase, key)
+                {
                     if created {
                         // don't leave an empty restoration behind
                         self.inner.cancel_restoration(restoration_id);
                     }
                     return Ok(self.rejected(e.to_string()));
                 }
-                let sends: Vec<_> = self.inner.tell_device_to_save_physical_backup(phase, restoration_id).into_iter().collect();
+                let sends: Vec<_> = self
+                    .inner
+                    .tell_device_to_save_physical_backup(phase, restoration_id)
+                    .into_iter()
+                    .collect();
                 self.session = Session::Backup(BackupSession::Enter {
                     device,
                     enter_id,
@@ -736,7 +888,13 @@ impl Coordinator {
         }
     }
 
-    fn next_step(&mut self, device: DeviceId, sends: Vec<CoordinatorSend>, step: WireStep, message: &str) -> Update {
+    fn next_step(
+        &mut self,
+        device: DeviceId,
+        sends: Vec<CoordinatorSend>,
+        step: WireStep,
+        message: &str,
+    ) -> Update {
         let mut update = Update {
             message: message.to_string(),
             broadcast: Some(self.broadcast(sends, step)),

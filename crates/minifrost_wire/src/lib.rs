@@ -4,9 +4,9 @@
 //! The packets are thin wrappers around frostsnap_core's own device<->coordinator messages.
 
 use frostsnap_core::{
-    message::{signing::OpenNonceStreams, CoordinatorToDeviceMessage, DeviceToCoordinatorMessage},
-    schnorr_fun::frost::ShareIndex,
     AccessStructureRef, DeviceId, KeyId, WireSignTask,
+    message::{CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, signing::OpenNonceStreams},
+    schnorr_fun::frost::ShareIndex,
 };
 
 /// Bumped on any incompatible change to [`Packet`].
@@ -143,10 +143,10 @@ impl Step {
     /// Whether a coordinator step carrying `message` can be this step. A [`SignPrepare`] is
     /// always [`Step::SignReview`], which no `message` fits.
     fn fits(self, message: &CoordinatorToDeviceMessage) -> bool {
-        use frostsnap_core::message::{
-            keygen::Keygen, signing::CoordinatorSigning, CoordinatorRestoration as R,
-        };
         use CoordinatorToDeviceMessage as M;
+        use frostsnap_core::message::{
+            CoordinatorRestoration as R, keygen::Keygen, signing::CoordinatorSigning,
+        };
         match (self, message) {
             (Step::KeygenJoin, M::KeyGen(Keygen::Begin(_)))
             | (Step::KeygenCertify, M::KeyGen(Keygen::CertifyPlease { .. }))
@@ -156,10 +156,16 @@ impl Step {
             | (Step::ShowBackup, M::Restoration(R::DisplayBackup { .. }))
             | (Step::CheckBackup, M::Restoration(R::CheckBackup { .. }))
             | (Step::EnterBackup, M::Restoration(R::EnterPhysicalBackup { .. }))
-            | (Step::SaveBackup, M::Restoration(R::SavePhysicalBackup { .. } | R::SavePhysicalBackup2(_)))
+            | (
+                Step::SaveBackup,
+                M::Restoration(R::SavePhysicalBackup { .. } | R::SavePhysicalBackup2(_)),
+            )
             | (Step::HeldShares, M::Restoration(R::RequestHeldShares)) => true,
             // the same request finishes both flows
-            (Step::AddBackupToWallet | Step::FinishRestoring, M::Restoration(R::Consolidate(_))) => true,
+            (
+                Step::AddBackupToWallet | Step::FinishRestoring,
+                M::Restoration(R::Consolidate(_)),
+            ) => true,
             _ => false,
         }
     }
@@ -169,7 +175,10 @@ impl Step {
         if self.fits(message) {
             Ok(())
         } else {
-            Err(format!("This code is labelled “{}” but does not carry that step. Refusing it.", self.title()))
+            Err(format!(
+                "This code is labelled “{}” but does not carry that step. Refusing it.",
+                self.title()
+            ))
         }
     }
 
@@ -178,7 +187,10 @@ impl Step {
         if self == Step::SignReview {
             Ok(())
         } else {
-            Err(format!("This code is labelled “{}” but carries a transaction to review. Refusing it.", self.title()))
+            Err(format!(
+                "This code is labelled “{}” but carries a transaction to review. Refusing it.",
+                self.title()
+            ))
         }
     }
 }

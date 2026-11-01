@@ -33,7 +33,10 @@ pub fn list_cameras() -> Vec<CameraInfo> {
     Camera::list_devices()
         .unwrap_or_default()
         .into_iter()
-        .map(|d| CameraInfo { index: d.index as u32, name: d.name })
+        .map(|d| CameraInfo {
+            index: d.index as u32,
+            name: d.name,
+        })
         .collect()
 }
 
@@ -54,7 +57,7 @@ impl CameraSink for Sink {
         let mut n = self.n.lock().unwrap();
         *n += 1;
         // ~15 fps preview from a 30 fps camera
-        if *n % 2 == 0 {
+        if n.is_multiple_of(2) {
             self.events
                 .add(CameraEvent::Preview(frame.data.clone()))
                 .map_err(|_| desktop_camera::CameraError::DeviceError("ui closed".into()))?;
@@ -96,7 +99,12 @@ pub fn start_camera(index: u32, events: StreamSink<CameraEvent>) -> Result<(), S
         });
     }
 
-    let sink = Sink { stop: stop.clone(), events, latest, n: Mutex::new(0) };
+    let sink = Sink {
+        stop: stop.clone(),
+        events,
+        latest,
+        n: Mutex::new(0),
+    };
     let camera = Camera::open(&info, sink).map_err(|e| e.to_string())?;
     std::mem::forget(camera); // the capture thread ends itself when `stop` is set
     Ok(())
@@ -116,7 +124,11 @@ fn decode_qr(jpeg: &[u8]) -> Vec<String> {
     };
     let luma = img.to_luma8();
     let mut prepared = rqrr::PreparedImage::prepare(luma);
-    prepared.detect_grids().into_iter().filter_map(|g| g.decode().ok().map(|(_, text)| text)).collect()
+    prepared
+        .detect_grids()
+        .into_iter()
+        .filter_map(|g| g.decode().ok().map(|(_, text)| text))
+        .collect()
 }
 
 /// Stubs so the generated bindings compile on Android too; the Dart side never calls them

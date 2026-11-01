@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use bitcoin::{secp256k1, Address, Txid};
+use bitcoin::{Address, Txid, secp256k1};
 use minifrost_coordinator::engine::{Coordinator, Finished, Update};
 use minifrost_coordinator::wallet::{self, Amt, Esplora, EsploraUtxo};
 // Compile the signer engine straight into the test instead of linking the signer crate: both FFI
@@ -45,7 +45,12 @@ impl Esplora for Chain {
 }
 
 pub fn frames_of(update: &Update) -> Vec<String> {
-    update.broadcast.as_ref().expect("a broadcast").frames.clone()
+    update
+        .broadcast
+        .as_ref()
+        .expect("a broadcast")
+        .frames
+        .clone()
 }
 
 /// Run one signer through a coordinator broadcast.
@@ -63,7 +68,10 @@ pub fn approve_to_reply(s: &mut Signer) -> Vec<String> {
 /// Nonce release and partial signing burn nonces: the snapshot must come with the reply.
 pub fn approve_persisting(s: &mut Signer) -> Vec<String> {
     let r = s.approve().unwrap();
-    assert!(r.snapshot.is_some(), "burned nonces must be persisted before the QR is shown");
+    assert!(
+        r.snapshot.is_some(),
+        "burned nonces must be persisted before the QR is shown"
+    );
     match r.step {
         Step::Reply { frames, .. } => frames,
         other => panic!("expected reply, got {other:?}"),
@@ -96,7 +104,10 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     let replies: Vec<_> = signers
         .iter_mut()
         .map(|s| {
-            assert!(matches!(signer_step(s, &b1), Step::Confirm(Prompt::JoinKeygen { .. })));
+            assert!(matches!(
+                signer_step(s, &b1),
+                Step::Confirm(Prompt::JoinKeygen { .. })
+            ));
             reply_to(s.approve().unwrap().step, &first)
         })
         .collect();
@@ -106,7 +117,10 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     // the coordinator's camera can still catch a signer's previous reply after the round moved on
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b2 = frames_of(&up);
-    let replies: Vec<_> = signers.iter_mut().map(|s| reply_to(signer_step(s, &b2), &up)).collect();
+    let replies: Vec<_> = signers
+        .iter_mut()
+        .map(|s| reply_to(signer_step(s, &b2), &up))
+        .collect();
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
@@ -115,7 +129,10 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     let acks: Vec<_> = signers
         .iter_mut()
         .map(|s| {
-            assert!(matches!(signer_step(s, &b3), Step::Confirm(Prompt::VerifyKeygen { .. })));
+            assert!(matches!(
+                signer_step(s, &b3),
+                Step::Confirm(Prompt::VerifyKeygen { .. })
+            ));
             reply_to(s.approve().unwrap().step, &up)
         })
         .collect();
@@ -127,15 +144,26 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
 
 /// Enrol fresh signers named `names`, create a `threshold`-of-n signet wallet over QR, store the
 /// shares. Returns the signers and the wallet's key id.
-pub fn create_wallet(coord: &mut Coordinator, names: &[&str], threshold: u16) -> (Vec<Signer>, String) {
-    let mut signers: Vec<Signer> = names.iter().map(|n| Signer::create(n.to_string())).collect();
+pub fn create_wallet(
+    coord: &mut Coordinator,
+    names: &[&str],
+    threshold: u16,
+) -> (Vec<Signer>, String) {
+    let mut signers: Vec<Signer> = names
+        .iter()
+        .map(|n| Signer::create(n.to_string()))
+        .collect();
     for s in &signers {
         coord.enroll(&scan(&s.hello_frames())).unwrap();
     }
     let ids: Vec<String> = signers.iter().map(|s| s.device_id().to_string()).collect();
-    let up = coord.start_keygen("family".into(), threshold, ids, bitcoin::Network::Signet).unwrap();
+    let up = coord
+        .start_keygen("family".into(), threshold, ids, bitcoin::Network::Signet)
+        .unwrap();
     let mut up = run_keygen(coord, &mut signers, up);
-    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else { panic!("{up:?}") };
+    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else {
+        panic!("{up:?}")
+    };
     for s in signers.iter_mut() {
         let r = s.receive(&scan(&frames_of(&up))).unwrap();
         assert!(matches!(r.step, Step::Done { .. }));
@@ -146,24 +174,44 @@ pub fn create_wallet(coord: &mut Coordinator, names: &[&str], threshold: u16) ->
 
 /// Fund the wallet on a fake chain, pay 40k sats with the signers at `chosen`, return the signed
 /// transaction after verifying its BIP340 signature against the wallet's own address.
-pub fn fund_and_sign(coord: &mut Coordinator, signers: &mut [Signer], chosen: &[usize], key_id: &str) -> String {
+pub fn fund_and_sign(
+    coord: &mut Coordinator,
+    signers: &mut [Signer],
+    chosen: &[usize],
+    key_id: &str,
+) -> String {
     let (master, network) = coord.wallet_params(key_id).unwrap();
     let mut chain = Chain(BTreeMap::new());
     chain.0.insert(
         wallet::address(master, network, false, 0).to_string(),
-        vec![EsploraUtxo { txid: Txid::from_str(&"11".repeat(32)).unwrap(), vout: 1, value: 100_000, confirmed: true }],
+        vec![EsploraUtxo {
+            txid: Txid::from_str(&"11".repeat(32)).unwrap(),
+            vout: 1,
+            value: 100_000,
+            confirmed: true,
+        }],
     );
-    coord.store_wallet(key_id, wallet::sync(&chain, master, network).unwrap()).unwrap();
+    coord
+        .store_wallet(key_id, wallet::sync(&chain, master, network).unwrap())
+        .unwrap();
     let dest = wallet::address(master, network, false, 50).to_string();
-    let built = coord.prepare_send(key_id, &dest, Amt::Sats(40_000), 3.0).unwrap();
+    let built = coord
+        .prepare_send(key_id, &dest, Amt::Sats(40_000), 3.0)
+        .unwrap();
     let template = built.template.clone();
 
-    let chosen_ids: Vec<String> = chosen.iter().map(|&i| signers[i].device_id().to_string()).collect();
+    let chosen_ids: Vec<String> = chosen
+        .iter()
+        .map(|&i| signers[i].device_id().to_string())
+        .collect();
     let up = coord.begin_signing(key_id, chosen_ids).unwrap();
     let prepare = frames_of(&up);
     let mut nonce_replies = vec![];
     for &i in chosen {
-        assert!(matches!(signer_step(&mut signers[i], &prepare), Step::Confirm(Prompt::ReviewTransaction(_))));
+        assert!(matches!(
+            signer_step(&mut signers[i], &prepare),
+            Step::Confirm(Prompt::ReviewTransaction(_))
+        ));
         nonce_replies.push(approve_persisting(&mut signers[i]));
     }
     let mut up = Update::default();
@@ -173,14 +221,19 @@ pub fn fund_and_sign(coord: &mut Coordinator, signers: &mut [Signer], chosen: &[
     let bundle = frames_of(&up);
     let mut sigs = vec![];
     for &i in chosen {
-        assert!(matches!(signer_step(&mut signers[i], &bundle), Step::Confirm(Prompt::SignTransaction(_))));
+        assert!(matches!(
+            signer_step(&mut signers[i], &bundle),
+            Step::Confirm(Prompt::SignTransaction(_))
+        ));
         sigs.push(approve_persisting(&mut signers[i]));
     }
     let mut up = Update::default();
     for s in &sigs {
         up = coord.receive(&scan(s)).unwrap();
     }
-    let Some(Finished::Signed { tx_hex, .. }) = up.finished else { panic!("{up:?}") };
+    let Some(Finished::Signed { tx_hex, .. }) = up.finished else {
+        panic!("{up:?}")
+    };
 
     let tx: bitcoin::Transaction = bitcoin::consensus::encode::deserialize_hex(&tx_hex).unwrap();
     let secp = secp256k1::Secp256k1::verification_only();
@@ -192,7 +245,8 @@ pub fn fund_and_sign(coord: &mut Coordinator, signers: &mut [Signer], chosen: &[
             use bitcoin::hashes::Hash;
             msg.to_byte_array()
         });
-        secp.verify_schnorr(&sig.signature, &m, &xonly).expect("valid BIP340 signature");
+        secp.verify_schnorr(&sig.signature, &m, &xonly)
+            .expect("valid BIP340 signature");
     }
     tx_hex
 }

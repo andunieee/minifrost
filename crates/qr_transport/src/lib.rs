@@ -101,12 +101,23 @@ impl Frame {
         let index: u16 = it.next()?.parse().ok()?;
         let total: u16 = it.next()?.parse().ok()?;
         let data = b32_decode(it.next()?)?;
-        (index != 0 && index <= total).then_some(Frame { id, index, total, data })
+        (index != 0 && index <= total).then_some(Frame {
+            id,
+            index,
+            total,
+            data,
+        })
     }
 
     /// The `MF1:` text form, which an [`Assembler`] accepts.
     pub fn to_text(&self) -> String {
-        format!("{PREFIX}:{:08X}:{}:{}:{}", self.id, self.index, self.total, b32_encode(&self.data))
+        format!(
+            "{PREFIX}:{:08X}:{}:{}:{}",
+            self.id,
+            self.index,
+            self.total,
+            b32_encode(&self.data)
+        )
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -181,9 +192,18 @@ impl Assembler {
         }
         let id = u32::from_str_radix(it.next().ok_or(PushError::Malformed)?, 16)
             .map_err(|_| PushError::Malformed)?;
-        let index: usize = it.next().ok_or(PushError::Malformed)?.parse().map_err(|_| PushError::Malformed)?;
-        let total: usize = it.next().ok_or(PushError::Malformed)?.parse().map_err(|_| PushError::Malformed)?;
-        let data = b32_decode(it.next().ok_or(PushError::Malformed)?).ok_or(PushError::Malformed)?;
+        let index: usize = it
+            .next()
+            .ok_or(PushError::Malformed)?
+            .parse()
+            .map_err(|_| PushError::Malformed)?;
+        let total: usize = it
+            .next()
+            .ok_or(PushError::Malformed)?
+            .parse()
+            .map_err(|_| PushError::Malformed)?;
+        let data =
+            b32_decode(it.next().ok_or(PushError::Malformed)?).ok_or(PushError::Malformed)?;
         if index == 0 || index > total || total > 4096 {
             return Err(PushError::Malformed);
         }
@@ -202,9 +222,17 @@ impl Assembler {
                 return Err(PushError::BadChecksum);
             }
             self.current = None;
-            return Ok(Progress { received: total, total, complete: Some(payload) });
+            return Ok(Progress {
+                received: total,
+                total,
+                complete: Some(payload),
+            });
         }
-        Ok(Progress { received: parts.len(), total, complete: None })
+        Ok(Progress {
+            received: parts.len(),
+            total,
+            complete: None,
+        })
     }
 }
 
@@ -217,7 +245,10 @@ mod tests {
         for len in [0usize, 1, 5, 6, 7, 100, 1000, 5000] {
             let payload: Vec<u8> = (0..len).map(|i| (i * 31 + 7) as u8).collect();
             let mut frames = split(&payload, 64);
-            assert!(frames.iter().all(|f| f.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == ':')));
+            assert!(frames.iter().all(|f| {
+                f.chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == ':')
+            }));
             frames.reverse();
             let doubled: Vec<_> = frames.iter().chain(frames.iter()).cloned().collect();
             let mut asm = Assembler::new();
@@ -240,7 +271,7 @@ mod tests {
         // 160 chars = 100 bytes, a multiple of 5 so chunks stay independently decodable
         for text in split(&payload, 160) {
             let bytes = Frame::parse(&text).unwrap().to_bytes();
-            assert_eq!(bytes.len() <= 108, true);
+            assert!(bytes.len() <= 108);
             let again = Frame::from_bytes(&bytes).unwrap().to_text();
             assert_eq!(again, text);
             out = asm.push(&again).unwrap().complete.or(out);
@@ -260,7 +291,10 @@ mod tests {
         for f in &b[..b.len() - 1] {
             assert!(asm.push(f).unwrap().complete.is_none());
         }
-        assert_eq!(asm.push(b.last().unwrap()).unwrap().complete.unwrap(), vec![2u8; 300]);
+        assert_eq!(
+            asm.push(b.last().unwrap()).unwrap().complete.unwrap(),
+            vec![2u8; 300]
+        );
 
         // flip a frame from message a to hold message b's data under a's id
         let mut mixed = a.clone();
@@ -271,7 +305,11 @@ mod tests {
         parts[2] = a1[2];
         mixed[1] = parts.join(":");
         let mut asm = Assembler::new();
-        let mut last = Ok(Progress { received: 0, total: 0, complete: None });
+        let mut last = Ok(Progress {
+            received: 0,
+            total: 0,
+            complete: None,
+        });
         for f in &mixed {
             last = asm.push(f);
         }

@@ -62,7 +62,7 @@ impl desktop_camera::CameraSink for Sink {
         let mut n = self.n.lock().unwrap();
         *n += 1;
         // ~15 fps preview from a 30 fps camera
-        if *n % 2 == 0 {
+        if n.is_multiple_of(2) {
             self.events
                 .add(CameraEvent::Preview(frame.data.clone()))
                 .map_err(|_| desktop_camera::CameraError::DeviceError("ui closed".into()))?;

@@ -75,15 +75,25 @@ impl Codec {
         p.sampleFormatOut = GgFormat::GGWAVE_SAMPLE_FORMAT_F32;
         p.sampleRateInp = rate as f32;
         p.sampleRateOut = rate as f32;
-        p.operatingMode = if tx { ggwave_rs::GGWAVE_OPERATING_MODE_TX } else { ggwave_rs::GGWAVE_OPERATING_MODE_RX };
+        p.operatingMode = if tx {
+            ggwave_rs::GGWAVE_OPERATING_MODE_TX
+        } else {
+            ggwave_rs::GGWAVE_OPERATING_MODE_RX
+        };
         let wave = GgWave::new(p).map_err(|e| e.to_string())?;
         Ok(Codec(ManuallyDrop::new(wave)))
     }
 
     fn encode(&self, packet: &[u8]) -> Result<Vec<f32>, String> {
         let _g = GGWAVE.lock().unwrap_or_else(|e| e.into_inner());
-        let bytes = self.0.encode(packet, PROTOCOL, VOLUME).map_err(|e| e.to_string())?;
-        Ok(bytes.chunks_exact(4).map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]])).collect())
+        let bytes = self
+            .0
+            .encode(packet, PROTOCOL, VOLUME)
+            .map_err(|e| e.to_string())?;
+        Ok(bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+            .collect())
     }
 
     fn decode(&self, samples: &[f32]) -> Option<Vec<u8>> {
@@ -113,7 +123,11 @@ fn packets(frames: &[String]) -> Result<Vec<Vec<u8>>, String> {
     let payload = payload.ok_or("incomplete message, nothing to play")?;
     qr_transport::split(&payload, CHUNK_CHARS)
         .iter()
-        .map(|t| qr_transport::Frame::parse(t).map(|f| f.to_bytes()).ok_or_else(|| "bad frame".to_string()))
+        .map(|t| {
+            qr_transport::Frame::parse(t)
+                .map(|f| f.to_bytes())
+                .ok_or_else(|| "bad frame".to_string())
+        })
         .collect()
 }
 
@@ -140,7 +154,11 @@ struct Format {
 
 impl Format {
     fn config(&self) -> StreamConfig {
-        StreamConfig { channels: self.channels, sample_rate: self.rate, buffer_size: cpal::BufferSize::Default }
+        StreamConfig {
+            channels: self.channels,
+            sample_rate: self.rate,
+            buffer_size: cpal::BufferSize::Default,
+        }
     }
 }
 
@@ -148,14 +166,26 @@ impl Format {
 /// the device's own default avoids unsupported combinations.
 #[cfg(target_os = "android")]
 fn pick_format(_device: &cpal::Device, _input: bool) -> Result<Format, String> {
-    Ok(Format { rate: 48000, channels: 1, format: SampleFormat::F32 })
+    Ok(Format {
+        rate: 48000,
+        channels: 1,
+        format: SampleFormat::F32,
+    })
 }
 
 #[cfg(not(target_os = "android"))]
 fn pick_format(device: &cpal::Device, input: bool) -> Result<Format, String> {
-    let c = if input { device.default_input_config() } else { device.default_output_config() }
-        .map_err(|e| e.to_string())?;
-    Ok(Format { rate: c.sample_rate(), channels: c.channels(), format: c.sample_format() })
+    let c = if input {
+        device.default_input_config()
+    } else {
+        device.default_output_config()
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(Format {
+        rate: c.sample_rate(),
+        channels: c.channels(),
+        format: c.sample_format(),
+    })
 }
 
 fn out_stream<T: SizedSample + FromSample<f32>>(
@@ -195,7 +225,10 @@ where
             fmt.config(),
             move |data: &[T], _: &cpal::InputCallbackInfo| {
                 // keep the first channel only
-                let mono = data.chunks(channels).map(|f| f32::from_sample(f[0])).collect();
+                let mono = data
+                    .chunks(channels)
+                    .map(|f| f32::from_sample(f[0]))
+                    .collect();
                 let _ = send.send(mono);
             },
             |e| eprintln!("sound input error: {e}"),
@@ -222,7 +255,10 @@ impl Worker {
             let stop = stop.clone();
             std::thread::spawn(move || body(&stop, ready_tx))
         };
-        let w = Worker { stop, thread: Some(thread) };
+        let w = Worker {
+            stop,
+            thread: Some(thread),
+        };
         match ready_rx.recv() {
             Ok(Ok(())) => Ok(w),
             Ok(Err(e)) => Err(e),
@@ -250,7 +286,9 @@ impl Player {
         packets(&frames)?; // validate before touching the audio device
         let w = Worker::spawn(move |stop, ready| {
             let setup = || -> Result<cpal::Stream, String> {
-                let device = cpal::default_host().default_output_device().ok_or("no speaker found")?;
+                let device = cpal::default_host()
+                    .default_output_device()
+                    .ok_or("no speaker found")?;
                 let fmt = pick_format(&device, false)?;
                 let wave = waveform(&frames, fmt.rate)?;
                 let stream = match fmt.format {
@@ -289,7 +327,9 @@ impl Listener {
         let w = Worker::spawn(move |stop, ready| {
             let (tx, rx) = mpsc::channel();
             let setup = || -> Result<(cpal::Stream, Codec), String> {
-                let device = cpal::default_host().default_input_device().ok_or("no microphone found")?;
+                let device = cpal::default_host()
+                    .default_input_device()
+                    .ok_or("no microphone found")?;
                 let fmt = pick_format(&device, true)?;
                 let codec = Codec::new(false, fmt.rate)?;
                 let stream = match fmt.format {
@@ -319,7 +359,10 @@ impl Listener {
                 }
                 let whole = pending.len() / SAMPLES_PER_FRAME * SAMPLES_PER_FRAME;
                 for block in pending[..whole].chunks(SAMPLES_PER_FRAME) {
-                    if let Some(frame) = codec.decode(block).and_then(|b| qr_transport::Frame::from_bytes(&b)) {
+                    if let Some(frame) = codec
+                        .decode(block)
+                        .and_then(|b| qr_transport::Frame::from_bytes(&b))
+                    {
                         on_frame(frame.to_text());
                     }
                 }
@@ -350,9 +393,12 @@ mod tests {
         let mut heard = 0;
         let mut samples = vec![0.0; 5000];
         samples.extend_from_slice(&wave);
-        samples.extend(std::iter::repeat(0.0).take(SAMPLES_PER_FRAME * 4));
+        samples.extend(std::iter::repeat_n(0.0, SAMPLES_PER_FRAME * 4));
         for block in samples.chunks_exact(SAMPLES_PER_FRAME) {
-            if let Some(f) = codec.decode(block).and_then(|b| qr_transport::Frame::from_bytes(&b)) {
+            if let Some(f) = codec
+                .decode(block)
+                .and_then(|b| qr_transport::Frame::from_bytes(&b))
+            {
                 heard += 1;
                 if let Some(p) = asm.push(&f.to_text()).unwrap().complete {
                     done = Some(p);

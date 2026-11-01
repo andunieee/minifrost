@@ -1,7 +1,7 @@
 [package]
 name = "qr_transport"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Split arbitrary byte payloads into a loop of QR-sized text frames, and reassemble them."
 
 [dependencies]

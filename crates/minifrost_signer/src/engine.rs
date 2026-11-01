@@ -4,24 +4,24 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
-use frost_backup::{bip39_words, ShareBackup};
+use bitcoin::hashes::{Hash, HashEngine, Hmac, HmacEngine, sha256};
+use frost_backup::{ShareBackup, bip39_words};
 use frostsnap_core::{
+    AccessStructureRef, CoordShareDecryptionContrib, DeviceId, KeyId, SymmetricKey, Versioned,
+    WireSignTask,
     device::{
-        restoration::{EnterBackupPhase, ToUserRestoration},
         DeviceSecretDerivation, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose,
         Mutation, SignPhase1,
+        restoration::{EnterBackupPhase, ToUserRestoration},
     },
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
     message::{
-        keygen::Keygen, signing::CoordinatorSigning, CoordinatorToDeviceMessage, DeviceSend,
-        DeviceToCoordinatorMessage,
+        CoordinatorToDeviceMessage, DeviceSend, DeviceToCoordinatorMessage, keygen::Keygen,
+        signing::CoordinatorSigning,
     },
     nonce_stream::NonceStreamId,
     schnorr_fun::frost::ShareIndex,
-    schnorr_fun::fun::{marker::*, KeyPair, Scalar},
-    AccessStructureRef, CoordShareDecryptionContrib, DeviceId, KeyId, SymmetricKey, Versioned,
-    WireSignTask,
+    schnorr_fun::fun::{KeyPair, Scalar, marker::*},
 };
 use minifrost_wire::Packet;
 use rand::rngs::OsRng;
@@ -256,8 +256,15 @@ enum Pending {
     Nonces(CoordinatorToDeviceMessage, bitcoin::Txid, KeyId),
     Sign(Box<SignPhase1>),
     EnterBackup(EnterBackupPhase),
-    DisplayBackup { access_structure_ref: AccessStructureRef, share_index: ShareIndex },
-    Quiz { quiz: backup_quiz::Quiz, access_structure_ref: AccessStructureRef, share_index: ShareIndex },
+    DisplayBackup {
+        access_structure_ref: AccessStructureRef,
+        share_index: ShareIndex,
+    },
+    Quiz {
+        quiz: backup_quiz::Quiz,
+        access_structure_ref: AccessStructureRef,
+        share_index: ShareIndex,
+    },
 }
 
 pub struct Signer {
@@ -323,9 +330,16 @@ impl Signer {
         if version != SNAPSHOT_VERSION {
             return Err(format!("unknown snapshot version {version}"));
         }
-        let (snap, _): (Snapshot, _) = bincode::decode_from_slice(rest, bincode::config::standard())
-            .map_err(|e| format!("corrupt snapshot: {e}"))?;
-        Ok(build(snap.device_secret, snap.name, snap.history, snap.nonce_slots, snap.reviewed))
+        let (snap, _): (Snapshot, _) =
+            bincode::decode_from_slice(rest, bincode::config::standard())
+                .map_err(|e| format!("corrupt snapshot: {e}"))?;
+        Ok(build(
+            snap.device_secret,
+            snap.name,
+            snap.history,
+            snap.nonce_slots,
+            snap.reviewed,
+        ))
     }
 
     pub fn snapshot(&self) -> Vec<u8> {
@@ -333,8 +347,16 @@ impl Signer {
             device_secret: self.derivation.device_secret,
             name: self.name.clone(),
             history: self.history.clone(),
-            nonce_slots: self.slots.iter().map(|s| s.0.lock().unwrap().clone()).collect(),
-            reviewed: self.reviewed.iter().map(|(k, t)| (k.0, t.to_byte_array())).collect(),
+            nonce_slots: self
+                .slots
+                .iter()
+                .map(|s| s.0.lock().unwrap().clone())
+                .collect(),
+            reviewed: self
+                .reviewed
+                .iter()
+                .map(|(k, t)| (k.0, t.to_byte_array()))
+                .collect(),
         };
         let mut out = vec![SNAPSHOT_VERSION];
         out.extend(bincode::encode_to_vec(&snap, bincode::config::standard()).expect("encodes"));
@@ -351,7 +373,11 @@ impl Signer {
 
     /// Frames of the QR code that enrols this signer with a coordinator.
     pub fn hello_frames(&self) -> Vec<String> {
-        let bytes = Packet::Hello { device_id: self.device_id(), name: self.name.clone() }.to_bytes();
+        let bytes = Packet::Hello {
+            device_id: self.device_id(),
+            name: self.name.clone(),
+        }
+        .to_bytes();
         qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS)
     }
 
@@ -361,7 +387,11 @@ impl Signer {
         for m in &self.history {
             if let Mutation::Keygen(k) = m {
                 match k {
-                    NewKey { key_id, key_name, purpose } => {
+                    NewKey {
+                        key_id,
+                        key_name,
+                        purpose,
+                    } => {
                         out.insert(
                             *key_id,
                             KeyInfo {
@@ -372,7 +402,11 @@ impl Signer {
                             },
                         );
                     }
-                    NewAccessStructure { access_structure_ref, threshold, .. } => {
+                    NewAccessStructure {
+                        access_structure_ref,
+                        threshold,
+                        ..
+                    } => {
                         if let Some(k) = out.get_mut(&access_structure_ref.key_id) {
                             k.threshold = *threshold;
                         }
@@ -397,7 +431,10 @@ impl Signer {
     fn result(&mut self, step: Step) -> StepResult {
         // Nonce slots change inside sign_ack without staged mutations, so a signing step always
         // forces a snapshot.
-        StepResult { snapshot: self.take_snapshot(), step }
+        StepResult {
+            snapshot: self.take_snapshot(),
+            step,
+        }
     }
 
     // -----------------------------------------------------------------------------------------
@@ -416,7 +453,9 @@ impl Signer {
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
             Packet::ToDevices { step, entries } => {
                 match entries.into_iter().find(|(to, _)| to.contains(&me)) {
-                    None => Step::Ignored { reason: "This code is not addressed to this signer.".into() },
+                    None => Step::Ignored {
+                        reason: "This code is not addressed to this signer.".into(),
+                    },
                     Some((_, msg)) => {
                         step.check(&msg)?;
                         self.step = Some(step);
@@ -430,7 +469,9 @@ impl Signer {
 
     fn receive_prepare(&mut self, me: DeviceId, prep: minifrost_wire::SignPrepare) -> Res<Step> {
         let Some((_, open)) = prep.open_nonce_streams.into_iter().find(|(d, _)| *d == me) else {
-            return Ok(Step::Ignored { reason: "This signing request is not addressed to this signer.".into() });
+            return Ok(Step::Ignored {
+                reason: "This signing request is not addressed to this signer.".into(),
+            });
         };
         prep.step.check_sign_prepare()?;
         self.step = Some(prep.step);
@@ -470,19 +511,25 @@ impl Signer {
                 Ok(Step::Confirm(prompt))
             }
             CoordinatorToDeviceMessage::Signing(CoordinatorSigning::RequestSign(_)) => {
-                let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
+                let sends = self
+                    .inner
+                    .recv_coordinator_message(msg, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
                 for send in sends {
-                    if let DeviceSend::ToUser(u) = send {
-                        if let DeviceToUserMessage::SignatureRequest { phase } = *u {
-                            return self.prompt_final_sign(phase);
-                        }
+                    if let DeviceSend::ToUser(u) = send
+                        && let DeviceToUserMessage::SignatureRequest { phase } = *u
+                    {
+                        return self.prompt_final_sign(phase);
                     }
                 }
                 Err("Signing request was not accepted.".into())
             }
             _ => {
                 // CertifyPlease / Check / Finalize, and every restoration / backup message
-                let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
+                let sends = self
+                    .inner
+                    .recv_coordinator_message(msg, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
                 self.handle_sends(sends)
             }
         }
@@ -509,14 +556,21 @@ impl Signer {
                 // the freshly consolidated share is a new key the home screen should list
                 Some(self.handle_sends(sends)?)
             }
-            ToUserRestoration::DisplayBackup { key_name, access_structure_ref, phase } => {
+            ToUserRestoration::DisplayBackup {
+                key_name,
+                access_structure_ref,
+                phase,
+            } => {
                 let backup = phase
                     .decrypt_to_backup(&mut self.derivation)
                     .map_err(|e| format!("could not read this signer's share: {e:?}"))?;
                 let share_index = phase.share_index;
                 let words = backup.to_words().iter().map(|w| w.to_string()).collect();
                 let threshold = self.threshold_of(access_structure_ref.key_id);
-                self.pending = Some(Pending::DisplayBackup { access_structure_ref, share_index });
+                self.pending = Some(Pending::DisplayBackup {
+                    access_structure_ref,
+                    share_index,
+                });
                 Some(Step::Confirm(Prompt::DisplayBackup {
                     key_name,
                     threshold,
@@ -524,7 +578,11 @@ impl Signer {
                     words,
                 }))
             }
-            ToUserRestoration::CheckBackup { key_name, access_structure_ref, phase } => {
+            ToUserRestoration::CheckBackup {
+                key_name,
+                access_structure_ref,
+                phase,
+            } => {
                 let backup = phase
                     .decrypt_to_backup(&mut self.derivation)
                     .map_err(|e| format!("could not read this signer's share: {e:?}"))?;
@@ -539,13 +597,20 @@ impl Signer {
     }
 
     fn threshold_of(&self, key_id: KeyId) -> u16 {
-        self.keys().into_iter().find(|k| k.key_id == key_id.to_string()).map_or(0, |k| k.threshold)
+        self.keys()
+            .into_iter()
+            .find(|k| k.key_id == key_id.to_string())
+            .map_or(0, |k| k.threshold)
     }
 
     fn prompt_final_sign(&mut self, phase: Box<SignPhase1>) -> Res<Step> {
         use frostsnap_core::SignTask;
         let task = phase.sign_task();
-        let SignTask::BitcoinTransaction { tx_template, network } = &task.inner else {
+        let SignTask::BitcoinTransaction {
+            tx_template,
+            network,
+        } = &task.inner
+        else {
             return Err("Only Bitcoin transactions can be signed by this app.".into());
         };
         let key_id = phase.sign_task().master_appkey.key_id();
@@ -576,14 +641,19 @@ impl Signer {
     }
 
     fn reply(&self, me: DeviceId, message: DeviceToCoordinatorMessage) -> Step {
-        self.reply_packet(Packet::FromDevice { device_id: me, message })
+        self.reply_packet(Packet::FromDevice {
+            device_id: me,
+            message,
+        })
     }
 
     fn reply_packet(&self, packet: Packet) -> Step {
         let bytes = packet.to_bytes();
         Step::Reply {
             frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
-            what: self.step.map_or("Reply".to_string(), |s| minifrost_wire::reply_label(s.title())),
+            what: self.step.map_or("Reply".to_string(), |s| {
+                minifrost_wire::reply_label(s.title())
+            }),
         }
     }
 
@@ -607,7 +677,9 @@ impl Signer {
                     }
                     DeviceToUserMessage::FinalizeKeyGen { key_name } => {
                         step = Some(Step::Done {
-                            message: format!("Key “{key_name}” was created and its share stored securely."),
+                            message: format!(
+                                "Key “{key_name}” was created and its share stored securely."
+                            ),
                         });
                     }
                     DeviceToUserMessage::Restoration(r) => {
@@ -625,13 +697,22 @@ impl Signer {
     /// The user tapped "approve" on the current [`Prompt`].
     pub fn approve(&mut self) -> Res<StepResult> {
         let me = self.device_id();
-        if matches!(self.pending, Some(Pending::EnterBackup(_) | Pending::Quiz { .. })) {
+        if matches!(
+            self.pending,
+            Some(Pending::EnterBackup(_) | Pending::Quiz { .. })
+        ) {
             return Err("This step is not answered with approve.".into());
         }
-        let pending = self.pending.take().ok_or("nothing is waiting for approval")?;
+        let pending = self
+            .pending
+            .take()
+            .ok_or("nothing is waiting for approval")?;
         let step = match pending {
             Pending::Keygen(msg) => {
-                let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
+                let sends = self
+                    .inner
+                    .recv_coordinator_message(msg, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
                 self.handle_sends(sends)?
             }
             Pending::CheckKeygen(phase) => {
@@ -639,10 +720,18 @@ impl Signer {
                     .inner
                     .keygen_ack(*phase, &mut self.derivation, &mut OsRng)
                     .map_err(|e| e.to_string())?;
-                self.reply(me, DeviceToCoordinatorMessage::KeyGen(frostsnap_core::message::keygen::DeviceKeygen::Ack(ack)))
+                self.reply(
+                    me,
+                    DeviceToCoordinatorMessage::KeyGen(
+                        frostsnap_core::message::keygen::DeviceKeygen::Ack(ack),
+                    ),
+                )
             }
             Pending::Nonces(msg, txid, key_id) => {
-                let sends = self.inner.recv_coordinator_message(msg, &mut OsRng).map_err(|e| e.to_string())?;
+                let sends = self
+                    .inner
+                    .recv_coordinator_message(msg, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
                 let mut segments = vec![];
                 for send in sends {
                     match send {
@@ -667,9 +756,14 @@ impl Signer {
                     ),
                 )
             }
-            Pending::DisplayBackup { access_structure_ref, share_index } => {
-                self.reply_packet(Packet::BackupRecorded { device_id: me, access_structure_ref, share_index })
-            }
+            Pending::DisplayBackup {
+                access_structure_ref,
+                share_index,
+            } => self.reply_packet(Packet::BackupRecorded {
+                device_id: me,
+                access_structure_ref,
+                share_index,
+            }),
             Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();
@@ -716,14 +810,22 @@ impl Signer {
             .collect::<Vec<_>>()
             .try_into()
             .map_err(|_| "A backup has exactly 25 words.".to_string())?;
-        if let Some(bad) = words.iter().position(|w| !bip39_words::is_valid_bip39_word(w)) {
+        if let Some(bad) = words
+            .iter()
+            .position(|w| !bip39_words::is_valid_bip39_word(w))
+        {
             return Err(format!("Word {} is not a valid backup word.", bad + 1));
         }
         let backup = ShareBackup::from_words(share_index, words)
             .map_err(|e| format!("These words are not a valid backup: {e}"))?;
-        let Some(Pending::EnterBackup(phase)) = self.pending.take() else { unreachable!() };
-        let sends: Vec<DeviceSend> =
-            self.inner.tell_coordinator_about_backup_load_result(phase, backup).into_iter().collect();
+        let Some(Pending::EnterBackup(phase)) = self.pending.take() else {
+            unreachable!()
+        };
+        let sends: Vec<DeviceSend> = self
+            .inner
+            .tell_coordinator_about_backup_load_result(phase, backup)
+            .into_iter()
+            .collect();
         let step = self.handle_sends(sends)?;
         Ok(self.result(step))
     }
@@ -744,17 +846,35 @@ impl Signer {
             return Err("No backup check is running.".into());
         };
         match quiz.answer(choice as usize, &mut OsRng) {
-            backup_quiz::Answer::Wrong => Ok(QuizAnswer { correct: false, next: None, done: None }),
-            backup_quiz::Answer::Next => {
-                Ok(QuizAnswer { correct: true, next: Some(quiz_question(quiz)), done: None })
-            }
+            backup_quiz::Answer::Wrong => Ok(QuizAnswer {
+                correct: false,
+                next: None,
+                done: None,
+            }),
+            backup_quiz::Answer::Next => Ok(QuizAnswer {
+                correct: true,
+                next: Some(quiz_question(quiz)),
+                done: None,
+            }),
             backup_quiz::Answer::Done => {
-                let Some(Pending::Quiz { access_structure_ref, share_index, .. }) = self.pending.take() else {
+                let Some(Pending::Quiz {
+                    access_structure_ref,
+                    share_index,
+                    ..
+                }) = self.pending.take()
+                else {
                     unreachable!()
                 };
-                let step =
-                    self.reply_packet(Packet::BackupChecked { device_id: me, access_structure_ref, share_index });
-                Ok(QuizAnswer { correct: true, next: None, done: Some(self.result(step)) })
+                let step = self.reply_packet(Packet::BackupChecked {
+                    device_id: me,
+                    access_structure_ref,
+                    share_index,
+                });
+                Ok(QuizAnswer {
+                    correct: true,
+                    next: None,
+                    done: Some(self.result(step)),
+                })
             }
         }
     }
@@ -786,7 +906,8 @@ fn quiz_question(quiz: &backup_quiz::Quiz) -> QuizQuestion {
 }
 
 fn share_index_u32(i: ShareIndex) -> Res<u32> {
-    i.try_into().map_err(|_| "share index out of range".to_string())
+    i.try_into()
+        .map_err(|_| "share index out of range".to_string())
 }
 
 fn network_name(p: &KeyPurpose) -> String {
@@ -796,7 +917,6 @@ fn network_name(p: &KeyPurpose) -> String {
         _ => "other".into(),
     }
 }
-
 
 fn preview_summary(
     key_name: &str,
@@ -832,7 +952,9 @@ fn preview_summary(
 fn verified_summary(
     key_name: &str,
     network: bitcoin::Network,
-    template: &frostsnap_core::bitcoin_transaction::TransactionTemplate<frostsnap_core::bitcoin_transaction::ScopedTo>,
+    template: &frostsnap_core::bitcoin_transaction::TransactionTemplate<
+        frostsnap_core::bitcoin_transaction::ScopedTo,
+    >,
     txid: bitcoin::Txid,
     mut warnings: Vec<String>,
 ) -> TxSummary {
@@ -851,12 +973,14 @@ fn verified_summary(
             own_label: r.owned.map(|p| p.label()),
         })
         .collect();
-    if let Some(rate) = prompt.fee_rate_sats_per_vbyte {
-        if rate > 500.0 {
-            warnings.push(format!("Very high fee rate: {rate:.0} sat/vB"));
-        }
+    if let Some(rate) = prompt.fee_rate_sats_per_vbyte
+        && rate > 500.0
+    {
+        warnings.push(format!("Very high fee rate: {rate:.0} sat/vB"));
     }
-    if prompt.fee.to_sat() > prompt.value_at_risk().to_sat() / 10 && prompt.value_at_risk().to_sat() > 0 {
+    if prompt.fee.to_sat() > prompt.value_at_risk().to_sat() / 10
+        && prompt.value_at_risk().to_sat() > 0
+    {
         warnings.push("The fee is more than 10% of the amount being sent.".into());
     }
     TxSummary {

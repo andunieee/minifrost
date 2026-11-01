@@ -5,14 +5,14 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use bitcoin::{secp256k1, Network, Txid};
+use bitcoin::{Network, Txid, secp256k1};
 use minifrost_coordinator::engine::{Coordinator, Finished, Update};
 use minifrost_coordinator::wallet::{self, Amt, EsploraUtxo};
 
 mod common;
 use common::{
-    approve_persisting, approve_to_reply, auto_reply, frames_of, run_keygen, scan, signer_step, Chain, Prompt,
-    Signer, Step,
+    Chain, Prompt, Signer, Step, approve_persisting, approve_to_reply, auto_reply, frames_of,
+    run_keygen, scan, signer_step,
 };
 
 #[test]
@@ -20,8 +20,10 @@ fn keygen_and_sign_over_qr_only() {
     let dir = std::env::temp_dir().join(format!("minifrost-e2e-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let mut coord = Coordinator::open(&dir).unwrap();
-    let mut signers: Vec<Signer> =
-        ["alice", "bob", "carol"].iter().map(|n| Signer::create(n.to_string())).collect();
+    let mut signers: Vec<Signer> = ["alice", "bob", "carol"]
+        .iter()
+        .map(|n| Signer::create(n.to_string()))
+        .collect();
 
     // --- enrol
     for s in &signers {
@@ -31,7 +33,9 @@ fn keygen_and_sign_over_qr_only() {
     assert_eq!(ids.len(), 3);
 
     // --- keygen, 2 of 3
-    let mut up = coord.start_keygen("family".into(), 2, ids.clone(), Network::Signet).unwrap();
+    let mut up = coord
+        .start_keygen("family".into(), 2, ids.clone(), Network::Signet)
+        .unwrap();
     let mut by_id: BTreeMap<String, usize> = BTreeMap::new();
     for (i, s) in signers.iter().enumerate() {
         by_id.insert(s.device_id().to_string(), i);
@@ -42,7 +46,11 @@ fn keygen_and_sign_over_qr_only() {
     let mut replies = vec![];
     for s in signers.iter_mut() {
         match signer_step(s, &b1) {
-            Step::Confirm(Prompt::JoinKeygen { threshold: 2, n_signers: 3, .. }) => {}
+            Step::Confirm(Prompt::JoinKeygen {
+                threshold: 2,
+                n_signers: 3,
+                ..
+            }) => {}
             other => panic!("{other:?}"),
         }
         replies.push(approve_to_reply(s));
@@ -62,7 +70,9 @@ fn keygen_and_sign_over_qr_only() {
     let mut acks = vec![];
     for s in signers.iter_mut() {
         match signer_step(s, &b3) {
-            Step::Confirm(Prompt::VerifyKeygen { check_code, .. }) => assert_eq!(check_code, coord_code),
+            Step::Confirm(Prompt::VerifyKeygen { check_code, .. }) => {
+                assert_eq!(check_code, coord_code)
+            }
             other => panic!("{other:?}"),
         }
         acks.push(approve_to_reply(s));
@@ -70,7 +80,9 @@ fn keygen_and_sign_over_qr_only() {
     for a in &acks {
         up = coord.receive(&scan(a)).unwrap();
     }
-    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.clone() else { panic!("{up:?}") };
+    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.clone() else {
+        panic!("{up:?}")
+    };
     // final: store
     let b4 = frames_of(&up);
     for s in signers.iter_mut() {
@@ -82,7 +94,10 @@ fn keygen_and_sign_over_qr_only() {
 
     // --- restart everything from storage ("woken up again")
     let snaps: Vec<Vec<u8>> = signers.iter().map(|s| s.snapshot()).collect();
-    let mut signers: Vec<Signer> = snaps.iter().map(|b| Signer::from_snapshot(b).unwrap()).collect();
+    let mut signers: Vec<Signer> = snaps
+        .iter()
+        .map(|b| Signer::from_snapshot(b).unwrap())
+        .collect();
     drop(coord);
     let mut coord = Coordinator::open(&dir).unwrap();
     assert_eq!(coord.keys().len(), 1);
@@ -93,22 +108,37 @@ fn keygen_and_sign_over_qr_only() {
     let funding = wallet::address(master, network, false, 0).to_string();
     chain.0.insert(
         funding,
-        vec![EsploraUtxo { txid: Txid::from_str(&"11".repeat(32)).unwrap(), vout: 1, value: 100_000, confirmed: true }],
+        vec![EsploraUtxo {
+            txid: Txid::from_str(&"11".repeat(32)).unwrap(),
+            vout: 1,
+            value: 100_000,
+            confirmed: true,
+        }],
     );
-    coord.store_wallet(&key_id, wallet::sync(&chain, master, network).unwrap()).unwrap();
+    coord
+        .store_wallet(&key_id, wallet::sync(&chain, master, network).unwrap())
+        .unwrap();
     let dest = wallet::address(master, network, false, 50).to_string(); // any signet address will do
-    let built = coord.prepare_send(&key_id, &dest, Amt::Sats(40_000), 3.0).unwrap();
+    let built = coord
+        .prepare_send(&key_id, &dest, Amt::Sats(40_000), 3.0)
+        .unwrap();
     let template = built.template.clone();
 
     // --- signing with alice + carol
     let chosen = [0usize, 2];
-    let chosen_ids: Vec<String> = chosen.iter().map(|&i| signers[i].device_id().to_string()).collect();
+    let chosen_ids: Vec<String> = chosen
+        .iter()
+        .map(|&i| signers[i].device_id().to_string())
+        .collect();
     let up = coord.begin_signing(&key_id, chosen_ids.clone()).unwrap();
     assert_eq!(up.awaiting.len(), 2);
     let prepare = frames_of(&up);
 
     // step 1: each chosen signer reviews, then releases nonces. The third signer ignores it.
-    assert!(matches!(signer_step(&mut signers[1], &prepare), Step::Ignored { .. }));
+    assert!(matches!(
+        signer_step(&mut signers[1], &prepare),
+        Step::Ignored { .. }
+    ));
     let mut nonce_replies = vec![];
     for &i in &chosen {
         match signer_step(&mut signers[i], &prepare) {
@@ -147,7 +177,9 @@ fn keygen_and_sign_over_qr_only() {
     let mut up = coord.receive(&scan(&sigs[0])).unwrap();
     assert!(up.finished.is_none());
     up = coord.receive(&scan(&sigs[1])).unwrap();
-    let Some(Finished::Signed { tx_hex, .. }) = up.finished else { panic!("{up:?}") };
+    let Some(Finished::Signed { tx_hex, .. }) = up.finished else {
+        panic!("{up:?}")
+    };
 
     // --- verify the transaction independently
     let tx: bitcoin::Transaction = bitcoin::consensus::encode::deserialize_hex(&tx_hex).unwrap();
@@ -157,8 +189,12 @@ fn keygen_and_sign_over_qr_only() {
         let sig = bitcoin::taproot::Signature::from_slice(input.witness.nth(0).unwrap()).unwrap();
         let prev_spk = template.inputs()[0].txout().script_pubkey;
         let xonly = secp256k1::XOnlyPublicKey::from_slice(&prev_spk.as_bytes()[2..34]).unwrap();
-        let m = secp256k1::Message::from_digest({ use bitcoin::hashes::Hash; msg.to_byte_array() });
-        secp.verify_schnorr(&sig.signature, &m, &xonly).expect("valid BIP340 signature");
+        let m = secp256k1::Message::from_digest({
+            use bitcoin::hashes::Hash;
+            msg.to_byte_array()
+        });
+        secp.verify_schnorr(&sig.signature, &m, &xonly)
+            .expect("valid BIP340 signature");
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -167,14 +203,21 @@ fn keygen_and_sign_over_qr_only() {
 fn signer_refuses_swapped_transaction() {
     // Same setup but the coordinator swaps the transaction between round 1 and round 2.
     let mut coord = Coordinator::in_memory();
-    let mut signers: Vec<Signer> = ["a", "b"].iter().map(|n| Signer::create(n.to_string())).collect();
+    let mut signers: Vec<Signer> = ["a", "b"]
+        .iter()
+        .map(|n| Signer::create(n.to_string()))
+        .collect();
     for s in &signers {
         coord.enroll(&scan(&s.hello_frames())).unwrap();
     }
     let ids: Vec<String> = coord.signers().into_iter().map(|s| s.device_id).collect();
-    let up = coord.start_keygen("k".into(), 2, ids.clone(), Network::Signet).unwrap();
+    let up = coord
+        .start_keygen("k".into(), 2, ids.clone(), Network::Signet)
+        .unwrap();
     let mut up = run_keygen(&mut coord, &mut signers, up);
-    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else { panic!() };
+    let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else {
+        panic!()
+    };
     for s in signers.iter_mut() {
         s.receive(&scan(&frames_of(&up))).unwrap();
     }
@@ -182,24 +225,38 @@ fn signer_refuses_swapped_transaction() {
     let mut chain = Chain(BTreeMap::new());
     chain.0.insert(
         wallet::address(master, network, false, 0).to_string(),
-        vec![EsploraUtxo { txid: Txid::from_str(&"22".repeat(32)).unwrap(), vout: 0, value: 100_000, confirmed: true }],
+        vec![EsploraUtxo {
+            txid: Txid::from_str(&"22".repeat(32)).unwrap(),
+            vout: 0,
+            value: 100_000,
+            confirmed: true,
+        }],
     );
-    coord.store_wallet(&key_id, wallet::sync(&chain, master, network).unwrap()).unwrap();
+    coord
+        .store_wallet(&key_id, wallet::sync(&chain, master, network).unwrap())
+        .unwrap();
     let dest = wallet::address(master, network, false, 9).to_string();
 
     // Session A (honest): signers review transaction A and release nonces. The malicious
     // coordinator keeps those nonce replies and never feeds them to session A.
-    coord.prepare_send(&key_id, &dest, Amt::Sats(10_000), 3.0).unwrap();
+    coord
+        .prepare_send(&key_id, &dest, Amt::Sats(10_000), 3.0)
+        .unwrap();
     let up = coord.begin_signing(&key_id, ids.clone()).unwrap();
     let prepare = frames_of(&up);
     let mut nonces = vec![];
     for s in signers.iter_mut() {
-        assert!(matches!(signer_step(s, &prepare), Step::Confirm(Prompt::ReviewTransaction(_))));
+        assert!(matches!(
+            signer_step(s, &prepare),
+            Step::Confirm(Prompt::ReviewTransaction(_))
+        ));
         nonces.push(approve_persisting(s));
     }
     // Session B (evil): same signers, different transaction, nonces replayed from A.
     coord.cancel().unwrap();
-    coord.prepare_send(&key_id, &dest, Amt::Sats(60_000), 3.0).unwrap();
+    coord
+        .prepare_send(&key_id, &dest, Amt::Sats(60_000), 3.0)
+        .unwrap();
     coord.begin_signing(&key_id, ids.clone()).unwrap();
     let mut up = Update::default();
     for n in &nonces {
@@ -218,7 +275,9 @@ fn signer_refuses_a_code_whose_title_does_not_fit_its_step() {
     let mut signer = Signer::create("a".into());
     coord.enroll(&scan(&signer.hello_frames())).unwrap();
     let ids: Vec<String> = coord.signers().into_iter().map(|s| s.device_id).collect();
-    let up = coord.start_keygen("k".into(), 1, ids, Network::Signet).unwrap();
+    let up = coord
+        .start_keygen("k".into(), 1, ids, Network::Signet)
+        .unwrap();
 
     // relabel the round 1 code as a later round, so the signer's reply would claim to answer it
     let minifrost_wire::Packet::ToDevices { entries, .. } =
@@ -226,11 +285,16 @@ fn signer_refuses_a_code_whose_title_does_not_fit_its_step() {
     else {
         panic!("keygen round 1 is a ToDevices packet")
     };
-    let relabelled =
-        minifrost_wire::Packet::ToDevices { step: minifrost_wire::Step::KeygenCertify, entries };
+    let relabelled = minifrost_wire::Packet::ToDevices {
+        step: minifrost_wire::Step::KeygenCertify,
+        entries,
+    };
     let err = signer.receive(&relabelled.to_bytes()).unwrap_err();
     assert!(err.contains("labelled “Round 2 · Certify”"), "{err}");
 
     // the real code still works
-    assert!(matches!(signer_step(&mut signer, &frames_of(&up)), Step::Confirm(Prompt::JoinKeygen { .. })));
+    assert!(matches!(
+        signer_step(&mut signer, &frames_of(&up)),
+        Step::Confirm(Prompt::JoinKeygen { .. })
+    ));
 }

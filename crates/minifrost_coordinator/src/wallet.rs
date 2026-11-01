@@ -6,9 +6,9 @@ use std::str::FromStr;
 
 use bitcoin::{Address, Amount, Network, OutPoint, ScriptBuf, TxOut, Txid};
 use frostsnap_core::{
+    MasterAppkey,
     bitcoin_transaction::{LocalSpk, PushInput, TransactionTemplate},
     tweak::{BitcoinBip32Path, NormalIndex},
-    MasterAppkey,
 };
 
 pub const GAP_LIMIT: u32 = 10;
@@ -105,7 +105,10 @@ impl Esplora for HttpEsplora {
             .set("Content-Type", "text/plain")
             .send_string(tx_hex)
         {
-            Ok(r) => r.into_string().map(|s| s.trim().to_string()).map_err(|e| e.to_string()),
+            Ok(r) => r
+                .into_string()
+                .map(|s| s.trim().to_string())
+                .map_err(|e| e.to_string()),
             Err(ureq::Error::Status(code, r)) => Err(format!(
                 "the server rejected the transaction ({code}): {}",
                 r.into_string().unwrap_or_default()
@@ -153,7 +156,11 @@ impl WalletView {
         self.utxos.iter().map(|u| u.utxo.value).sum()
     }
     pub fn confirmed_balance(&self) -> u64 {
-        self.utxos.iter().filter(|u| u.utxo.confirmed).map(|u| u.utxo.value).sum()
+        self.utxos
+            .iter()
+            .filter(|u| u.utxo.confirmed)
+            .map(|u| u.utxo.value)
+            .sum()
     }
 }
 
@@ -172,7 +179,11 @@ pub fn sync(
                 gap = 0;
                 next = index + 1;
                 for utxo in esplora.address_utxos(&addr)? {
-                    view.utxos.push(OwnedUtxo { utxo, internal, index });
+                    view.utxos.push(OwnedUtxo {
+                        utxo,
+                        internal,
+                        index,
+                    });
                 }
             } else {
                 gap += 1;
@@ -246,7 +257,9 @@ pub fn build_send(
             }
             let total: u64 = coins.iter().map(|c| c.utxo.value).sum();
             let fee = fee_for(coins.len(), &[&to_spk]);
-            let amount = total.checked_sub(fee).ok_or("fees exceed the wallet balance")?;
+            let amount = total
+                .checked_sub(fee)
+                .ok_or("fees exceed the wallet balance")?;
             (coins, amount, None, fee)
         }
         Amt::Sats(amount) => {
@@ -279,20 +292,42 @@ pub fn build_send(
     let mut template = TransactionTemplate::new();
     for c in &selected {
         let owner = local_spk(master, c.internal, c.index);
-        let txout = TxOut { value: Amount::from_sat(c.utxo.value), script_pubkey: owner.spk() };
+        let txout = TxOut {
+            value: Amount::from_sat(c.utxo.value),
+            script_pubkey: owner.spk(),
+        };
         template
             .push_owned_input(
-                PushInput::spend_outpoint(&txout, OutPoint { txid: c.utxo.txid, vout: c.utxo.vout }),
+                PushInput::spend_outpoint(
+                    &txout,
+                    OutPoint {
+                        txid: c.utxo.txid,
+                        vout: c.utxo.vout,
+                    },
+                ),
                 owner,
             )
             .map_err(|e| format!("wallet bug: {e:?}"))?;
     }
-    template.push_foreign_output(TxOut { value: Amount::from_sat(amount), script_pubkey: to_spk });
+    template.push_foreign_output(TxOut {
+        value: Amount::from_sat(amount),
+        script_pubkey: to_spk,
+    });
     if let Some(change) = change {
-        template.push_owned_output(Amount::from_sat(change), local_spk(master, true, view.next_internal));
+        template.push_owned_output(
+            Amount::from_sat(change),
+            local_spk(master, true, view.next_internal),
+        );
     }
     debug_assert_eq!(template.fee(), Some(fee));
-    Ok(BuiltSend { template, fee, fee_rate, recipient, amount, change })
+    Ok(BuiltSend {
+        template,
+        fee,
+        fee_rate,
+        recipient,
+        amount,
+        change,
+    })
 }
 
 #[cfg(test)]
@@ -323,10 +358,10 @@ mod tests {
 
     fn master() -> MasterAppkey {
         // any valid key works for derivation tests
-        use frostsnap_core::schnorr_fun::fun::{prelude::*, Point};
-        let pk = Point::<Normal, Public, NonZero>::from_bytes(
-            hex_to_33("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"),
-        )
+        use frostsnap_core::schnorr_fun::fun::{Point, prelude::*};
+        let pk = Point::<Normal, Public, NonZero>::from_bytes(hex_to_33(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        ))
         .unwrap();
         MasterAppkey::derive_from_rootkey(pk)
     }
@@ -358,7 +393,9 @@ mod tests {
             });
         }
         // a used-and-spent change address at #0
-        chain.used.insert(address(m, Network::Signet, true, 0).to_string());
+        chain
+            .used
+            .insert(address(m, Network::Signet, true, 0).to_string());
 
         let view = sync(&chain, m, Network::Signet).unwrap();
         assert_eq!(view.balance(), 80_000);
@@ -366,13 +403,29 @@ mod tests {
 
         let dest = address(m, Network::Signet, false, 99).to_string();
         let built = build_send(&view, m, Network::Signet, &dest, Amt::Sats(20_000), 2.0).unwrap();
-        assert_eq!(built.template.inputs().len(), 1, "largest coin alone suffices");
+        assert_eq!(
+            built.template.inputs().len(),
+            1,
+            "largest coin alone suffices"
+        );
         let change = built.change.unwrap();
         assert_eq!(20_000 + change + built.fee, 50_000);
         assert_eq!(built.template.fee(), Some(built.fee));
         // change goes to the first unused internal index
-        let (_, _, spk) = built.template.as_seen_by(m).iter_our_outputs().map(|(a, b, c)| (a, b.value, c.clone())).next().map(|(a, b, c)| (a, b, c)).unwrap();
-        assert_eq!((spk.bip32_path.index.to_u32(), spk.bip32_path.account_keychain.keychain), (1, frostsnap_core::tweak::Keychain::Internal));
+        let (_, _, spk) = built
+            .template
+            .as_seen_by(m)
+            .iter_our_outputs()
+            .map(|(a, b, c)| (a, b.value, c.clone()))
+            .next()
+            .unwrap();
+        assert_eq!(
+            (
+                spk.bip32_path.index.to_u32(),
+                spk.bip32_path.account_keychain.keychain
+            ),
+            (1, frostsnap_core::tweak::Keychain::Internal)
+        );
 
         let max = build_send(&view, m, Network::Signet, &dest, Amt::Max, 2.0).unwrap();
         assert_eq!(max.template.inputs().len(), 2);
@@ -386,12 +439,28 @@ mod tests {
         let mut chain = Fake::default();
         let a = address(m, Network::Signet, false, 0).to_string();
         chain.used.insert(a.clone());
-        chain.utxos.insert(a, vec![EsploraUtxo { txid: txid(1), vout: 0, value: 10_000, confirmed: true }]);
+        chain.utxos.insert(
+            a,
+            vec![EsploraUtxo {
+                txid: txid(1),
+                vout: 0,
+                value: 10_000,
+                confirmed: true,
+            }],
+        );
         let view = sync(&chain, m, Network::Signet).unwrap();
         let mainnet = address(m, Network::Bitcoin, false, 0).to_string();
         assert!(build_send(&view, m, Network::Signet, &mainnet, Amt::Sats(1000), 2.0).is_err());
         let dest = address(m, Network::Signet, false, 5).to_string();
-        assert!(build_send(&view, m, Network::Signet, &dest, Amt::Sats(100), 2.0).unwrap_err().contains("dust"));
-        assert!(build_send(&view, m, Network::Signet, &dest, Amt::Sats(10_000), 2.0).unwrap_err().contains("not enough"));
+        assert!(
+            build_send(&view, m, Network::Signet, &dest, Amt::Sats(100), 2.0)
+                .unwrap_err()
+                .contains("dust")
+        );
+        assert!(
+            build_send(&view, m, Network::Signet, &dest, Amt::Sats(10_000), 2.0)
+                .unwrap_err()
+                .contains("not enough")
+        );
     }
 }

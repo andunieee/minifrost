@@ -1,7 +1,7 @@
 [package]
 name = "sound_transport"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Send and receive qr_transport frames as sound (ggwave data-over-sound), as an alternative to animated QR codes."
 
 # Local audio I/O only (ALSA / AAudio): no networking crates, see scripts/check-signer-offline.sh.

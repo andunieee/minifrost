@@ -4,7 +4,8 @@ use std::sync::Mutex;
 
 use crate::engine::Signer;
 pub use crate::engine::{
-    KeyInfo, OutputSummary, PendingBackup, Prompt, QuizAnswer, QuizQuestion, Step, StepResult, TxSummary,
+    KeyInfo, OutputSummary, PendingBackup, Prompt, QuizAnswer, QuizQuestion, Step, StepResult,
+    TxSummary,
 };
 
 pub mod camera;
@@ -60,7 +61,11 @@ impl SignerApp {
     // ---- backups
     /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
     /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
-    pub fn submit_backup(&self, share_index: u32, words: Vec<String>) -> Result<StepResult, String> {
+    pub fn submit_backup(
+        &self,
+        share_index: u32,
+        words: Vec<String>,
+    ) -> Result<StepResult, String> {
         self.inner.lock().unwrap().submit_backup(share_index, words)
     }
     /// The check-backup quiz question currently on screen (after `Step::CheckBackup`).
