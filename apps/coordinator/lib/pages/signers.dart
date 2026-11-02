@@ -91,6 +91,7 @@ class _EnrollDialogState extends State<_EnrollDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Add signer'),
+      scrollable: true,
       content: SizedBox(
         width: 480,
         child: added != null

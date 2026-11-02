@@ -44,11 +44,6 @@ class _EnterBackupScreenState extends State<EnterBackupScreen> {
     });
   }
 
-  Future<void> _paste() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data?.text != null) _fill(data!.text!);
-  }
-
   Future<void> _submit() async {
     final index = int.tryParse(keyNumber.text.trim());
     if (index == null || index < 1) {
@@ -91,10 +86,6 @@ class _EnterBackupScreenState extends State<EnterBackupScreen> {
           decoration: const InputDecoration(labelText: 'Key number', prefixText: '#', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(onPressed: _paste, icon: const Icon(Icons.paste), label: const Text('Paste all words')),
-        ),
         for (var i = 0; i < wordCount; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
