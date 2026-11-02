@@ -11,7 +11,8 @@
 //!
 //! All of it is `frostsnap_core`; this file only decides which QR goes out next and what the
 //! screens may show. Each action here is a short session in the same shape as keygen and signing:
-//! a broadcast QR for the signers, a scan of the reply, repeat.
+//! a broadcast QR for the signers, then a reply to scan — except for the purely user-confirmed
+//! steps (showing a backup, saving a typed-in backup), which use a button instead.
 
 use bitcoin::Network;
 use frostsnap_core::{
@@ -21,7 +22,7 @@ use frostsnap_core::{
         restoration::{PhysicalBackupPhase, RecoverShare, ShareCompatibility, ToUserRestoration},
     },
     device::KeyPurpose,
-    message::{DeviceToCoordinatorMessage, HeldShare2},
+    message::{DeviceRestoration, DeviceToCoordinatorMessage, HeldShare2},
     schnorr_fun::frost::ShareIndex,
 };
 use minifrost_wire::Step as WireStep;
@@ -112,7 +113,11 @@ pub enum EnterTarget {
 #[derive(Debug, Clone)]
 pub enum EnterStage {
     WaitingForWords,
-    Saving(RestorationId),
+    /// The signer saves the backup automatically; the user confirms on the coordinator that it did.
+    Saving {
+        restoration_id: RestorationId,
+        phase: PhysicalBackupPhase,
+    },
     Consolidating,
 }
 
@@ -158,7 +163,6 @@ impl BackupSession {
 /// A reply from a signer that belongs to a backup session.
 pub(super) enum Incoming {
     Core(DeviceToCoordinatorMessage),
-    Recorded(AccessStructureRef, ShareIndex),
     Checked(AccessStructureRef, ShareIndex),
 }
 
@@ -280,12 +284,117 @@ impl Coordinator {
             .inner
             .request_device_display_backup(device, aref, self.encryption_key)
             .map_err(|e| e.to_string())?;
-        self.start_backup_session(
+        let mut update = self.start_backup_session(
             BackupSession::Display { device, access_structure_ref: aref, share_index },
             sends,
             WireStep::ShowBackup,
-            "Show this to the signer. It will display 25 words: write them down in order, then confirm.",
-        )
+            "Show this to the signer. It will display 25 words: write them down in order, then confirm here.",
+        )?;
+        update.confirm = Some("I wrote down the 25 words".into());
+        Ok(update)
+    }
+
+    /// Confirm the current no-reply step: the user wrote a displayed backup down, or saw the
+    /// signer save a typed-in backup. Both are recorded here instead of with a scanned reply.
+    pub fn confirm_backup(&mut self) -> Res<Update> {
+        let displayed = match &self.session {
+            Session::Backup(BackupSession::Display {
+                device,
+                access_structure_ref,
+                share_index,
+            }) => Some((*device, *access_structure_ref, *share_index)),
+            _ => None,
+        };
+        if let Some((device, aref, share_index)) = displayed {
+            return self.finish_displayed_backup(device, aref, share_index);
+        }
+        let saved = match &self.session {
+            Session::Backup(BackupSession::Enter {
+                device,
+                stage:
+                    EnterStage::Saving {
+                        restoration_id,
+                        phase,
+                    },
+                ..
+            }) => Some((*device, *restoration_id, *phase)),
+            _ => None,
+        };
+        if let Some((device, restoration_id, phase)) = saved {
+            return self.finish_saved_backup(device, restoration_id, phase);
+        }
+        Err("Nothing is waiting for a confirmation.".into())
+    }
+
+    fn finish_displayed_backup(
+        &mut self,
+        device: DeviceId,
+        aref: AccessStructureRef,
+        share_index: ShareIndex,
+    ) -> Res<Update> {
+        self.backups.insert((aref, index_u32(share_index)), true);
+        self.session = Session::Idle;
+        self.replied.clear();
+        self.save()?;
+        Ok(Update {
+            message: format!(
+                "{}'s backup was marked as written down.",
+                self.name_of(&device)
+            ),
+            finished: Some(Finished::BackupRecorded {
+                key_name: self.key_name(aref.key_id),
+                share_index: index_u32(share_index),
+            }),
+            snapshot_saved: self.dir.is_some(),
+            ..Default::default()
+        })
+    }
+
+    fn finish_saved_backup(
+        &mut self,
+        device: DeviceId,
+        restoration_id: RestorationId,
+        phase: PhysicalBackupPhase,
+    ) -> Res<Update> {
+        // The user confirms what the signer did automatically. Feed frostsnap the same
+        // PhysicalSaved message the signer used to send, so the restoration state is updated
+        // exactly as before.
+        let sends = self
+            .inner
+            .recv_device_message(
+                device,
+                DeviceToCoordinatorMessage::Restoration(DeviceRestoration::PhysicalSaved(
+                    phase.share_image(),
+                )),
+            )
+            .map_err(|e| e.to_string())?;
+        let share_index = sends
+            .into_iter()
+            .find_map(|s| match s {
+                CoordinatorSend::ToUser(CoordinatorToUserMessage::Restoration(
+                    ToUserRestoration::PhysicalBackupSaved { share_index, .. },
+                )) => Some(share_index),
+                _ => None,
+            })
+            .ok_or("The coordinator did not record the saved backup.")?;
+        let restorable = self
+            .inner
+            .get_restoration_state(restoration_id)
+            .map(|s| s.is_restorable())
+            .unwrap_or(false);
+        self.session = Session::Idle;
+        self.replied.clear();
+        self.save()?;
+        Ok(Update {
+            message: "The backup was saved on the signer.".into(),
+            finished: Some(Finished::BackupSaved {
+                restoration_id: restoration_id.to_string(),
+                share_index: index_u32(share_index),
+                restorable,
+            }),
+            snapshot_saved: self.dir.is_some(),
+            ..Default::default()
+        })
     }
 
     /// Ask a signer to quiz the user on their paper backup.
@@ -595,29 +704,16 @@ impl Coordinator {
         };
         let session = session.clone();
         let name = self.name_of(&from);
+        if let BackupSession::Enter {
+            stage: EnterStage::Saving { .. },
+            ..
+        } = &session
+        {
+            return Err(
+                "The coordinator confirms this step itself; no signer reply is needed.".into(),
+            );
+        }
         let update = match (session, incoming) {
-            (
-                BackupSession::Display {
-                    access_structure_ref,
-                    share_index,
-                    ..
-                },
-                Incoming::Recorded(aref, index),
-            ) => {
-                if aref != access_structure_ref || index != share_index {
-                    return Err("That reply is for a different backup.".into());
-                }
-                self.backups.insert((aref, index_u32(index)), true);
-                self.session = Session::Idle;
-                Update {
-                    message: format!("{name} confirmed the backup was written down."),
-                    finished: Some(Finished::BackupRecorded {
-                        key_name: self.key_name(aref.key_id),
-                        share_index: index_u32(index),
-                    }),
-                    ..Default::default()
-                }
-            }
             (
                 BackupSession::Check {
                     access_structure_ref,
@@ -762,26 +858,6 @@ impl Coordinator {
                 self.handle_entered_backup(device, enter_id, target, *phase)
             }
             (
-                EnterStage::Saving(restoration_id),
-                Some(ToUserRestoration::PhysicalBackupSaved { share_index, .. }),
-            ) => {
-                let restorable = self
-                    .inner
-                    .get_restoration_state(restoration_id)
-                    .map(|s| s.is_restorable())
-                    .unwrap_or(false);
-                self.session = Session::Idle;
-                Ok(Update {
-                    message: "The backup was saved on the signer.".into(),
-                    finished: Some(Finished::BackupSaved {
-                        restoration_id: restoration_id.to_string(),
-                        share_index: index_u32(share_index),
-                        restorable,
-                    }),
-                    ..Default::default()
-                })
-            }
-            (
                 EnterStage::Consolidating,
                 Some(ToUserRestoration::FinishedConsolidation {
                     access_structure_ref,
@@ -875,15 +951,20 @@ impl Coordinator {
                     device,
                     enter_id,
                     target,
-                    stage: EnterStage::Saving(restoration_id),
+                    stage: EnterStage::Saving {
+                        restoration_id,
+                        phase,
+                    },
                 });
                 self.replied.clear();
-                Ok(self.next_step(
+                let mut update = self.next_step(
                     device,
                     sends,
                     WireStep::SaveBackup,
-                    "The backup is accepted. Show this to the signer so it keeps it.",
-                ))
+                    "The backup is accepted. Show this to the signer so it keeps it, then confirm here.",
+                );
+                update.confirm = Some("The signer saved the backup".into());
+                Ok(update)
             }
         }
     }

@@ -11,8 +11,7 @@ use minifrost_coordinator::engine::{Coordinator, Finished, Update};
 
 mod common;
 use common::{
-    Prompt, Signer, Step, approve_to_reply, auto_reply, create_wallet, frames_of, fund_and_sign,
-    scan, signer_step,
+    Prompt, Signer, Step, auto_reply, create_wallet, frames_of, fund_and_sign, scan, signer_step,
 };
 
 /// Ask `signer` to display its backup; return (share index, words) after the user confirms.
@@ -21,19 +20,10 @@ fn display_backup(
     signer: &mut Signer,
     key_id: &str,
 ) -> (u32, Vec<String>) {
-    let (index, words, _) = display_backup_frames(coord, signer, key_id);
-    (index, words)
-}
-
-/// Like [`display_backup`], also returning the "backup recorded" reply the coordinator scanned.
-fn display_backup_frames(
-    coord: &mut Coordinator,
-    signer: &mut Signer,
-    key_id: &str,
-) -> (u32, Vec<String>, Vec<String>) {
     let up = coord
         .start_display_backup(key_id, &signer.device_id().to_string())
         .unwrap();
+    assert_eq!(up.confirm.as_deref(), Some("I wrote down the 25 words"));
     let Step::Confirm(Prompt::DisplayBackup {
         share_index,
         words,
@@ -46,12 +36,13 @@ fn display_backup_frames(
     assert_eq!(words.len(), 25);
     assert_eq!(key_name, "family");
     assert_eq!(threshold, 2);
-    let reply = approve_to_reply(signer);
-    let up = coord.receive(&scan(&reply)).unwrap();
+    // confirming on the signer only ends its local prompt; there is no reply to show
+    assert!(matches!(signer.approve().unwrap().step, Step::Done { .. }));
+    let up = coord.confirm_backup().unwrap();
     assert!(
         matches!(up.finished, Some(Finished::BackupRecorded { share_index: i, .. }) if i == share_index)
     );
-    (share_index, words, reply)
+    (share_index, words)
 }
 
 /// The user types `words` into a signer that was asked to enter a backup; returns the reply frames.
@@ -88,8 +79,13 @@ fn enter_backup(
     let entered = type_backup(signer, share_index, words);
     let up = coord.receive(&scan(&entered)).unwrap();
     assert!(up.finished.is_none(), "{:?}", up.finished);
-    let saved = auto_reply(signer, &frames_of(&up));
-    coord.receive(&scan(&saved)).unwrap()
+    assert_eq!(up.confirm.as_deref(), Some("The signer saved the backup"));
+    // the signer saves by itself; it only says so locally, and the user confirms on this side
+    assert!(matches!(
+        signer_step(signer, &frames_of(&up)),
+        Step::Done { .. }
+    ));
+    coord.confirm_backup().unwrap()
 }
 
 #[test]
@@ -102,8 +98,7 @@ fn display_backup_then_pass_the_quiz() {
     assert_eq!(shares.len(), 3);
     assert!(shares.iter().all(|s| !s.complete));
 
-    let (index, words, alice_recorded) =
-        display_backup_frames(&mut coord, &mut signers[0], &key_id);
+    let (index, words) = display_backup(&mut coord, &mut signers[0], &key_id);
     let shares = coord.backup_shares(&key_id).unwrap();
     assert_eq!(shares.iter().filter(|s| s.complete).count(), 1);
     assert_eq!(
@@ -170,7 +165,7 @@ fn display_backup_then_pass_the_quiz() {
         matches!(up.finished, Some(Finished::BackupChecked { share_index: i, .. }) if i == index)
     );
 
-    // an old "backup recorded" code cannot confirm another signer's backup
+    // a backup stays unconfirmed until the user presses the coordinator's button
     let up = coord
         .start_display_backup(&key_id, &signers[1].device_id().to_string())
         .unwrap();
@@ -178,19 +173,31 @@ fn display_backup_then_pass_the_quiz() {
         signer_step(&mut signers[1], &frames_of(&up)),
         Step::Confirm(Prompt::DisplayBackup { .. })
     ));
-    let err = coord.receive(&scan(&alice_recorded)).unwrap_err();
-    assert!(err.contains("not part of this session"), "{err}");
-    assert!(
-        !coord
+    let bob = |coord: &Coordinator| {
+        coord
             .backup_shares(&key_id)
             .unwrap()
-            .iter()
+            .into_iter()
             .find(|s| s.name == "bob")
             .unwrap()
             .complete
+    };
+    assert!(!bob(&coord));
+    assert!(matches!(
+        signers[1].approve().unwrap().step,
+        Step::Done { .. }
+    ));
+    assert!(
+        !bob(&coord),
+        "the signer's local confirmation does not change the coordinator"
     );
-    coord.cancel().unwrap();
-    signers[1].reject();
+    let up = coord.confirm_backup().unwrap();
+    assert!(matches!(
+        up.finished,
+        Some(Finished::BackupRecorded { share_index: i, .. }) if i != index
+    ));
+    assert!(bob(&coord));
+    assert!(coord.confirm_backup().is_err(), "nothing left to confirm");
 }
 
 #[test]
@@ -244,8 +251,11 @@ fn restore_wallet_from_physical_backups_and_sign() {
 
     let entered = type_backup(&mut phones[0], backups[0].0, &backups[0].1);
     let up = coord.receive(&scan(&entered)).unwrap();
-    let saved = auto_reply(&mut phones[0], &frames_of(&up));
-    let up = coord.receive(&scan(&saved)).unwrap();
+    assert!(matches!(
+        signer_step(&mut phones[0], &frames_of(&up)),
+        Step::Done { .. }
+    ));
+    let up = coord.confirm_backup().unwrap();
     let Some(Finished::BackupSaved { restorable, .. }) = up.finished else {
         panic!("{up:?}")
     };

@@ -28,6 +28,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
   String? broadcastResult;
   String? broadcastError;
   bool broadcasting = false;
+  bool confirming = false;
 
   /// The signer the toast on screen is about, so rescanning its reply doesn't toast again.
   String? toastFrom;
@@ -72,6 +73,28 @@ class _CeremonyPageState extends State<CeremonyPage> {
     }
   }
 
+  /// A step with no signer reply (a displayed or saved backup): the user confirms it here.
+  Future<void> _confirm() async {
+    setState(() => confirming = true);
+    try {
+      final u = await widget.app.confirmBackup();
+      if (!mounted) return;
+      setState(() {
+        update = u;
+        message = u.message;
+        if (u.broadcast != null) broadcast = u.broadcast;
+      });
+      if (u.finished != null) showSuccessToast(context, u.message);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => confirming = false);
+    }
+  }
+
   Future<void> _cancel() async {
     if (!finished) {
       final ok = await showDialog<bool>(
@@ -104,6 +127,31 @@ class _CeremonyPageState extends State<CeremonyPage> {
     } finally {
       if (mounted) setState(() => broadcasting = false);
     }
+  }
+
+  Widget _confirmation(ThemeData theme, String label) {
+    return Card(
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('No reply code is needed for this step.', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            'When the signer has finished, confirm it here. '
+            'Only confirm if you really did it: this is the coordinator’s only record.',
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: confirming ? null : _confirm,
+            icon: confirming
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.check),
+            label: Text(label),
+          ),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -185,11 +233,15 @@ class _CeremonyPageState extends State<CeremonyPage> {
               expecting: broadcast == null ? 'signer reply' : 'signer reply to “${broadcast!.title}”',
             ),
           ];
-          // a phone has no room for two columns: show the code first, the scanner below it
+          final confirm = update.confirm;
+          // a phone has no room for two columns: show the code first, the reply area below it
           if (narrow) {
             return ListView(padding: const EdgeInsets.all(16), children: [
               ...shown,
-              if (!finished) ...[const Divider(height: 32), ...scan],
+              if (!finished) ...[
+                const Divider(height: 32),
+                if (confirm != null) _confirmation(theme, confirm) else ...scan,
+              ],
             ]);
           }
           return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -199,7 +251,11 @@ class _CeremonyPageState extends State<CeremonyPage> {
               width: 460,
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: finished ? const SizedBox() : ListView(children: scan),
+                child: finished
+                    ? const SizedBox()
+                    : confirm != null
+                    ? _confirmation(theme, confirm)
+                    : ListView(children: scan),
               ),
             ),
           ]);

@@ -10,7 +10,7 @@ use frostsnap_core::{
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 3;
+pub const WIRE_VERSION: u8 = 4;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -30,15 +30,6 @@ pub enum Packet {
     FromDevice {
         device_id: DeviceId,
         message: DeviceToCoordinatorMessage,
-    },
-    /// signer -> coordinator: the user confirmed they wrote the displayed backup down. In
-    /// frostsnap this is `CommsMisc::BackupRecorded`, which is not one of `frostsnap_core`'s
-    /// message types, so it gets its own packet. The share is named so a stale or replayed code
-    /// can't mark the wrong share as backed up.
-    BackupRecorded {
-        device_id: DeviceId,
-        access_structure_ref: AccessStructureRef,
-        share_index: ShareIndex,
     },
     /// signer -> coordinator: the user passed the backup check quiz for this share
     /// (`CommsMisc::BackupChecked` in frostsnap).

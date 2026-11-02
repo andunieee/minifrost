@@ -86,7 +86,7 @@ pub enum Finished {
         txid: String,
         tx_hex: String,
     },
-    /// A signer displayed its backup and the user confirmed writing it down.
+    /// A backup was displayed and the user confirmed writing it down.
     BackupRecorded {
         key_name: String,
         share_index: u32,
@@ -133,6 +133,8 @@ pub struct Update {
     pub received: Vec<SignerInfo>,
     /// Keygen only: signers show the same code; the humans compare.
     pub check_code: Option<String>,
+    /// This step needs no signer reply: the user confirms it on the coordinator with this button.
+    pub confirm: Option<String>,
     pub finished: Option<Finished>,
     pub snapshot_saved: bool,
 }
@@ -548,14 +550,6 @@ impl Coordinator {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let (from, incoming) = match packet {
             Packet::FromDevice { device_id, message } => (device_id, Incoming::Core(message)),
-            Packet::BackupRecorded {
-                device_id,
-                access_structure_ref,
-                share_index,
-            } => (
-                device_id,
-                Incoming::Recorded(access_structure_ref, share_index),
-            ),
             Packet::BackupChecked {
                 device_id,
                 access_structure_ref,

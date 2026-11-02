@@ -16,8 +16,8 @@ use frostsnap_core::{
     },
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
     message::{
-        CoordinatorToDeviceMessage, DeviceSend, DeviceToCoordinatorMessage, keygen::Keygen,
-        signing::CoordinatorSigning,
+        CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend, DeviceToCoordinatorMessage,
+        keygen::Keygen, signing::CoordinatorSigning,
     },
     nonce_stream::NonceStreamId,
     schnorr_fun::frost::ShareIndex,
@@ -179,7 +179,8 @@ pub enum Prompt {
     /// Round 2: final, verified view. Approving releases the partial signature.
     SignTransaction(TxSummary),
     /// The coordinator asked this signer to show its secret backup. Approving means "I wrote
-    /// every word down"; it tells the coordinator so it can stop nagging about this share.
+    /// every word down"; the coordinator records that with its own confirmation button, so no
+    /// reply code is shown.
     DisplayBackup {
         key_name: String,
         threshold: u16,
@@ -256,10 +257,7 @@ enum Pending {
     Nonces(CoordinatorToDeviceMessage, bitcoin::Txid, KeyId),
     Sign(Box<SignPhase1>),
     EnterBackup(EnterBackupPhase),
-    DisplayBackup {
-        access_structure_ref: AccessStructureRef,
-        share_index: ShareIndex,
-    },
+    DisplayBackup,
     Quiz {
         quiz: backup_quiz::Quiz,
         access_structure_ref: AccessStructureRef,
@@ -444,12 +442,11 @@ impl Signer {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let me = self.device_id();
         let step = match packet {
-            Packet::Hello { .. }
-            | Packet::FromDevice { .. }
-            | Packet::BackupRecorded { .. }
-            | Packet::BackupChecked { .. } => Step::Ignored {
-                reason: "This code is meant for a coordinator, not for a signer.".into(),
-            },
+            Packet::Hello { .. } | Packet::FromDevice { .. } | Packet::BackupChecked { .. } => {
+                Step::Ignored {
+                    reason: "This code is meant for a coordinator, not for a signer.".into(),
+                }
+            }
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
             Packet::ToDevices { step, entries } => {
                 match entries.into_iter().find(|(to, _)| to.contains(&me)) {
@@ -545,8 +542,11 @@ impl Signer {
                 self.pending = Some(Pending::EnterBackup(phase));
                 Some(Step::EnterBackup)
             }
-            // The `PhysicalSaved` message to the coordinator comes with it.
-            ToUserRestoration::BackupSaved { .. } => None,
+            // Saving is automatic and the coordinator confirms it with its own button, so there is
+            // no reply to show: just tell the user the signer is done.
+            ToUserRestoration::BackupSaved { .. } => Some(Step::Done {
+                message: "The backup is saved on this signer.".into(),
+            }),
             ToUserRestoration::ConsolidateBackup(phase) => {
                 let sends: Vec<DeviceSend> = self
                     .inner
@@ -567,10 +567,7 @@ impl Signer {
                 let share_index = phase.share_index;
                 let words = backup.to_words().iter().map(|w| w.to_string()).collect();
                 let threshold = self.threshold_of(access_structure_ref.key_id);
-                self.pending = Some(Pending::DisplayBackup {
-                    access_structure_ref,
-                    share_index,
-                });
+                self.pending = Some(Pending::DisplayBackup);
                 Some(Step::Confirm(Prompt::DisplayBackup {
                     key_name,
                     threshold,
@@ -662,7 +659,19 @@ impl Signer {
         let mut step = None;
         for send in sends {
             match send {
-                DeviceSend::ToCoordinator(m) => step = Some(self.reply(me, *m)),
+                DeviceSend::ToCoordinator(m) => {
+                    // The coordinator records a saved physical backup with a button of its own.
+                    // Showing a QR reply for this would only ask the user to scan nothing useful.
+                    if matches!(
+                        m.as_ref(),
+                        DeviceToCoordinatorMessage::Restoration(DeviceRestoration::PhysicalSaved(
+                            _
+                        ))
+                    ) {
+                        continue;
+                    }
+                    step = Some(self.reply(me, *m));
+                }
                 DeviceSend::ToUser(u) => match *u {
                     DeviceToUserMessage::CheckKeyGen { phase } => {
                         let (t, n) = phase.t_of_n();
@@ -756,14 +765,9 @@ impl Signer {
                     ),
                 )
             }
-            Pending::DisplayBackup {
-                access_structure_ref,
-                share_index,
-            } => self.reply_packet(Packet::BackupRecorded {
-                device_id: me,
-                access_structure_ref,
-                share_index,
-            }),
+            Pending::DisplayBackup => Step::Done {
+                message: "Backup written down. You can close this screen.".into(),
+            },
             Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();

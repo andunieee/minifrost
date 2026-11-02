@@ -6,6 +6,7 @@
 //! NOTE: the pub functions must stay at module top level — flutter_rust_bridge bakes their
 //! full path into the generated bindings.
 
+#[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "linux")]
 use std::sync::{Arc, Mutex};

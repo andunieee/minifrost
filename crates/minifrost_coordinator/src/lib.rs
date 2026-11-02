@@ -5,7 +5,7 @@ pub mod wallet;
 
 /// Called by `MainActivity` before any sound is played or heard, see `sound_transport::android`.
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_minifrost_minifrost_1coordinator_MainActivity_initAudio(
     env: *mut std::ffi::c_void,
     _class: *mut std::ffi::c_void,

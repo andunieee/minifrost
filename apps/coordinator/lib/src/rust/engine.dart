@@ -148,6 +148,9 @@ class Update {
 
   /// Keygen only: signers show the same code; the humans compare.
   final String? checkCode;
+
+  /// This step needs no signer reply: the user confirms it on the coordinator with this button.
+  final String? confirm;
   final Finished? finished;
   final bool snapshotSaved;
 
@@ -159,6 +162,7 @@ class Update {
     required this.awaiting,
     required this.received,
     this.checkCode,
+    this.confirm,
     this.finished,
     required this.snapshotSaved,
   });
@@ -172,6 +176,7 @@ class Update {
       awaiting.hashCode ^
       received.hashCode ^
       checkCode.hashCode ^
+      confirm.hashCode ^
       finished.hashCode ^
       snapshotSaved.hashCode;
 
@@ -187,6 +192,7 @@ class Update {
           awaiting == other.awaiting &&
           received == other.received &&
           checkCode == other.checkCode &&
+          confirm == other.confirm &&
           finished == other.finished &&
           snapshotSaved == other.snapshotSaved;
 }

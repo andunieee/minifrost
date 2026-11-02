@@ -62,6 +62,10 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
 
   Future<void> cancelSession();
 
+  /// Confirm a step whose only missing response is the user's: writing a backup down, or
+  /// watching the signer save a typed-in backup. The next step arrives in `Update.finished`.
+  Future<Update> confirmBackup();
+
   Future<void> deleteRestorationShare({
     required String restorationId,
     required String deviceId,

@@ -76,8 +76,8 @@ typed into the wrong wallet is caught.
 **Backup** (after key generation every share is "not backed up" until its signer confirmed it)
 1. Coordinator broadcasts `DisplayBackup` to one signer. The signer decrypts its own share and
    shows the 25 words with the key number, threshold and wallet name; the user writes them down and
-   confirms → `BackupRecorded` QR → the coordinator marks that share backed up. "Mark as backed up"
-   does the same by hand.
+   confirms on the signer, then presses the coordinator's confirmation button to mark that share
+   backed up. No reply QR is needed. "Mark as backed up" does the same by hand from the wallet page.
 2. **Check** (`CheckBackup`): the signer quizzes the user with 26 multiple-choice questions (key
    number, then each word; the wrong options are the closest BIP39 words) answered from the paper.
    Wrong answers change nothing. Passing → `BackupChecked` QR.
@@ -87,7 +87,8 @@ typed into the wrong wallet is caught.
    `EnterPhysicalBackup` to a signer. The user types the key number and 25 words; the signer checks
    the word checksums and replies with the share's public *image* only.
 2. The coordinator checks it fits (not a share it already has, not a different wallet's), then
-   broadcasts `SavePhysicalBackup` → the signer keeps the backup and replies `PhysicalSaved`.
+   broadcasts `SavePhysicalBackup` → the signer keeps the backup and confirms locally; the user
+   presses the coordinator's confirmation button instead of scanning a `PhysicalSaved` reply.
 3. Repeat with other signers until the shares determine the key (`Restore wallet` becomes available).
    `finish_restoration` creates the wallet, with the same addresses as before.
 4. **Consolidation**: each signer that was restored from a typed-in backup is asked (`Consolidate`)
