@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'mic_permission.dart';
 import 'qr_scan_backend.dart';
 import 'toast.dart';
 
-/// Camera preview + QR frame assembly + a "paste QR text" fallback, plus a "Listen" button that
-/// receives the same frames as sound (ggwave) from a device that is playing them. Uses the webcam through the
-/// backend on desktop and the `camera` plugin on Android. Calls [onPayload] once per completed
+/// Camera preview + QR frame assembly, with "Input" (type QR text) and "Paste" (from the clipboard)
+/// fallbacks, plus a "Listen" button that receives the same frames as sound (ggwave) from a device
+/// that is playing them. Uses the webcam through the backend on desktop and the `camera` plugin on Android. Calls [onPayload] once per completed
 /// animated code.
 class ScanPanel extends StatefulWidget {
   const ScanPanel({
@@ -44,9 +44,10 @@ class _ScanPanelState extends State<ScanPanel> {
   bool handling = false;
   CameraController? phoneCamera;
   bool busy = false;
-  final paste = TextEditingController();
+  final input = TextEditingController();
   StreamSubscription<String>? soundSub;
   bool listening = false;
+  bool showInput = false;
   String? soundError;
 
   @override
@@ -173,20 +174,31 @@ class _ScanPanelState extends State<ScanPanel> {
     widget.backend.stopListeningSound();
   }
 
-  Future<void> _addPasted() async {
+  Future<void> _pasteClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
+    await _addText(data?.text ?? '');
+  }
+
+  Future<void> _submitInput() async {
+    if (await _addText(input.text)) input.clear();
+  }
+
+  /// Pushes every QR frame found in [text]; false (and a snackbar) if there were none.
+  Future<bool> _addText(String text) async {
     // frames are upper-case, but tolerate pasted text that was lower-cased or run together
     final frames = RegExp(r'MF1:[A-Z0-9:]+', caseSensitive: false)
-        .allMatches(paste.text)
+        .allMatches(text)
         .map((m) => m.group(0)!.toUpperCase())
         .toList();
     if (frames.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No QR frames (MF1:…) found in that text.')));
-      return;
+      return false;
     }
-    paste.clear();
     for (final f in frames) {
       await _push(f);
     }
+    return true;
   }
 
   Future<void> _push(String text) async {
@@ -225,7 +237,7 @@ class _ScanPanelState extends State<ScanPanel> {
     } else {
       widget.backend.stopCamera();
     }
-    paste.dispose();
+    input.dispose();
     super.dispose();
   }
 
@@ -239,7 +251,7 @@ class _ScanPanelState extends State<ScanPanel> {
       ],
       if (cams == null) const Center(child: CircularProgressIndicator()),
       if (cams != null && cams.isEmpty)
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(Platform.isAndroid ? 'No camera available. You can paste QR text below instead.' : 'No camera found (/dev/video*). You can paste QR text below instead.'))),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(Platform.isAndroid ? 'No camera available. You can input or paste QR text instead.' : 'No camera found (/dev/video*). You can input or paste QR text instead.'))),
       if (cams != null && cams.length > 1)
         DropdownButton<int>(
           value: selected,
@@ -270,13 +282,23 @@ class _ScanPanelState extends State<ScanPanel> {
         Text('$received of $total parts', textAlign: TextAlign.center),
       ],
       const SizedBox(height: 8),
-      Center(
-        child: OutlinedButton.icon(
+      Wrap(alignment: WrapAlignment.center, children: [
+        TextButton.icon(
           onPressed: _toggleListening,
           icon: Icon(listening ? Icons.hearing_disabled : Icons.hearing),
-          label: Text(listening ? 'Stop listening' : 'Listen (sound)'),
+          label: Text(listening ? 'Stop listening' : 'Listen'),
         ),
-      ),
+        TextButton.icon(
+          onPressed: () => setState(() => showInput = !showInput),
+          icon: Icon(showInput ? Icons.keyboard_hide : Icons.keyboard),
+          label: const Text('Input'),
+        ),
+        TextButton.icon(
+          onPressed: _pasteClipboard,
+          icon: const Icon(Icons.content_paste),
+          label: const Text('Paste'),
+        ),
+      ]),
       if (listening)
         const Padding(
           padding: EdgeInsets.only(top: 4),
@@ -288,17 +310,20 @@ class _ScanPanelState extends State<ScanPanel> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(soundError!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
-      const SizedBox(height: 8),
-      TextField(
-        controller: paste,
-        minLines: 1,
-        maxLines: 3,
-        decoration: const InputDecoration(labelText: 'Paste QR text', hintText: 'MF1:…', border: OutlineInputBorder()),
-      ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton(onPressed: _addPasted, child: const Text('Add')),
-      ),
+      if (showInput) ...[
+        const SizedBox(height: 8),
+        TextField(
+          controller: input,
+          autofocus: true,
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'QR text', hintText: 'MF1:…', border: OutlineInputBorder()),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(onPressed: _submitInput, child: const Text('Submit')),
+        ),
+      ],
     ]);
   }
 }

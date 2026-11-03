@@ -133,12 +133,10 @@ class _AnimatedQrState extends State<AnimatedQr> {
             await Clipboard.setData(ClipboardData(text: widget.frames.join('\n')));
             if (!context.mounted) return;
             ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-                content: Text(widget.frames.length > 1
-                    ? 'Copied all ${widget.frames.length} parts'
-                    : 'Copied QR contents')));
+                content: Text('Copied QR contents')));
           },
           icon: const Icon(Icons.copy),
-          label: Text(widget.frames.length > 1 ? 'Copy all parts' : 'Copy contents'),
+          label: const Text('Copy contents'),
         ),
         if (widget.sound != null)
           TextButton.icon(
