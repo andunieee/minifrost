@@ -415,7 +415,7 @@ impl Coordinator {
             },
             sends,
             WireStep::CheckBackup,
-            "Show this to the signer. The user answers its quiz using the paper backup.",
+            "Show this to the signer, then answer its quiz using your paper backup.",
         )
     }
 
@@ -710,7 +710,8 @@ impl Coordinator {
         } = &session
         {
             return Err(
-                "The coordinator confirms this step itself; no signer reply is needed.".into(),
+                "Nothing to scan for this step: confirm it on this screen once the signer is done."
+                    .into(),
             );
         }
         let update = match (session, incoming) {

@@ -135,8 +135,6 @@ class _CeremonyPageState extends State<CeremonyPage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('No reply code is needed for this step.', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
           Text(
             'When the signer has finished, confirm it here. '
             'Only confirm if you really did it: this is the coordinator’s only record.',
@@ -272,7 +270,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
           Icons.check_circle,
           Colors.green,
           'Backup of key #$shareIndex recorded',
-          'The user confirmed writing down the 25 words for “$keyName”. Keep the paper safe and secret.',
+          'You confirmed writing down the 25 words for “$keyName”. Keep the paper safe and secret.',
         ),
       Finished_BackupChecked(:final keyName, :final shareIndex) => (
           Icons.verified,
