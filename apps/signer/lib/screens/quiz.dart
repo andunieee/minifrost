@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../controller.dart';
@@ -14,7 +16,9 @@ class QuizScreen extends StatefulWidget {
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
-class _QuizScreenState extends State<QuizScreen> {
+class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateMixin {
+  static const wrongFeedback = Duration(milliseconds: 1200);
+  late final AnimationController shake = AnimationController(vsync: this, duration: wrongFeedback);
   QuizQuestion? question;
   String? error;
   int? flashed;
@@ -31,6 +35,12 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    shake.dispose();
+    super.dispose();
+  }
+
   Future<void> _answer(int choice) async {
     if (busy) return;
     setState(() {
@@ -42,7 +52,8 @@ class _QuizScreenState extends State<QuizScreen> {
       final a = await widget.controller.quizAnswer(choice);
       if (!mounted) return;
       setState(() => flashedCorrect = a.correct);
-      await Future<void>.delayed(Duration(milliseconds: a.correct ? 350 : 600));
+      if (!a.correct) shake.forward(from: 0);
+      await Future<void>.delayed(a.correct ? const Duration(milliseconds: 350) : wrongFeedback);
       if (!mounted) return;
       if (a.done != null) {
         Navigator.pop(context, a.done);
@@ -85,21 +96,31 @@ class _QuizScreenState extends State<QuizScreen> {
               for (var i = 0; i < q.options.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: SizedBox(
-                    height: 64,
-                    child: FilledButton.tonal(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: flashed == i
-                            ? (flashedCorrect == null
-                                ? null
-                                : flashedCorrect!
-                                    ? Colors.green.shade600
-                                    : scheme.error)
-                            : null,
-                        foregroundColor: flashed == i && flashedCorrect != null ? Colors.white : null,
+                  child: AnimatedBuilder(
+                    animation: shake,
+                    // damped shake: 6 swings that fade out over the feedback time
+                    builder: (context, child) => Transform.translate(
+                      offset: flashed == i && flashedCorrect == false
+                          ? Offset(sin(shake.value * 6 * pi) * 12 * (1 - shake.value), 0)
+                          : Offset.zero,
+                      child: child,
+                    ),
+                    child: SizedBox(
+                      height: 64,
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: flashed == i
+                              ? (flashedCorrect == null
+                                  ? null
+                                  : flashedCorrect!
+                                      ? Colors.green.shade600
+                                      : scheme.error)
+                              : null,
+                          foregroundColor: flashed == i && flashedCorrect != null ? Colors.white : null,
+                        ),
+                        onPressed: busy ? null : () => _answer(i),
+                        child: Text(q.options[i], style: const TextStyle(fontFamily: 'monospace', fontSize: 22, fontWeight: FontWeight.bold)),
                       ),
-                      onPressed: busy ? null : () => _answer(i),
-                      child: Text(q.options[i], style: const TextStyle(fontFamily: 'monospace', fontSize: 22, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
