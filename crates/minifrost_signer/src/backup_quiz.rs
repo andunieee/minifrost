@@ -4,8 +4,8 @@
 //! of the 25 words. Each question has three options; the wrong words are the two BIP39 words
 //! closest to the right one, so a smudged or mis-copied word is likely to be caught.
 //!
-//! The signer decrypts its own share to build the expected answers, so nothing the coordinator
-//! sends decides what counts as correct.
+//! The expected answers are built from the signer's own share (decrypted with the coordinator's
+//! contribution), so nothing else the coordinator sends decides what counts as correct.
 
 use frost_backup::{ShareBackup, bip39_words::BIP39_WORDS};
 use rand::{RngCore, seq::SliceRandom};

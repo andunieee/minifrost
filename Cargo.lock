@@ -714,7 +714,7 @@ dependencies = [
 [[package]]
 name = "frost_backup"
 version = "0.1.0"
-source = "git+https://github.com/frostsnap/frostsnap?rev=14446c811fa0c86714a2080ef7a107afea96e863#14446c811fa0c86714a2080ef7a107afea96e863"
+source = "git+https://github.com/frostsnap/frostsnap?rev=f0ae95d03adc030de9c41ccae57f918e395a6f8f#f0ae95d03adc030de9c41ccae57f918e395a6f8f"
 dependencies = [
  "bincode",
  "rand_core",
@@ -725,7 +725,7 @@ dependencies = [
 [[package]]
 name = "frostsnap_core"
 version = "0.1.0"
-source = "git+https://github.com/frostsnap/frostsnap?rev=14446c811fa0c86714a2080ef7a107afea96e863#14446c811fa0c86714a2080ef7a107afea96e863"
+source = "git+https://github.com/frostsnap/frostsnap?rev=f0ae95d03adc030de9c41ccae57f918e395a6f8f#f0ae95d03adc030de9c41ccae57f918e395a6f8f"
 dependencies = [
  "bincode",
  "bitcoin",
@@ -746,7 +746,7 @@ dependencies = [
 [[package]]
 name = "frostsnap_macros"
 version = "0.0.1"
-source = "git+https://github.com/frostsnap/frostsnap?rev=14446c811fa0c86714a2080ef7a107afea96e863#14446c811fa0c86714a2080ef7a107afea96e863"
+source = "git+https://github.com/frostsnap/frostsnap?rev=f0ae95d03adc030de9c41ccae57f918e395a6f8f#f0ae95d03adc030de9c41ccae57f918e395a6f8f"
 dependencies = [
  "proc-macro2",
  "quote",

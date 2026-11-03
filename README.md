@@ -74,8 +74,8 @@ plus a key number**. The words carry a checksum tied to the wallet's public poly
 typed into the wrong wallet is caught.
 
 **Backup** (after key generation every share is "not backed up" until its signer confirmed it)
-1. Coordinator broadcasts `DisplayBackup` to one signer. The signer decrypts its own share and
-   shows the 25 words with the key number, threshold and wallet name; the user writes them down and
+1. Coordinator broadcasts `DisplayBackup` to one signer, with its decryption contribution (see
+   below). The signer decrypts its share with it and shows the 25 words with the key number, threshold and wallet name; the user writes them down and
    confirms on the signer, then presses the coordinator's confirmation button to mark that share
    backed up. No reply QR is needed. "Mark as backed up" does the same by hand from the wallet page.
 2. **Check** (`CheckBackup`): the signer quizzes the user with 26 multiple-choice questions (key
@@ -100,16 +100,30 @@ coordinator broadcasts `RequestHeldShares`, each signer answers with the shares 
 images, wallet name, threshold), and the user picks them into a restoration. A signer that rejoins
 an existing wallet this way needs no consolidation.
 
-The coordinator's own file is **not** needed to recover funds: its key only protects public wallet
-data, and the signers' share encryption ignores it. What *is* needed is a threshold of backups (or
+As in frostsnap, **a signer can't decrypt its own share without the coordinator**. Only the
+coordinator keeps the wallet's root key (the public point at the root of the key polynomial,
+encrypted in its own file), and every message that needs a signer's share (sign, display or check
+a backup, consolidate) carries `CoordShareDecryptionContrib`, a hash of the device id, share index
+and root polynomial that the signer mixes into its share-encryption key. The signer computes the
+same hash once, right after keygen, to encrypt the share, then forgets the polynomial.
+
+The coordinator's file is still **not** needed to recover funds: the root key is public data that
+a threshold of shares rebuilds (either restoration flow above), after which the new coordinator
+can give the signers their contributions again. What *is* needed is a threshold of backups (or
 signer phones), and knowing the wallet's name, network and threshold to check the result against.
 
 ## Where the signer keeps its secret
 
-- One 32-byte random `device_secret`; the identity key, the share-encryption key and the nonce
-  seeds are all HMAC-derived from it. `frostsnap_core` always encrypts the share, but the key is
-  derived from `device_secret` alone (the coordinator's decryption contribution is ignored), so it
-  is effectively plaintext: the phone's storage alone can sign.
+- One 32-byte random `device_secret`; the identity key is HMAC-derived from it, and the
+  share-encryption keys and nonce seeds come from `frostsnap_core`'s `DevicePrf` derivation (the
+  same byte layouts as a frostsnap device) with HMAC-SHA256 under `device_secret` as the PRF. The
+  share-encryption key also needs the coordinator's contribution (see above). That contribution is
+  derived from public wallet data, so, as frostsnap says of its own devices, it forces the signer to
+  be talking to a coordinator that knows the whole wallet rather than hiding the share: the phone's
+  storage plus the wallet's public polynomial can sign.
+- Vaults written before this scheme (snapshot version 1) are refused: their shares were encrypted
+  under the old key and can't be moved without the coordinator. Clear the app's data and restore
+  the keys from their backup words.
 - Rust hands the app a snapshot, which `lib/vault.dart` writes **unencrypted** to a file in the
   app-private directory (atomic temp file + rename). Backups and device transfer are disabled;
   `FLAG_SECURE` blocks screenshots (release builds only). Minimum Android is 7 (API 24). No screen lock, biometrics or

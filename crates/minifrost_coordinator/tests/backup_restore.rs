@@ -200,6 +200,37 @@ fn display_backup_then_pass_the_quiz() {
     assert!(coord.confirm_backup().is_err(), "nothing left to confirm");
 }
 
+/// As in frostsnap, a signer's share key mixes in the coordinator's contribution (a hash of the
+/// root polynomial): with a wrong one the signer can't decrypt its share to show the backup.
+#[test]
+fn signer_needs_the_coordinator_to_decrypt_its_backup() {
+    use frostsnap_core::message::{CoordinatorRestoration, CoordinatorToDeviceMessage};
+    use minifrost_wire::Packet;
+
+    let mut coord = Coordinator::in_memory();
+    let (mut signers, key_id) = create_wallet(&mut coord, &["alice", "bob"], 2);
+    let up = coord
+        .start_display_backup(&key_id, &signers[0].device_id().to_string())
+        .unwrap();
+    let mut packet = Packet::from_bytes(&scan(&frames_of(&up))).unwrap();
+    let Packet::ToDevices { entries, .. } = &mut packet else {
+        panic!("{packet:?}")
+    };
+    let CoordinatorToDeviceMessage::Restoration(CoordinatorRestoration::DisplayBackup {
+        coord_share_decryption_contrib,
+        ..
+    }) = &mut entries[0].1
+    else {
+        panic!()
+    };
+    *coord_share_decryption_contrib =
+        "0404040404040404040404040404040404040404040404040404040404040404"
+            .parse()
+            .unwrap();
+    let err = signers[0].receive(&packet.to_bytes()).unwrap_err();
+    assert!(err.contains("could not read this signer's share"), "{err}");
+}
+
 #[test]
 fn restore_wallet_from_physical_backups_and_sign() {
     // --- an original wallet; write its backups down

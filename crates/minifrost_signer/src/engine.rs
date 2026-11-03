@@ -7,11 +7,10 @@ use std::sync::{Arc, Mutex};
 use bitcoin::hashes::{Hash, HashEngine, Hmac, HmacEngine, sha256};
 use frost_backup::{ShareBackup, bip39_words};
 use frostsnap_core::{
-    AccessStructureRef, CoordShareDecryptionContrib, DeviceId, KeyId, SymmetricKey, Versioned,
-    WireSignTask,
+    AccessStructureRef, DeviceId, KeyId, Versioned, WireSignTask,
     device::{
-        DeviceSecretDerivation, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose,
-        Mutation, SignPhase1,
+        DevicePrf, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose, Mutation,
+        SignPhase1,
         restoration::{EnterBackupPhase, ToUserRestoration},
     },
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
@@ -19,7 +18,6 @@ use frostsnap_core::{
         CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend, DeviceToCoordinatorMessage,
         keygen::Keygen, signing::CoordinatorSigning,
     },
-    nonce_stream::NonceStreamId,
     schnorr_fun::frost::ShareIndex,
     schnorr_fun::fun::{KeyPair, Scalar, marker::*},
 };
@@ -32,7 +30,9 @@ use rand::rngs::OsRng;
 mod backup_quiz;
 
 const NONCE_SLOTS: usize = 4;
-const SNAPSHOT_VERSION: u8 = 1;
+/// 2: share-encryption keys and nonce seeds switched to frostsnap's derivation (which needs the
+/// coordinator to decrypt a share); a version 1 vault's shares can't be read any more.
+const SNAPSHOT_VERSION: u8 = 2;
 
 // ---------------------------------------------------------------------------------------------
 // Persistent nonce slots
@@ -55,10 +55,13 @@ impl NonceStreamSlot for SharedSlot {
 // Secret derivation
 // ---------------------------------------------------------------------------------------------
 
-/// Everything secret on this signer derives from one 32-byte random `device_secret`. The share
-/// encryption key deliberately ignores the coordinator's contribution: `frostsnap_core` insists on
-/// encrypting shares, but the key sits next to the ciphertext, so this is storage-equivalent to
-/// plaintext. That keeps a lost coordinator from making every signer's share undecryptable.
+/// Everything secret on this signer derives from one 32-byte random `device_secret`. As on a
+/// frostsnap device, share-encryption keys and nonce seeds come from `frostsnap_core`'s
+/// [`DevicePrf`] derivation (HMAC-SHA256 under `device_secret` here, the HMAC peripheral there).
+/// A share-encryption key mixes in the coordinator's
+/// [`frostsnap_core::CoordShareDecryptionContrib`], a hash of the wallet's root polynomial, so a
+/// signer can't decrypt its share without a coordinator that knows the wallet. A lost coordinator
+/// is rebuilt from a threshold of shares (restoration).
 #[derive(Clone)]
 struct Derivation {
     device_secret: [u8; 32],
@@ -82,38 +85,9 @@ impl Derivation {
     }
 }
 
-impl DeviceSecretDerivation for Derivation {
-    fn get_share_encryption_key(
-        &mut self,
-        access_structure_ref: AccessStructureRef,
-        party_index: frostsnap_core::schnorr_fun::frost::ShareIndex,
-        _coord_key: CoordShareDecryptionContrib,
-    ) -> SymmetricKey {
-        let ctx = bincode::encode_to_vec(
-            (access_structure_ref, party_index),
-            bincode::config::standard(),
-        )
-        .expect("encodes");
-        SymmetricKey(hmac(
-            &hmac(&self.device_secret, &[b"minifrost/share-encryption-key"]),
-            &[&ctx],
-        ))
-    }
-
-    fn derive_nonce_seed(
-        &mut self,
-        nonce_stream_id: NonceStreamId,
-        index: u32,
-        seed_material: &[u8; 32],
-    ) -> [u8; 32] {
-        hmac(
-            &hmac(&self.device_secret, &[b"minifrost/nonce-seed"]),
-            &[
-                nonce_stream_id.to_bytes().as_slice(),
-                &index.to_le_bytes(),
-                seed_material,
-            ],
-        )
+impl DevicePrf for Derivation {
+    fn prf(&mut self, message: &[&[u8]]) -> [u8; 32] {
+        hmac(&self.device_secret, message)
     }
 }
 
@@ -325,6 +299,13 @@ impl Signer {
 
     pub fn from_snapshot(bytes: &[u8]) -> Res<Signer> {
         let (&version, rest) = bytes.split_first().ok_or("empty snapshot")?;
+        if version == 1 {
+            return Err(
+                "This signer's data is from an older minifrost whose shares this version \
+                can't decrypt. Delete the app's data and restore each key from its backup words."
+                    .into(),
+            );
+        }
         if version != SNAPSHOT_VERSION {
             return Err(format!("unknown snapshot version {version}"));
         }
