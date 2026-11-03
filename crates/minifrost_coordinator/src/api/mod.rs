@@ -100,11 +100,15 @@ impl CoordinatorApp {
     pub fn receive(&self, payload: Vec<u8>) -> Result<Update, String> {
         self.inner.lock().unwrap().receive(&payload)
     }
-    /// Confirm a step whose only missing response is the user's: approving the check code on
-    /// every signer, writing a backup down, passing a backup check, or watching the signer save a
-    /// typed-in backup. The next step arrives in `Update.finished`.
+    /// Confirm a step whose only missing response is the user's: writing a backup down, passing
+    /// a backup check, or watching the signer save a typed-in backup. The next step arrives in
+    /// `Update.finished`.
     pub fn confirm(&self) -> Result<Update, String> {
-        self.inner.lock().unwrap().confirm()
+        self.inner.lock().unwrap().confirm_backup()
+    }
+    /// Keygen check round: the user approved the check code on this signer.
+    pub fn confirm_signer(&self, device_id: String) -> Result<Update, String> {
+        self.inner.lock().unwrap().confirm_signer(&device_id)
     }
 
     // ---- backups

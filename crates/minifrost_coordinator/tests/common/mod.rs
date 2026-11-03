@@ -126,7 +126,10 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     }
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b3 = frames_of(&up);
-    assert!(up.confirm.is_some(), "the check code round ends with a button");
+    assert!(
+        up.confirm_each_signer,
+        "the check code round ends with a button per signer"
+    );
     for s in signers.iter_mut() {
         assert!(matches!(
             signer_step(s, &b3),
@@ -139,7 +142,21 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
             "approving the check code stores the share"
         );
     }
-    coord.confirm().unwrap()
+    let mut up = up;
+    for (i, s) in signers.iter().enumerate() {
+        let id = s.device_id().to_string();
+        up = coord.confirm_signer(&id).unwrap();
+        if i + 1 < signers.len() {
+            assert!(up.finished.is_none() && up.confirm_each_signer);
+            assert_eq!(up.awaiting.len(), signers.len() - i - 1);
+            assert!(up.check_code.is_some(), "the code stays on screen");
+            assert!(
+                coord.confirm_signer(&id).is_err(),
+                "each signer is confirmed once"
+            );
+        }
+    }
+    up
 }
 
 /// Enrol fresh signers named `names`, create a `threshold`-of-n signet wallet over QR, store the

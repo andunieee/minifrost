@@ -151,6 +151,10 @@ class Update {
 
   /// This step needs no signer reply: the user confirms it on the coordinator with this button.
   final String? confirm;
+
+  /// Keygen check round: no signer reply either, but the user confirms each signer in
+  /// `awaiting` separately, with `confirm_signer`, once it shows the check code and approved.
+  final bool confirmEachSigner;
   final Finished? finished;
   final bool snapshotSaved;
 
@@ -163,6 +167,7 @@ class Update {
     required this.received,
     this.checkCode,
     this.confirm,
+    required this.confirmEachSigner,
     this.finished,
     required this.snapshotSaved,
   });
@@ -177,6 +182,7 @@ class Update {
       received.hashCode ^
       checkCode.hashCode ^
       confirm.hashCode ^
+      confirmEachSigner.hashCode ^
       finished.hashCode ^
       snapshotSaved.hashCode;
 
@@ -193,6 +199,7 @@ class Update {
           received == other.received &&
           checkCode == other.checkCode &&
           confirm == other.confirm &&
+          confirmEachSigner == other.confirmEachSigner &&
           finished == other.finished &&
           snapshotSaved == other.snapshotSaved;
 }

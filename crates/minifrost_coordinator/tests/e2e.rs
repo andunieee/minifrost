@@ -79,8 +79,11 @@ fn keygen_and_sign_over_qr_only() {
         assert!(r.snapshot.is_some(), "the share must be persisted");
         assert_eq!(s.keys().len(), 1);
     }
-    // the user approved on every signer: confirm on the coordinator instead of scanning acks
-    let up = coord.confirm().unwrap();
+    // the user approved on every signer: confirm each on the coordinator instead of scanning acks
+    let mut up = up;
+    for s in &signers {
+        up = coord.confirm_signer(&s.device_id().to_string()).unwrap();
+    }
     let Some(Finished::KeyCreated { key_id, .. }) = up.finished.clone() else {
         panic!("{up:?}")
     };

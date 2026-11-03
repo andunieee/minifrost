@@ -38,8 +38,8 @@ whole payload is checked against its SHA-256 prefix. Coordinator → signers is 
 2. Coordinator scans all, broadcasts `CertifyPlease`; signers answer automatically with a certificate.
 3. Coordinator scans all, broadcasts `Check`; **every signer and the coordinator show the same check
    code** — humans compare — each signer approves → stores its share right away.
-4. The user confirms on the coordinator that every signer approved, and the coordinator stores the
-   key. No QR goes either way for this: frostsnap's `KeyGenAck` (signer → coordinator) carries only
+4. The user confirms each signer on the coordinator (one button per signer) once it approved; after
+   the last one the coordinator stores the key. No QR goes either way for this: frostsnap's `KeyGenAck` (signer → coordinator) carries only
    the keygen id and the session hash, and `Finalize` (coordinator → signer) only the keygen id, so
    each side builds the other's message itself. If the ceremony is abandoned after some signers
    approved, they keep a share of a wallet that was never created; if the user confirms without

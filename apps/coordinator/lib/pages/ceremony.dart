@@ -73,12 +73,12 @@ class _CeremonyPageState extends State<CeremonyPage> {
     }
   }
 
-  /// A step with no signer reply (approved check codes, a displayed, checked or saved backup): the
-  /// user confirms it here.
-  Future<void> _confirm() async {
+  /// A step with no signer reply (a signer that approved the check code, a displayed, checked or
+  /// saved backup): the user confirms it here.
+  Future<void> _confirm(Future<Update> Function() action) async {
     setState(() => confirming = true);
     try {
-      final u = await widget.app.confirm();
+      final u = await action();
       if (!mounted) return;
       setState(() {
         update = u;
@@ -142,12 +142,49 @@ class _CeremonyPageState extends State<CeremonyPage> {
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: confirming ? null : _confirm,
+            onPressed: confirming ? null : () => _confirm(widget.app.confirm),
             icon: confirming
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check),
             label: Text(label),
           ),
+        ]),
+      ),
+    );
+  }
+
+  /// Keygen check round: one button per signer, pressed once that signer shows the code and the
+  /// user approved on it.
+  Widget _signerConfirmations(ThemeData theme) {
+    final signers = [
+      for (final s in update.received) (s, true),
+      for (final s in update.awaiting) (s, false),
+    ]..sort((a, b) => a.$1.name.compareTo(b.$1.name));
+    return Card(
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text(
+            'Confirm each signer here once it shows the code above and you approved on it. '
+            'Only confirm if you really did: a signer you confirm without approving holds no share.',
+          ),
+          const SizedBox(height: 16),
+          for (final (s, done) in signers)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: done
+                  ? Align(alignment: Alignment.centerLeft, child: SignerChip(deviceId: s.deviceId, name: s.name, done: true))
+                  : OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: signerColor(s.deviceId, theme.brightness),
+                        side: BorderSide(color: signerColor(s.deviceId, theme.brightness), width: 1.5),
+                      ),
+                      onPressed: confirming ? null : () => _confirm(() => widget.app.confirmSigner(deviceId: s.deviceId)),
+                      icon: const Icon(Icons.check),
+                      label: Text('${s.name} shows this code and I approved'),
+                    ),
+            ),
         ]),
       ),
     );
@@ -232,13 +269,19 @@ class _CeremonyPageState extends State<CeremonyPage> {
             ),
           ];
           final confirm = update.confirm;
+          final confirmEach = update.confirmEachSigner;
+          final Widget? confirmation = confirmEach
+              ? _signerConfirmations(theme)
+              : confirm != null
+              ? _confirmation(theme, confirm)
+              : null;
           // a phone has no room for two columns: show the code first, the reply area below it
           if (narrow) {
             return ListView(padding: const EdgeInsets.all(16), children: [
               ...shown,
               if (!finished) ...[
                 const Divider(height: 32),
-                if (confirm != null) _confirmation(theme, confirm) else ...scan,
+                if (confirmation != null) confirmation else ...scan,
               ],
             ]);
           }
@@ -251,8 +294,8 @@ class _CeremonyPageState extends State<CeremonyPage> {
                 padding: const EdgeInsets.all(24),
                 child: finished
                     ? const SizedBox()
-                    : confirm != null
-                    ? _confirmation(theme, confirm)
+                    : confirmation != null
+                    ? ListView(children: [confirmation])
                     : ListView(children: scan),
               ),
             ),

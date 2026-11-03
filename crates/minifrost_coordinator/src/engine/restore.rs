@@ -175,7 +175,7 @@ fn compat_name(c: ShareCompatibility) -> &'static str {
 // ---------------------------------------------------------------------------------------------
 
 impl Coordinator {
-    fn parse_device(&self, device_id: &str) -> Res<DeviceId> {
+    pub(super) fn parse_device(&self, device_id: &str) -> Res<DeviceId> {
         device_id.parse().map_err(|_| "bad device id".to_string())
     }
 

@@ -100,7 +100,7 @@ sealed class Prompt with _$Prompt {
   }) = Prompt_JoinKeygen;
 
   /// All signers must show the same code. Compare them before approving: approving stores this
-  /// signer's share. No reply code is shown; the user confirms on the coordinator instead.
+  /// signer's share. No reply code is shown; the user confirms this signer on the coordinator instead.
   const factory Prompt.verifyKeygen({
     required String keyName,
     required int threshold,

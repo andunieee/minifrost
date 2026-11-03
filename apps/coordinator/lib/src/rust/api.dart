@@ -62,10 +62,13 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
 
   Future<void> cancelSession();
 
-  /// Confirm a step whose only missing response is the user's: approving the check code on
-  /// every signer, writing a backup down, passing a backup check, or watching the signer save a
-  /// typed-in backup. The next step arrives in `Update.finished`.
+  /// Confirm a step whose only missing response is the user's: writing a backup down, passing
+  /// a backup check, or watching the signer save a typed-in backup. The next step arrives in
+  /// `Update.finished`.
   Future<Update> confirm();
+
+  /// Keygen check round: the user approved the check code on this signer.
+  Future<Update> confirmSigner({required String deviceId});
 
   Future<void> deleteRestorationShare({
     required String restorationId,

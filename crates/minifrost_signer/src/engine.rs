@@ -142,7 +142,7 @@ pub enum Prompt {
         network: String,
     },
     /// All signers must show the same code. Compare them before approving: approving stores this
-    /// signer's share. No reply code is shown; the user confirms on the coordinator instead.
+    /// signer's share. No reply code is shown; the user confirms this signer on the coordinator instead.
     VerifyKeygen {
         key_name: String,
         threshold: u16,
@@ -719,7 +719,7 @@ impl Signer {
                     .ok_or("The share was not stored.")?;
                 Step::Done {
                     message: format!(
-                        "Your share of “{key_name}” is stored on this signer. Once every signer shows this, confirm on the coordinator."
+                        "Your share of “{key_name}” is stored on this signer. Now confirm this signer on the coordinator."
                     ),
                 }
             }

@@ -136,6 +136,9 @@ pub struct Update {
     pub check_code: Option<String>,
     /// This step needs no signer reply: the user confirms it on the coordinator with this button.
     pub confirm: Option<String>,
+    /// Keygen check round: no signer reply either, but the user confirms each signer in
+    /// `awaiting` separately, with `confirm_signer`, once it shows the check code and approved.
+    pub confirm_each_signer: bool,
     pub finished: Option<Finished>,
     pub snapshot_saved: bool,
 }
@@ -549,43 +552,60 @@ impl Coordinator {
         }
     }
 
-    /// Confirm a step whose only missing response is the user's (see [`Update::confirm`]).
-    pub fn confirm(&mut self) -> Res<Update> {
-        match &self.session {
-            Session::Keygen(k) if k.round == KeygenRound::Acks => self.confirm_keygen(),
-            _ => self.confirm_backup(),
-        }
-    }
-
-    /// The user approved the check code on every signer, and each stored its share right then.
-    /// A signer's ack says only that (the keygen id and the session hash, unsigned), so the
-    /// coordinator feeds frostsnap the acks itself instead of scanning one QR per signer.
-    fn confirm_keygen(&mut self) -> Res<Update> {
-        let Session::Keygen(k) = &self.session else {
-            unreachable!("checked by the caller")
+    /// Keygen check round: the user approved the check code on this signer, which stored its
+    /// share right then. A signer's ack says only that (the keygen id and the session hash,
+    /// unsigned), so the coordinator feeds frostsnap the ack itself instead of scanning a QR. The
+    /// wallet is created once every signer is confirmed.
+    pub fn confirm_signer(&mut self, device_id: &str) -> Res<Update> {
+        let device = self.parse_device(device_id)?;
+        let (keygen_id, ack_session_hash) = match &self.session {
+            Session::Keygen(KeygenSession {
+                id,
+                devices,
+                round: KeygenRound::Acks,
+                session_hash: Some(hash),
+            }) if devices.contains(&device) => (*id, *hash),
+            Session::Keygen(KeygenSession {
+                round: KeygenRound::Acks,
+                ..
+            }) => {
+                return Err(format!(
+                    "{} is not part of this session.",
+                    self.name_of(&device)
+                ));
+            }
+            _ => return Err("No signer is waiting for a confirmation.".into()),
         };
-        let keygen_id = k.id;
-        let ack_session_hash = k.session_hash.ok_or("No check code was shown yet.")?;
-        let devices: Vec<DeviceId> = k
-            .devices
-            .iter()
-            .filter(|d| !self.replied.contains(d))
-            .copied()
-            .collect();
-        let mut update = Update::default();
-        for device in devices {
-            update = self.handle_device_message(
-                device,
-                DeviceToCoordinatorMessage::KeyGen(DeviceKeygen::Ack(KeyGenAck {
-                    keygen_id,
-                    ack_session_hash,
-                })),
-            )?;
+        let name = self.name_of(&device);
+        if !self.replied.insert(device) {
+            return Err(format!("{name} was already confirmed."));
         }
+        let result = self.handle_device_message(
+            device,
+            DeviceToCoordinatorMessage::KeyGen(DeviceKeygen::Ack(KeyGenAck {
+                keygen_id,
+                ack_session_hash,
+            })),
+        );
+        if result.is_err() {
+            self.replied.remove(&device);
+        }
+        let mut update = result?;
+        update.from = Some(SignerInfo {
+            device_id: device.to_string(),
+            name: name.clone(),
+        });
         update.snapshot_saved = {
             self.save()?;
             self.dir.is_some()
         };
+        if update.finished.is_none() {
+            update.message = format!("{name} confirmed.");
+            update.check_code = Some(minifrost_wire::format_check_code(&ack_session_hash.0));
+            update.confirm_each_signer = true;
+            let expected = self.expected();
+            self.fill_awaiting(&mut update, &expected);
+        }
         Ok(update)
     }
 
@@ -758,15 +778,12 @@ impl Coordinator {
                 self.replied.clear();
                 update.message = match &self.session {
                     Session::Keygen(_) if update.check_code.is_some() => {
-                        "Every signer must show the same check code as below. If so, approve on each signer, then confirm here.".into()
+                        "Every signer must show the same check code as below. If so, approve on each signer and confirm it here.".into()
                     }
                     Session::Keygen(_) => "Show this to all signers; each answers automatically.".into(),
                     _ => "Show this to the signers. Each verifies the transaction and shows a partial signature.".into(),
                 };
-                if update.check_code.is_some() {
-                    update.confirm =
-                        Some("Every signer shows this code and I approved on each".into());
-                }
+                update.confirm_each_signer = update.check_code.is_some();
             }
         }
 
