@@ -1600,9 +1600,11 @@ impl SseDecode for crate::engine::Step {
             2 => {
                 let mut var_frames = <Vec<String>>::sse_decode(deserializer);
                 let mut var_what = <String>::sse_decode(deserializer);
+                let mut var_next = <Option<String>>::sse_decode(deserializer);
                 return crate::engine::Step::Reply {
                     frames: var_frames,
                     what: var_what,
+                    next: var_next,
                 };
             }
             3 => {
@@ -2020,10 +2022,11 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Step {
             crate::engine::Step::Confirm(field0) => {
                 [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
-            crate::engine::Step::Reply { frames, what } => [
+            crate::engine::Step::Reply { frames, what, next } => [
                 2.into_dart(),
                 frames.into_into_dart().into_dart(),
                 what.into_into_dart().into_dart(),
+                next.into_into_dart().into_dart(),
             ]
             .into_dart(),
             crate::engine::Step::Done { message } => {
@@ -2443,10 +2446,11 @@ impl SseEncode for crate::engine::Step {
                 <i32>::sse_encode(1, serializer);
                 <crate::engine::Prompt>::sse_encode(field0, serializer);
             }
-            crate::engine::Step::Reply { frames, what } => {
+            crate::engine::Step::Reply { frames, what, next } => {
                 <i32>::sse_encode(2, serializer);
                 <Vec<String>>::sse_encode(frames, serializer);
                 <String>::sse_encode(what, serializer);
+                <Option<String>>::sse_encode(next, serializer);
             }
             crate::engine::Step::Done { message } => {
                 <i32>::sse_encode(3, serializer);

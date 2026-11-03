@@ -121,6 +121,18 @@ impl Step {
         }
     }
 
+    /// The step the coordinator sends once it has this step's replies, when the signer takes part
+    /// in it too. The signer offers to scan it right after showing its reply.
+    pub fn next(self) -> Option<Step> {
+        match self {
+            Step::KeygenJoin => Some(Step::KeygenCertify),
+            Step::KeygenCertify => Some(Step::KeygenCheck),
+            Step::SignReview => Some(Step::SignNonces),
+            Step::EnterBackup => Some(Step::SaveBackup),
+            _ => None,
+        }
+    }
+
     /// Whether a coordinator step carrying `message` can be this step. A [`SignPrepare`] is
     /// always [`Step::SignReview`], which no `message` fits.
     fn fits(self, message: &CoordinatorToDeviceMessage) -> bool {

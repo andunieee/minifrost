@@ -85,12 +85,18 @@ pub fn auto_reply(s: &mut Signer, frames: &[String]) -> Vec<String> {
     }
 }
 
-/// A signer's reply to the coordinator broadcast in `to`, labelled with that broadcast's title.
-pub fn reply_to(step: Step, to: &Update) -> Vec<String> {
+/// A signer's reply to the coordinator broadcast in `to`, labelled with that broadcast's title,
+/// offering to scan `next` after it.
+pub fn reply_to(step: Step, to: &Update, next: Option<minifrost_wire::Step>) -> Vec<String> {
     let title = &to.broadcast.as_ref().expect("a broadcast").title;
     match step {
-        Step::Reply { frames, what } => {
+        Step::Reply {
+            frames,
+            what,
+            next: offered,
+        } => {
             assert_eq!(what, minifrost_wire::reply_label(title));
+            assert_eq!(offered.as_deref(), next.map(|s| s.title()));
             frames
         }
         other => panic!("expected reply, got {other:?}"),
@@ -108,22 +114,40 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
                 signer_step(s, &b1),
                 Step::Confirm(Prompt::JoinKeygen { .. })
             ));
-            reply_to(s.approve().unwrap().step, &first)
+            reply_to(
+                s.approve().unwrap().step,
+                &first,
+                Some(minifrost_wire::Step::KeygenCertify),
+            )
         })
         .collect();
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
+    assert_eq!(
+        up.broadcast.as_ref().unwrap().title,
+        minifrost_wire::Step::KeygenCertify.title()
+    );
     // the coordinator's camera can still catch a signer's previous reply after the round moved on
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b2 = frames_of(&up);
     let replies: Vec<_> = signers
         .iter_mut()
-        .map(|s| reply_to(signer_step(s, &b2), &up))
+        .map(|s| {
+            reply_to(
+                signer_step(s, &b2),
+                &up,
+                Some(minifrost_wire::Step::KeygenCheck),
+            )
+        })
         .collect();
     for r in &replies {
         up = coord.receive(&scan(r)).unwrap();
     }
+    assert_eq!(
+        up.broadcast.as_ref().unwrap().title,
+        minifrost_wire::Step::KeygenCheck.title()
+    );
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b3 = frames_of(&up);
     assert!(

@@ -15,13 +15,15 @@ import 'scan.dart';
 Future<void> runScanFlow(BuildContext context, SignerController c) async {
   final payload = await Navigator.push<Uint8List>(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
   if (payload == null || !context.mounted) return;
-  await _handle(context, c, () async {
-    final r = await c.receive(payload);
-    final kind = _readKind(r.step);
-    if (kind != null && context.mounted) showSuccessToast(context, 'Read from coordinator: $kind');
-    return r;
-  });
+  await _receive(context, c, payload);
 }
+
+Future<void> _receive(BuildContext context, SignerController c, Uint8List payload) => _handle(context, c, () async {
+      final r = await c.receive(payload);
+      final kind = _readKind(r.step);
+      if (kind != null && context.mounted) showSuccessToast(context, 'Read from coordinator: $kind');
+      return r;
+    });
 
 /// What the coordinator code that was just read asked for; null when it needs nothing.
 String? _readKind(Step step) => switch (step) {
@@ -80,8 +82,12 @@ Future<void> _handle(BuildContext context, SignerController c, Future<StepResult
       }
       if (!context.mounted) return;
       await _handle(context, c, () async => next);
-    case Step_Reply(:final frames, :final what):
-      await nav.push(MaterialPageRoute(builder: (_) => ReplyScreen(frames: frames, title: 'Show to coordinator', what: what, deviceId: c.deviceId)));
+    case Step_Reply(:final frames, :final what, :final next):
+      // pops with the coordinator's following code when the user scanned it from there
+      final payload = await nav.push<Uint8List>(MaterialPageRoute(
+          builder: (_) => ReplyScreen(frames: frames, title: 'Show to coordinator', what: what, deviceId: c.deviceId, next: next)));
+      if (payload == null || !context.mounted) return;
+      await _receive(context, c, payload);
     case Step_Confirm(:final field0):
       await nav.push(MaterialPageRoute(
         builder: (promptContext) => PromptScreen(

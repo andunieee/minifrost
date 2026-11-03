@@ -194,10 +194,12 @@ sealed class Step with _$Step {
   /// Ask the user, then call `approve` or `reject`.
   const factory Step.confirm(Prompt field0) = Step_Confirm;
 
-  /// Show these frames as a looping QR code for the coordinator to scan.
+  /// Show these frames as a looping QR code for the coordinator to scan. `next` is the title of
+  /// the coordinator's following code, when this signer takes part in that step too.
   const factory Step.reply({
     required List<String> frames,
     required String what,
+    String? next,
   }) = Step_Reply;
 
   /// Finished locally; nothing to show the coordinator.

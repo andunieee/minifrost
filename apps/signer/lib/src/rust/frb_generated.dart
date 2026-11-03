@@ -1397,6 +1397,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return Step_Reply(
           frames: dco_decode_list_String(raw[1]),
           what: dco_decode_String(raw[2]),
+          next: dco_decode_opt_String(raw[3]),
         );
       case 3:
         return Step_Done(message: dco_decode_String(raw[1]));
@@ -1946,7 +1947,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 2:
         var var_frames = sse_decode_list_String(deserializer);
         var var_what = sse_decode_String(deserializer);
-        return Step_Reply(frames: var_frames, what: var_what);
+        var var_next = sse_decode_opt_String(deserializer);
+        return Step_Reply(frames: var_frames, what: var_what, next: var_next);
       case 3:
         var var_message = sse_decode_String(deserializer);
         return Step_Done(message: var_message);
@@ -2490,10 +2492,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case Step_Confirm(field0: final field0):
         sse_encode_i_32(1, serializer);
         sse_encode_box_autoadd_prompt(field0, serializer);
-      case Step_Reply(frames: final frames, what: final what):
+      case Step_Reply(frames: final frames, what: final what, next: final next):
         sse_encode_i_32(2, serializer);
         sse_encode_list_String(frames, serializer);
         sse_encode_String(what, serializer);
+        sse_encode_opt_String(next, serializer);
       case Step_Done(message: final message):
         sse_encode_i_32(3, serializer);
         sse_encode_String(message, serializer);

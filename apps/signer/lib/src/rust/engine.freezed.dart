@@ -676,12 +676,12 @@ return checkBackup(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what)?  reply,TResult Function( String message)?  done,TResult Function()?  enterBackup,TResult Function( String keyName)?  checkBackup,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what,  String? next)?  reply,TResult Function( String message)?  done,TResult Function()?  enterBackup,TResult Function( String keyName)?  checkBackup,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
-return reply(_that.frames,_that.what);case Step_Done() when done != null:
+return reply(_that.frames,_that.what,_that.next);case Step_Done() when done != null:
 return done(_that.message);case Step_EnterBackup() when enterBackup != null:
 return enterBackup();case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that.keyName);case _:
@@ -702,12 +702,12 @@ return checkBackup(_that.keyName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what)  reply,required TResult Function( String message)  done,required TResult Function()  enterBackup,required TResult Function( String keyName)  checkBackup,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what,  String? next)  reply,required TResult Function( String message)  done,required TResult Function()  enterBackup,required TResult Function( String keyName)  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored():
 return ignored(_that.reason);case Step_Confirm():
 return confirm(_that.field0);case Step_Reply():
-return reply(_that.frames,_that.what);case Step_Done():
+return reply(_that.frames,_that.what,_that.next);case Step_Done():
 return done(_that.message);case Step_EnterBackup():
 return enterBackup();case Step_CheckBackup():
 return checkBackup(_that.keyName);}
@@ -724,12 +724,12 @@ return checkBackup(_that.keyName);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what)?  reply,TResult? Function( String message)?  done,TResult? Function()?  enterBackup,TResult? Function( String keyName)?  checkBackup,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what,  String? next)?  reply,TResult? Function( String message)?  done,TResult? Function()?  enterBackup,TResult? Function( String keyName)?  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
-return reply(_that.frames,_that.what);case Step_Done() when done != null:
+return reply(_that.frames,_that.what,_that.next);case Step_Done() when done != null:
 return done(_that.message);case Step_EnterBackup() when enterBackup != null:
 return enterBackup();case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that.keyName);case _:
@@ -889,7 +889,7 @@ $PromptCopyWith<$Res> get field0 {
 
 
 class Step_Reply extends Step {
-  const Step_Reply({required  List<String> frames, required this.what}): _frames = frames,super._();
+  const Step_Reply({required  List<String> frames, required this.what, this.next}): _frames = frames,super._();
   
 
  final  List<String> _frames;
@@ -900,6 +900,7 @@ class Step_Reply extends Step {
 }
 
  final  String what;
+ final  String? next;
 
 /// Create a copy of Step
 /// with the given fields replaced by the non-null parameter values.
@@ -911,18 +912,18 @@ $Step_ReplyCopyWith<Step_Reply> get copyWith => _$Step_ReplyCopyWithImpl<Step_Re
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Step_Reply&&const DeepCollectionEquality().equals(other.frames, _frames)&&(identical(other.what, what) || other.what == what));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Step_Reply&&const DeepCollectionEquality().equals(other.frames, _frames)&&(identical(other.what, what) || other.what == what)&&(identical(other.next, next) || other.next == next));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_frames),what);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_frames),what,next);
 }
 
 @override
 String toString() {
-    return 'Step.reply(frames: $frames, what: $what)';
+    return 'Step.reply(frames: $frames, what: $what, next: $next)';
 }
 
 
@@ -933,7 +934,7 @@ abstract mixin class $Step_ReplyCopyWith<$Res> implements $StepCopyWith<$Res> {
   factory $Step_ReplyCopyWith(Step_Reply value, $Res Function(Step_Reply) _then) = _$Step_ReplyCopyWithImpl;
 @useResult
 $Res call({
- List<String> frames, String what
+ List<String> frames, String what, String? next
 });
 
 
@@ -950,11 +951,12 @@ class _$Step_ReplyCopyWithImpl<$Res>
 
 /// Create a copy of Step
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? frames = null,Object? what = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? frames = null,Object? what = null,Object? next = freezed,}) {
   return _then(Step_Reply(
 frames: null == frames ? _self._frames : frames // ignore: cast_nullable_to_non_nullable
 as List<String>,what: null == what ? _self.what : what // ignore: cast_nullable_to_non_nullable
-as String,
+as String,next: freezed == next ? _self.next : next // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

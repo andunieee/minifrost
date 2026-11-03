@@ -171,8 +171,13 @@ pub enum Step {
     Ignored { reason: String },
     /// Ask the user, then call `approve` or `reject`.
     Confirm(Prompt),
-    /// Show these frames as a looping QR code for the coordinator to scan.
-    Reply { frames: Vec<String>, what: String },
+    /// Show these frames as a looping QR code for the coordinator to scan. `next` is the title of
+    /// the coordinator's following code, when this signer takes part in that step too.
+    Reply {
+        frames: Vec<String>,
+        what: String,
+        next: Option<String>,
+    },
     /// Finished locally; nothing to show the coordinator.
     Done { message: String },
     /// The coordinator wants the user to type in a physical backup (key number + 25 words).
@@ -622,6 +627,10 @@ impl Signer {
             what: self.step.map_or("Reply".to_string(), |s| {
                 minifrost_wire::reply_label(s.title())
             }),
+            next: self
+                .step
+                .and_then(|s| s.next())
+                .map(|s| s.title().to_string()),
         }
     }
 
