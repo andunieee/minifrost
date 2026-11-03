@@ -73,11 +73,12 @@ class _CeremonyPageState extends State<CeremonyPage> {
     }
   }
 
-  /// A step with no signer reply (a displayed or saved backup): the user confirms it here.
+  /// A step with no signer reply (approved check codes, a displayed, checked or saved backup): the
+  /// user confirms it here.
   Future<void> _confirm() async {
     setState(() => confirming = true);
     try {
-      final u = await widget.app.confirmBackup();
+      final u = await widget.app.confirm();
       if (!mounted) return;
       setState(() {
         update = u;
@@ -136,7 +137,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(
-            'When the signer has finished, confirm it here. '
+            'When you are done on the signer side, confirm it here. '
             'Only confirm if you really did it: this is the coordinator’s only record.',
           ),
           const SizedBox(height: 16),

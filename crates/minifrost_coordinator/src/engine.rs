@@ -10,14 +10,15 @@ use std::path::{Path, PathBuf};
 
 use bitcoin::Network;
 use frostsnap_core::{
-    AccessStructureRef, DeviceId, KeyId, KeygenId, SignSessionId, SymmetricKey, WireSignTask,
+    AccessStructureRef, DeviceId, KeyId, KeygenId, SessionHash, SignSessionId, SymmetricKey,
+    WireSignTask,
     coordinator::{
         BeginKeygen, CoordinatorSend, CoordinatorToUserKeyGenMessage, CoordinatorToUserMessage,
         CoordinatorToUserSigningMessage, FrostCoordinator, Mutation,
     },
     device::KeyPurpose,
     message::{
-        CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, keygen::DeviceKeygen,
+        CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, KeyGenAck, keygen::DeviceKeygen,
         signing::OpenNonceStreams,
     },
 };
@@ -145,6 +146,8 @@ struct KeygenSession {
     id: KeygenId,
     devices: Vec<DeviceId>,
     round: KeygenRound,
+    /// What every signer must show as its check code, once the certificates are in.
+    session_hash: Option<SessionHash>,
 }
 
 /// The keygen reply the coordinator is waiting for.
@@ -435,6 +438,7 @@ impl Coordinator {
             id: keygen_id,
             devices: devices.clone(),
             round: KeygenRound::Responses,
+            session_hash: None,
         });
         self.replied.clear();
         let mut update = Update {
@@ -545,6 +549,46 @@ impl Coordinator {
         }
     }
 
+    /// Confirm a step whose only missing response is the user's (see [`Update::confirm`]).
+    pub fn confirm(&mut self) -> Res<Update> {
+        match &self.session {
+            Session::Keygen(k) if k.round == KeygenRound::Acks => self.confirm_keygen(),
+            _ => self.confirm_backup(),
+        }
+    }
+
+    /// The user approved the check code on every signer, and each stored its share right then.
+    /// A signer's ack says only that (the keygen id and the session hash, unsigned), so the
+    /// coordinator feeds frostsnap the acks itself instead of scanning one QR per signer.
+    fn confirm_keygen(&mut self) -> Res<Update> {
+        let Session::Keygen(k) = &self.session else {
+            unreachable!("checked by the caller")
+        };
+        let keygen_id = k.id;
+        let ack_session_hash = k.session_hash.ok_or("No check code was shown yet.")?;
+        let devices: Vec<DeviceId> = k
+            .devices
+            .iter()
+            .filter(|d| !self.replied.contains(d))
+            .copied()
+            .collect();
+        let mut update = Update::default();
+        for device in devices {
+            update = self.handle_device_message(
+                device,
+                DeviceToCoordinatorMessage::KeyGen(DeviceKeygen::Ack(KeyGenAck {
+                    keygen_id,
+                    ack_session_hash,
+                })),
+            )?;
+        }
+        update.snapshot_saved = {
+            self.save()?;
+            self.dir.is_some()
+        };
+        Ok(update)
+    }
+
     /// A reassembled QR payload from a signer.
     pub fn receive(&mut self, payload: &[u8]) -> Res<Update> {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
@@ -648,14 +692,15 @@ impl Coordinator {
         let mut to_devices = vec![];
         let mut signed = None;
         let mut finalize = None;
+        let mut session_hash = None;
         for send in sends {
             match send {
                 CoordinatorSend::ToDevice { .. } => to_devices.push(send),
                 CoordinatorSend::ToUser(u) => match u {
                     CoordinatorToUserMessage::KeyGen { keygen_id, inner } => match inner {
-                        CoordinatorToUserKeyGenMessage::CheckKeyGen { session_hash } => {
-                            update.check_code =
-                                Some(minifrost_wire::format_check_code(&session_hash.0));
+                        CoordinatorToUserKeyGenMessage::CheckKeyGen { session_hash: hash } => {
+                            update.check_code = Some(minifrost_wire::format_check_code(&hash.0));
+                            session_hash = Some(hash);
                         }
                         CoordinatorToUserKeyGenMessage::KeyGenAck {
                             all_acks_received: true,
@@ -707,16 +752,21 @@ impl Coordinator {
                 } else {
                     KeygenRound::Certificates
                 };
+                k.session_hash = session_hash;
             }
             if !matches!(self.session, Session::Idle) {
                 self.replied.clear();
                 update.message = match &self.session {
                     Session::Keygen(_) if update.check_code.is_some() => {
-                        "Every signer must show the same check code as below. If so, approve on each signer.".into()
+                        "Every signer must show the same check code as below. If so, approve on each signer, then confirm here.".into()
                     }
                     Session::Keygen(_) => "Show this to all signers; each answers automatically.".into(),
                     _ => "Show this to the signers. Each verifies the transaction and shows a partial signature.".into(),
                 };
+                if update.check_code.is_some() {
+                    update.confirm =
+                        Some("Every signer shows this code and I approved on each".into());
+                }
             }
         }
 

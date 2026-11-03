@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -985397906;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -675699089;
 
 // Section: executor
 
@@ -425,7 +425,7 @@ fn wire__crate__api__CoordinatorApp_cancel_session_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_confirm_backup_impl(
+fn wire__crate__api__CoordinatorApp_confirm_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -433,7 +433,7 @@ fn wire__crate__api__CoordinatorApp_confirm_backup_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_confirm_backup",
+            debug_name: "CoordinatorApp_confirm",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -467,7 +467,7 @@ fn wire__crate__api__CoordinatorApp_confirm_backup_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::confirm_backup(&*api_that_guard)?;
+                    let output_ok = crate::api::CoordinatorApp::confirm(&*api_that_guard)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -2918,9 +2918,7 @@ fn pde_ffi_dispatcher_primary_impl(
         7 => {
             wire__crate__api__CoordinatorApp_cancel_session_impl(port, ptr, rust_vec_len, data_len)
         }
-        8 => {
-            wire__crate__api__CoordinatorApp_confirm_backup_impl(port, ptr, rust_vec_len, data_len)
-        }
+        8 => wire__crate__api__CoordinatorApp_confirm_impl(port, ptr, rust_vec_len, data_len),
         9 => wire__crate__api__CoordinatorApp_delete_restoration_share_impl(
             port,
             ptr,

@@ -67,7 +67,6 @@ fn keygen_and_sign_over_qr_only() {
     // round 3: check codes
     let coord_code = up.check_code.clone().expect("coordinator shows check code");
     let b3 = frames_of(&up);
-    let mut acks = vec![];
     for s in signers.iter_mut() {
         match signer_step(s, &b3) {
             Step::Confirm(Prompt::VerifyKeygen { check_code, .. }) => {
@@ -75,13 +74,13 @@ fn keygen_and_sign_over_qr_only() {
             }
             other => panic!("{other:?}"),
         }
-        acks.push(approve_persisting(s));
-        // the share is stored on approval, before the coordinator has seen any ack
+        let r = s.approve().unwrap();
+        assert!(matches!(r.step, Step::Done { .. }), "no ack code to scan");
+        assert!(r.snapshot.is_some(), "the share must be persisted");
         assert_eq!(s.keys().len(), 1);
     }
-    for a in &acks {
-        up = coord.receive(&scan(a)).unwrap();
-    }
+    // the user approved on every signer: confirm on the coordinator instead of scanning acks
+    let up = coord.confirm().unwrap();
     let Some(Finished::KeyCreated { key_id, .. }) = up.finished.clone() else {
         panic!("{up:?}")
     };

@@ -126,25 +126,20 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
     }
     assert!(coord.receive(&scan(&replies[0])).unwrap().repeat);
     let b3 = frames_of(&up);
-    let acks: Vec<_> = signers
-        .iter_mut()
-        .map(|s| {
-            assert!(matches!(
-                signer_step(s, &b3),
-                Step::Confirm(Prompt::VerifyKeygen { .. })
-            ));
-            let r = s.approve().unwrap();
-            assert!(
-                r.snapshot.is_some(),
-                "approving the check code stores the share"
-            );
-            reply_to(r.step, &up)
-        })
-        .collect();
-    for a in &acks {
-        up = coord.receive(&scan(a)).unwrap();
+    assert!(up.confirm.is_some(), "the check code round ends with a button");
+    for s in signers.iter_mut() {
+        assert!(matches!(
+            signer_step(s, &b3),
+            Step::Confirm(Prompt::VerifyKeygen { .. })
+        ));
+        let r = s.approve().unwrap();
+        assert!(matches!(r.step, Step::Done { .. }), "no ack code to scan");
+        assert!(
+            r.snapshot.is_some(),
+            "approving the check code stores the share"
+        );
     }
-    up
+    coord.confirm().unwrap()
 }
 
 /// Enrol fresh signers named `names`, create a `threshold`-of-n signet wallet over QR, store the

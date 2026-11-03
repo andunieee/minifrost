@@ -37,11 +37,14 @@ whole payload is checked against its SHA-256 prefix. Coordinator → signers is 
 1. Coordinator broadcasts `Begin`; each signer user approves → signer shows its keygen contribution.
 2. Coordinator scans all, broadcasts `CertifyPlease`; signers answer automatically with a certificate.
 3. Coordinator scans all, broadcasts `Check`; **every signer and the coordinator show the same check
-   code** — humans compare — each signer approves → stores its share right away and shows an ack.
-4. Coordinator scans all acks and stores the key. There is no last code back to the signers:
-   frostsnap's `Finalize` carries only the keygen id, so each signer applies it to itself on approval.
-   If the ceremony is abandoned after some signers approved, they keep a share of a wallet that was
-   never created.
+   code** — humans compare — each signer approves → stores its share right away.
+4. The user confirms on the coordinator that every signer approved, and the coordinator stores the
+   key. No QR goes either way for this: frostsnap's `KeyGenAck` (signer → coordinator) carries only
+   the keygen id and the session hash, and `Finalize` (coordinator → signer) only the keygen id, so
+   each side builds the other's message itself. If the ceremony is abandoned after some signers
+   approved, they keep a share of a wallet that was never created; if the user confirms without
+   approving on some signer, that signer holds no share (its backup can't be shown, which the
+   backup step right after key creation reveals).
 
 **Signing** (taproot key-path spend of a tweaked FROST key)
 1. Coordinator broadcasts `SignPrepare`: the unsigned transaction and a nonce request. Each chosen

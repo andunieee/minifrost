@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -985397906;
+  int get rustContentHash => -675699089;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -123,9 +123,7 @@ abstract class RustLibApi extends BaseApi {
     required CoordinatorApp that,
   });
 
-  Future<Update> crateApiCoordinatorAppConfirmBackup({
-    required CoordinatorApp that,
-  });
+  Future<Update> crateApiCoordinatorAppConfirm({required CoordinatorApp that});
 
   Future<void> crateApiCoordinatorAppDeleteRestorationShare({
     required CoordinatorApp that,
@@ -595,9 +593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<Update> crateApiCoordinatorAppConfirmBackup({
-    required CoordinatorApp that,
-  }) {
+  Future<Update> crateApiCoordinatorAppConfirm({required CoordinatorApp that}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -617,16 +613,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_update,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiCoordinatorAppConfirmBackupConstMeta,
+        constMeta: kCrateApiCoordinatorAppConfirmConstMeta,
         argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiCoordinatorAppConfirmBackupConstMeta =>
+  TaskConstMeta get kCrateApiCoordinatorAppConfirmConstMeta =>
       const TaskConstMeta(
-        debugName: "CoordinatorApp_confirm_backup",
+        debugName: "CoordinatorApp_confirm",
         argNames: ["that"],
       );
 
@@ -3882,10 +3878,11 @@ class CoordinatorAppImpl extends RustOpaque implements CoordinatorApp {
   Future<void> cancelSession() =>
       RustLib.instance.api.crateApiCoordinatorAppCancelSession(that: this);
 
-  /// Confirm a step whose only missing response is the user's: writing a backup down, or
-  /// watching the signer save a typed-in backup. The next step arrives in `Update.finished`.
-  Future<Update> confirmBackup() =>
-      RustLib.instance.api.crateApiCoordinatorAppConfirmBackup(that: this);
+  /// Confirm a step whose only missing response is the user's: approving the check code on
+  /// every signer, writing a backup down, passing a backup check, or watching the signer save a
+  /// typed-in backup. The next step arrives in `Update.finished`.
+  Future<Update> confirm() =>
+      RustLib.instance.api.crateApiCoordinatorAppConfirm(that: this);
 
   Future<void> deleteRestorationShare({
     required String restorationId,

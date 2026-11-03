@@ -141,8 +141,8 @@ pub enum Prompt {
         n_signers: u16,
         network: String,
     },
-    /// All signers must show the same code. Compare them before approving: approving also stores
-    /// this signer's share, without waiting for a last code from the coordinator.
+    /// All signers must show the same code. Compare them before approving: approving stores this
+    /// signer's share. No reply code is shown; the user confirms on the coordinator instead.
     VerifyKeygen {
         key_name: String,
         threshold: u16,
@@ -693,11 +693,13 @@ impl Signer {
                     .inner
                     .keygen_ack(*phase, &mut self.derivation, &mut OsRng)
                     .map_err(|e| e.to_string())?;
-                // frostsnap waits for the coordinator's `Finalize` before saving the share. It
-                // carries only the keygen id and proves nothing, so save right away instead of
-                // asking the user to scan one more code (and losing the share if the app is
-                // closed before then).
-                self.inner
+                // frostsnap waits for the coordinator's `Finalize` before saving the share, and
+                // the coordinator for every signer's ack before creating the wallet. Neither
+                // message carries more than the keygen id and the session hash the user just
+                // compared, so the signer saves right away and the user confirms on the
+                // coordinator instead of scanning a code each way.
+                let sends = self
+                    .inner
                     .recv_coordinator_message(
                         CoordinatorToDeviceMessage::KeyGen(Keygen::Finalize {
                             keygen_id: ack.keygen_id,
@@ -705,12 +707,21 @@ impl Signer {
                         &mut OsRng,
                     )
                     .map_err(|e| e.to_string())?;
-                self.reply(
-                    me,
-                    DeviceToCoordinatorMessage::KeyGen(
-                        frostsnap_core::message::keygen::DeviceKeygen::Ack(ack),
+                let key_name = sends
+                    .into_iter()
+                    .find_map(|s| match s {
+                        DeviceSend::ToUser(u) => match *u {
+                            DeviceToUserMessage::FinalizeKeyGen { key_name } => Some(key_name),
+                            _ => None,
+                        },
+                        _ => None,
+                    })
+                    .ok_or("The share was not stored.")?;
+                Step::Done {
+                    message: format!(
+                        "Your share of “{key_name}” is stored on this signer. Once every signer shows this, confirm on the coordinator."
                     ),
-                )
+                }
             }
             Pending::Nonces(msg, txid, key_id) => {
                 let sends = self
