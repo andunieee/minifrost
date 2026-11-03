@@ -39,7 +39,7 @@ sealed class Finished with _$Finished {
   const factory Finished.signed({required String txid, required String txHex}) =
       Finished_Signed;
 
-  /// A signer displayed its backup and the user confirmed writing it down.
+  /// A backup was displayed and the user confirmed writing it down.
   const factory Finished.backupRecorded({
     required String keyName,
     required int shareIndex,

@@ -12,7 +12,7 @@
 //! All of it is `frostsnap_core`; this file only decides which QR goes out next and what the
 //! screens may show. Each action here is a short session in the same shape as keygen and signing:
 //! a broadcast QR for the signers, then a reply to scan — except for the purely user-confirmed
-//! steps (showing a backup, saving a typed-in backup), which use a button instead.
+//! steps (showing a backup, checking it, saving a typed-in backup), which use a button instead.
 
 use bitcoin::Network;
 use frostsnap_core::{
@@ -160,12 +160,6 @@ impl BackupSession {
     }
 }
 
-/// A reply from a signer that belongs to a backup session.
-pub(super) enum Incoming {
-    Core(DeviceToCoordinatorMessage),
-    Checked(AccessStructureRef, ShareIndex),
-}
-
 fn index_u32(i: ShareIndex) -> u32 {
     i.try_into().expect("share index fits in a u32")
 }
@@ -294,8 +288,9 @@ impl Coordinator {
         Ok(update)
     }
 
-    /// Confirm the current no-reply step: the user wrote a displayed backup down, or saw the
-    /// signer save a typed-in backup. Both are recorded here instead of with a scanned reply.
+    /// Confirm the current no-reply step: the user wrote a displayed backup down, passed the
+    /// signer's backup check, or saw the signer save a typed-in backup. All are recorded here
+    /// instead of with a scanned reply.
     pub fn confirm_backup(&mut self) -> Res<Update> {
         let displayed = match &self.session {
             Session::Backup(BackupSession::Display {
@@ -307,6 +302,26 @@ impl Coordinator {
         };
         if let Some((device, aref, share_index)) = displayed {
             return self.finish_displayed_backup(device, aref, share_index);
+        }
+        let checked = match &self.session {
+            Session::Backup(BackupSession::Check {
+                device,
+                access_structure_ref,
+                share_index,
+            }) => Some((*device, *access_structure_ref, *share_index)),
+            _ => None,
+        };
+        if let Some((device, aref, share_index)) = checked {
+            self.session = Session::Idle;
+            self.replied.clear();
+            return Ok(Update {
+                message: format!("{} passed the backup check.", self.name_of(&device)),
+                finished: Some(Finished::BackupChecked {
+                    key_name: self.key_name(aref.key_id),
+                    share_index: index_u32(share_index),
+                }),
+                ..Default::default()
+            });
         }
         let saved = match &self.session {
             Session::Backup(BackupSession::Enter {
@@ -407,7 +422,7 @@ impl Coordinator {
             .inner
             .request_device_check_backup(device, aref, self.encryption_key)
             .map_err(|e| e.to_string())?;
-        self.start_backup_session(
+        let mut update = self.start_backup_session(
             BackupSession::Check {
                 device,
                 access_structure_ref: aref,
@@ -415,8 +430,10 @@ impl Coordinator {
             },
             sends,
             WireStep::CheckBackup,
-            "Show this to the signer, then answer its quiz using your paper backup.",
-        )
+            "Show this to the signer, then answer its quiz using your paper backup. When the signer says the check is complete, confirm here.",
+        )?;
+        update.confirm = Some("The signer said the check is complete".into());
+        Ok(update)
     }
 
     fn share_index_of(&self, aref: AccessStructureRef, device: DeviceId) -> Res<ShareIndex> {
@@ -698,66 +715,46 @@ impl Coordinator {
         }
     }
 
-    pub(super) fn receive_backup(&mut self, from: DeviceId, incoming: Incoming) -> Res<Update> {
+    pub(super) fn receive_backup(
+        &mut self,
+        from: DeviceId,
+        message: DeviceToCoordinatorMessage,
+    ) -> Res<Update> {
         let Session::Backup(session) = &self.session else {
             unreachable!("checked by the caller")
         };
         let session = session.clone();
         let name = self.name_of(&from);
-        if let BackupSession::Enter {
-            stage: EnterStage::Saving { .. },
-            ..
-        } = &session
-        {
+        if matches!(
+            session,
+            BackupSession::Check { .. }
+                | BackupSession::Enter {
+                    stage: EnterStage::Saving { .. },
+                    ..
+                }
+        ) {
             return Err(
                 "Nothing to scan for this step: confirm it on this screen once the signer is done."
                     .into(),
             );
         }
-        let update = match (session, incoming) {
-            (
-                BackupSession::Check {
-                    access_structure_ref,
-                    share_index,
-                    ..
-                },
-                Incoming::Checked(aref, index),
-            ) => {
-                if aref != access_structure_ref || index != share_index {
-                    return Err("That reply is for a different backup.".into());
-                }
-                self.session = Session::Idle;
-                Update {
-                    message: format!("{name} passed the backup check."),
-                    finished: Some(Finished::BackupChecked {
-                        key_name: self.key_name(aref.key_id),
-                        share_index: index_u32(index),
-                    }),
-                    ..Default::default()
-                }
-            }
-            (
-                BackupSession::Enter {
-                    enter_id,
-                    target,
-                    stage,
-                    device,
-                },
-                Incoming::Core(message),
-            ) => {
+        let update = match session {
+            BackupSession::Enter {
+                enter_id,
+                target,
+                stage,
+                device,
+            } => {
                 let sends = self
                     .inner
                     .recv_device_message(from, message)
                     .map_err(|e| e.to_string())?;
                 self.receive_enter(device, enter_id, target, stage, sends)?
             }
-            (
-                BackupSession::Consolidate {
-                    access_structure_ref,
-                    ..
-                },
-                Incoming::Core(message),
-            ) => {
+            BackupSession::Consolidate {
+                access_structure_ref,
+                ..
+            } => {
                 let sends = self
                     .inner
                     .recv_device_message(from, message)
@@ -781,7 +778,7 @@ impl Coordinator {
                     ..Default::default()
                 }
             }
-            (BackupSession::HeldShares { .. }, Incoming::Core(message)) => {
+            BackupSession::HeldShares { .. } => {
                 let sends = self
                     .inner
                     .recv_device_message(from, message)

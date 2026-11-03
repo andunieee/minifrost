@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use bitcoin::hashes::{Hash, HashEngine, Hmac, HmacEngine, sha256};
 use frost_backup::{ShareBackup, bip39_words};
 use frostsnap_core::{
-    AccessStructureRef, DeviceId, KeyId, Versioned, WireSignTask,
+    DeviceId, KeyId, Versioned, WireSignTask,
     device::{
         DevicePrf, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose, Mutation,
         SignPhase1,
@@ -196,7 +196,8 @@ pub struct QuizAnswer {
     pub correct: bool,
     /// The next question, unless the quiz is over or the answer was wrong.
     pub next: Option<QuizQuestion>,
-    /// Set once the last question was answered correctly: show this to the coordinator.
+    /// Set once the last question was answered correctly. The signer only tells the user; the
+    /// coordinator records the check with its own confirmation button, so no reply code is shown.
     pub done: Option<StepResult>,
 }
 
@@ -232,11 +233,7 @@ enum Pending {
     Sign(Box<SignPhase1>),
     EnterBackup(EnterBackupPhase),
     DisplayBackup,
-    Quiz {
-        quiz: backup_quiz::Quiz,
-        access_structure_ref: AccessStructureRef,
-        share_index: ShareIndex,
-    },
+    Quiz(backup_quiz::Quiz),
 }
 
 pub struct Signer {
@@ -423,11 +420,9 @@ impl Signer {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let me = self.device_id();
         let step = match packet {
-            Packet::Hello { .. } | Packet::FromDevice { .. } | Packet::BackupChecked { .. } => {
-                Step::Ignored {
-                    reason: "This code is meant for a coordinator, not for a signer.".into(),
-                }
-            }
+            Packet::Hello { .. } | Packet::FromDevice { .. } => Step::Ignored {
+                reason: "This code is meant for a coordinator, not for a signer.".into(),
+            },
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
             Packet::ToDevices { step, entries } => {
                 match entries.into_iter().find(|(to, _)| to.contains(&me)) {
@@ -557,18 +552,12 @@ impl Signer {
                 }))
             }
             ToUserRestoration::CheckBackup {
-                key_name,
-                access_structure_ref,
-                phase,
+                key_name, phase, ..
             } => {
                 let backup = phase
                     .decrypt_to_backup(&mut self.derivation)
                     .map_err(|e| format!("could not read this signer's share: {e:?}"))?;
-                self.pending = Some(Pending::Quiz {
-                    quiz: backup_quiz::Quiz::new(&backup, &mut OsRng),
-                    access_structure_ref,
-                    share_index: phase.share_index,
-                });
+                self.pending = Some(Pending::Quiz(backup_quiz::Quiz::new(&backup, &mut OsRng)));
                 Some(Step::CheckBackup { key_name })
             }
         })
@@ -689,7 +678,7 @@ impl Signer {
         let me = self.device_id();
         if matches!(
             self.pending,
-            Some(Pending::EnterBackup(_) | Pending::Quiz { .. })
+            Some(Pending::EnterBackup(_) | Pending::Quiz(_))
         ) {
             return Err("This step is not answered with approve.".into());
         }
@@ -749,7 +738,7 @@ impl Signer {
             Pending::DisplayBackup => Step::Done {
                 message: "Backup written down. You can close this screen.".into(),
             },
-            Pending::EnterBackup(_) | Pending::Quiz { .. } => unreachable!("rejected above"),
+            Pending::EnterBackup(_) | Pending::Quiz(_) => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();
                 let sends = self
@@ -818,7 +807,7 @@ impl Signer {
     /// The question the check-backup quiz is on.
     pub fn quiz_question(&self) -> Res<QuizQuestion> {
         match &self.pending {
-            Some(Pending::Quiz { quiz, .. }) => Ok(quiz_question(quiz)),
+            Some(Pending::Quiz(quiz)) => Ok(quiz_question(quiz)),
             _ => Err("No backup check is running.".into()),
         }
     }
@@ -826,8 +815,7 @@ impl Signer {
     /// Answer the current quiz question with the option the user picked. A wrong answer changes
     /// nothing: the same question stays up.
     pub fn quiz_answer(&mut self, choice: u32) -> Res<QuizAnswer> {
-        let me = self.device_id();
-        let Some(Pending::Quiz { quiz, .. }) = &mut self.pending else {
+        let Some(Pending::Quiz(quiz)) = &mut self.pending else {
             return Err("No backup check is running.".into());
         };
         match quiz.answer(choice as usize, &mut OsRng) {
@@ -842,19 +830,11 @@ impl Signer {
                 done: None,
             }),
             backup_quiz::Answer::Done => {
-                let Some(Pending::Quiz {
-                    access_structure_ref,
-                    share_index,
-                    ..
-                }) = self.pending.take()
-                else {
-                    unreachable!()
+                self.pending = None;
+                let step = Step::Done {
+                    message: "Backup checked: every answer matched. You can close this screen."
+                        .into(),
                 };
-                let step = self.reply_packet(Packet::BackupChecked {
-                    device_id: me,
-                    access_structure_ref,
-                    share_index,
-                });
                 Ok(QuizAnswer {
                     correct: true,
                     next: None,

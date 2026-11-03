@@ -4,13 +4,12 @@
 //! The packets are thin wrappers around frostsnap_core's own device<->coordinator messages.
 
 use frostsnap_core::{
-    AccessStructureRef, DeviceId, KeyId, WireSignTask,
+    DeviceId, KeyId, WireSignTask,
     message::{CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, signing::OpenNonceStreams},
-    schnorr_fun::frost::ShareIndex,
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 4;
+pub const WIRE_VERSION: u8 = 5;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -30,13 +29,6 @@ pub enum Packet {
     FromDevice {
         device_id: DeviceId,
         message: DeviceToCoordinatorMessage,
-    },
-    /// signer -> coordinator: the user passed the backup check quiz for this share
-    /// (`CommsMisc::BackupChecked` in frostsnap).
-    BackupChecked {
-        device_id: DeviceId,
-        access_structure_ref: AccessStructureRef,
-        share_index: ShareIndex,
     },
 }
 

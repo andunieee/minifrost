@@ -118,6 +118,7 @@ fn display_backup_then_pass_the_quiz() {
     let up = coord
         .start_check_backup(&key_id, &signers[0].device_id().to_string())
         .unwrap();
+    assert!(up.confirm.is_some(), "the check is confirmed with a button");
     let Step::CheckBackup { key_name } = signer_step(&mut signers[0], &frames_of(&up)) else {
         panic!()
     };
@@ -157,10 +158,12 @@ fn display_backup_then_pass_the_quiz() {
     let Some(done) = done else {
         panic!("the last answer finishes the quiz")
     };
-    let Step::Reply { frames, .. } = done.step else {
-        panic!()
-    };
-    let up = coord.receive(&scan(&frames)).unwrap();
+    // the signer only says so on its own screen; the user confirms it on the coordinator
+    assert!(
+        matches!(done.step, Step::Done { .. }),
+        "no reply code after the quiz"
+    );
+    let up = coord.confirm_backup().unwrap();
     assert!(
         matches!(up.finished, Some(Finished::BackupChecked { share_index: i, .. }) if i == index)
     );

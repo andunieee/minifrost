@@ -116,7 +116,8 @@ sealed class Prompt with _$Prompt {
       Prompt_SignTransaction;
 
   /// The coordinator asked this signer to show its secret backup. Approving means "I wrote
-  /// every word down"; it tells the coordinator so it can stop nagging about this share.
+  /// every word down"; the coordinator records that with its own confirmation button, so no
+  /// reply code is shown.
   const factory Prompt.displayBackup({
     required String keyName,
     required int threshold,
@@ -133,7 +134,8 @@ class QuizAnswer {
   /// The next question, unless the quiz is over or the answer was wrong.
   final QuizQuestion? next;
 
-  /// Set once the last question was answered correctly: show this to the coordinator.
+  /// Set once the last question was answered correctly. The signer only tells the user; the
+  /// coordinator records the check with its own confirmation button, so no reply code is shown.
   final StepResult? done;
 
   const QuizAnswer({required this.correct, this.next, this.done});

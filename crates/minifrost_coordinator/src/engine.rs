@@ -27,7 +27,7 @@ use rand::{RngCore, rngs::OsRng};
 use crate::wallet::{self, Amt, BuiltSend, HttpEsplora, WalletView};
 
 pub mod restore;
-use restore::{BackupSession, Incoming};
+use restore::BackupSession;
 pub use restore::{
     BackupShare, EnterTarget, HeldShareView, PendingConsolidationView, RestorationShareView,
     RestorationView,
@@ -548,16 +548,8 @@ impl Coordinator {
     /// A reassembled QR payload from a signer.
     pub fn receive(&mut self, payload: &[u8]) -> Res<Update> {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
-        let (from, incoming) = match packet {
-            Packet::FromDevice { device_id, message } => (device_id, Incoming::Core(message)),
-            Packet::BackupChecked {
-                device_id,
-                access_structure_ref,
-                share_index,
-            } => (
-                device_id,
-                Incoming::Checked(access_structure_ref, share_index),
-            ),
+        let (from, message) = match packet {
+            Packet::FromDevice { device_id, message } => (device_id, message),
             Packet::Hello { .. } => return Err("That is an enrolment code, not a reply.".into()),
             _ => return Err("That code is meant for signers.".into()),
         };
@@ -574,7 +566,7 @@ impl Coordinator {
         if matches!(self.session, Session::Backup(_)) {
             // A backup session is a short back and forth with one signer: the same signer
             // answers more than once, so the "already replied" bookkeeping doesn't apply.
-            let mut update = self.receive_backup(from, incoming)?;
+            let mut update = self.receive_backup(from, message)?;
             update.from = Some(SignerInfo {
                 device_id: from.to_string(),
                 name: self.name_of(&from),
@@ -585,9 +577,6 @@ impl Coordinator {
             };
             return Ok(update);
         }
-        let Incoming::Core(message) = incoming else {
-            return Err("That reply does not belong to this session.".into());
-        };
         // frostsnap_core drops the whole pending keygen when it rejects a keygen message, so a
         // signer's reply to an earlier round (its old QR still on screen) must not reach it.
         if let (Session::Keygen(k), DeviceToCoordinatorMessage::KeyGen(m)) =

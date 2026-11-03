@@ -80,7 +80,8 @@ typed into the wrong wallet is caught.
    backed up. No reply QR is needed. "Mark as backed up" does the same by hand from the wallet page.
 2. **Check** (`CheckBackup`): the signer quizzes the user with 26 multiple-choice questions (key
    number, then each word; the wrong options are the closest BIP39 words) answered from the paper.
-   Wrong answers change nothing. Passing → `BackupChecked` QR.
+   Wrong answers change nothing. When all 26 are right the signer says the check is complete and
+   the user presses the coordinator's confirmation button. No reply QR is needed.
 
 **Restoration from physical backups** (new coordinator and/or new phones)
 1. Coordinator creates a restoration (wallet name, network, optional threshold) and broadcasts
