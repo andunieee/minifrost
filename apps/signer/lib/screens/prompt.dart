@@ -40,7 +40,7 @@ class _PromptScreenState extends State<PromptScreen> {
       Prompt_VerifyKeygen(:final keyName, :final threshold, :final nSigners, :final checkCode) => (
           'Compare check code',
           _checkCode(context, keyName, threshold, nSigners, checkCode),
-          'Codes match'
+          'Codes match, store my share'
         ),
       Prompt_ReviewTransaction(:final field0) => (
           'Review transaction',

@@ -141,7 +141,8 @@ pub enum Prompt {
         n_signers: u16,
         network: String,
     },
-    /// All signers must show the same code. Compare them before approving.
+    /// All signers must show the same code. Compare them before approving: approving also stores
+    /// this signer's share, without waiting for a last code from the coordinator.
     VerifyKeygen {
         key_name: String,
         threshold: u16,
@@ -654,13 +655,6 @@ impl Signer {
                         self.pending = Some(Pending::CheckKeygen(phase));
                         step = Some(Step::Confirm(prompt));
                     }
-                    DeviceToUserMessage::FinalizeKeyGen { key_name } => {
-                        step = Some(Step::Done {
-                            message: format!(
-                                "Key “{key_name}” was created and its share stored securely."
-                            ),
-                        });
-                    }
                     DeviceToUserMessage::Restoration(r) => {
                         if let Some(s) = self.handle_restoration(*r)? {
                             step = Some(s);
@@ -698,6 +692,18 @@ impl Signer {
                 let ack = self
                     .inner
                     .keygen_ack(*phase, &mut self.derivation, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
+                // frostsnap waits for the coordinator's `Finalize` before saving the share. It
+                // carries only the keygen id and proves nothing, so save right away instead of
+                // asking the user to scan one more code (and losing the share if the app is
+                // closed before then).
+                self.inner
+                    .recv_coordinator_message(
+                        CoordinatorToDeviceMessage::KeyGen(Keygen::Finalize {
+                            keygen_id: ack.keygen_id,
+                        }),
+                        &mut OsRng,
+                    )
                     .map_err(|e| e.to_string())?;
                 self.reply(
                     me,

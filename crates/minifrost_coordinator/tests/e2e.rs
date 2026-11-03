@@ -75,7 +75,9 @@ fn keygen_and_sign_over_qr_only() {
             }
             other => panic!("{other:?}"),
         }
-        acks.push(approve_to_reply(s));
+        acks.push(approve_persisting(s));
+        // the share is stored on approval, before the coordinator has seen any ack
+        assert_eq!(s.keys().len(), 1);
     }
     for a in &acks {
         up = coord.receive(&scan(a)).unwrap();
@@ -83,14 +85,7 @@ fn keygen_and_sign_over_qr_only() {
     let Some(Finished::KeyCreated { key_id, .. }) = up.finished.clone() else {
         panic!("{up:?}")
     };
-    // final: store
-    let b4 = frames_of(&up);
-    for s in signers.iter_mut() {
-        let r = s.receive(&scan(&b4)).unwrap();
-        assert!(matches!(r.step, Step::Done { .. }));
-        assert!(r.snapshot.is_some(), "the share must be persisted");
-        assert_eq!(s.keys().len(), 1);
-    }
+    assert!(up.broadcast.is_none(), "no last code for the signers");
 
     // --- restart everything from storage ("woken up again")
     let snaps: Vec<Vec<u8>> = signers.iter().map(|s| s.snapshot()).collect();
@@ -218,9 +213,6 @@ fn signer_refuses_swapped_transaction() {
     let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else {
         panic!()
     };
-    for s in signers.iter_mut() {
-        s.receive(&scan(&frames_of(&up))).unwrap();
-    }
     let (master, network) = coord.wallet_params(&key_id).unwrap();
     let mut chain = Chain(BTreeMap::new());
     chain.0.insert(

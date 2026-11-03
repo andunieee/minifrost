@@ -9,7 +9,7 @@ use frostsnap_core::{
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 5;
+pub const WIRE_VERSION: u8 = 6;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -92,7 +92,6 @@ pub enum Step {
     KeygenJoin,
     KeygenCertify,
     KeygenCheck,
-    KeygenFinalize,
     SignReview,
     SignNonces,
     ShowBackup,
@@ -110,7 +109,6 @@ impl Step {
             Step::KeygenJoin => "Round 1 · Join key generation",
             Step::KeygenCertify => "Round 2 · Certify",
             Step::KeygenCheck => "Round 3 · Compare the check code",
-            Step::KeygenFinalize => "Final · Store the key",
             Step::SignReview => "Step 1 · Transaction to review",
             Step::SignNonces => "Step 2 · Aggregated nonces",
             Step::ShowBackup => "Show the secret backup",
@@ -134,7 +132,6 @@ impl Step {
             (Step::KeygenJoin, M::KeyGen(Keygen::Begin(_)))
             | (Step::KeygenCertify, M::KeyGen(Keygen::CertifyPlease { .. }))
             | (Step::KeygenCheck, M::KeyGen(Keygen::Check { .. }))
-            | (Step::KeygenFinalize, M::KeyGen(Keygen::Finalize { .. }))
             | (Step::SignNonces, M::Signing(CoordinatorSigning::RequestSign(_)))
             | (Step::ShowBackup, M::Restoration(R::DisplayBackup { .. }))
             | (Step::CheckBackup, M::Restoration(R::CheckBackup { .. }))

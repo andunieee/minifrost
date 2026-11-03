@@ -170,9 +170,8 @@ class _CeremonyPageState extends State<CeremonyPage> {
           final narrow = box.maxWidth < 900;
           final qrSize = narrow ? (box.maxWidth - 80).clamp(200.0, 380.0) : 380.0;
           final shown = <Widget>[
-              // a finished signing or backup session has nothing left to show to the signers;
-              // key creation still shows its last code so every signer can store its share
-              if (broadcast != null && (f == null || f is Finished_KeyCreated)) ...[
+              // a finished session has nothing left to show to the signers
+              if (broadcast != null && f == null) ...[
                 Text(broadcast!.title, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 4),
                 Text(message),
@@ -207,7 +206,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
                   child: ListTile(
                     leading: const Icon(Icons.check_circle, color: Colors.green),
                     title: Text('Wallet “${f.name}” created'),
-                    subtitle: const Text('Show the code above so every signer stores its share. Then back up every signer from the wallet page: until a backup is written down, losing a signer can lose the wallet.'),
+                    subtitle: const Text('Every signer stored its share when it approved the check code. Now back up every signer from the wallet page: until a backup is written down, losing a signer can lose the wallet.'),
                   ),
                 ),
                 FilledButton(onPressed: () => Navigator.pop(context, f), child: const Text('Done')),

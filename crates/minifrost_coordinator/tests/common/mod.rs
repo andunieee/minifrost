@@ -133,7 +133,12 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
                 signer_step(s, &b3),
                 Step::Confirm(Prompt::VerifyKeygen { .. })
             ));
-            reply_to(s.approve().unwrap().step, &up)
+            let r = s.approve().unwrap();
+            assert!(
+                r.snapshot.is_some(),
+                "approving the check code stores the share"
+            );
+            reply_to(r.step, &up)
         })
         .collect();
     for a in &acks {
@@ -164,11 +169,8 @@ pub fn create_wallet(
     let Some(Finished::KeyCreated { key_id, .. }) = up.finished.take() else {
         panic!("{up:?}")
     };
-    for s in signers.iter_mut() {
-        let r = s.receive(&scan(&frames_of(&up))).unwrap();
-        assert!(matches!(r.step, Step::Done { .. }));
-        assert!(r.snapshot.is_some());
-    }
+    assert!(up.broadcast.is_none(), "no last code for the signers");
+    assert!(signers.iter().all(|s| s.keys().len() == 1));
     (signers, key_id)
 }
 

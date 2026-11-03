@@ -99,7 +99,8 @@ sealed class Prompt with _$Prompt {
     required String network,
   }) = Prompt_JoinKeygen;
 
-  /// All signers must show the same code. Compare them before approving.
+  /// All signers must show the same code. Compare them before approving: approving also stores
+  /// this signer's share, without waiting for a last code from the coordinator.
   const factory Prompt.verifyKeygen({
     required String keyName,
     required int threshold,

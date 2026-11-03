@@ -685,21 +685,17 @@ impl Coordinator {
                 .get_frost_key(key_id)
                 .map(|k| k.key_name.clone())
                 .unwrap_or_default();
-            to_devices.extend(fin);
             self.session = Session::Idle;
             self.replied.clear();
             update.finished = Some(Finished::KeyCreated {
                 key_id: key_id.to_string(),
                 name: name.clone(),
             });
-            update.message = format!(
-                "Key “{name}” created. Show the last code so every signer stores its share."
-            );
+            update.message = format!("Key “{name}” created.");
         }
 
         if !to_devices.is_empty() {
             let step = match (&self.session, update.finished.is_some()) {
-                (_, true) => WireStep::KeygenFinalize,
                 (Session::Keygen(_), _) if update.check_code.is_some() => WireStep::KeygenCheck,
                 (Session::Keygen(_), _) => WireStep::KeygenCertify,
                 _ => WireStep::SignNonces,
