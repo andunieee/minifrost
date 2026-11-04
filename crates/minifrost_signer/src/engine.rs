@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use bitcoin::hashes::{Hash, HashEngine, Hmac, HmacEngine, sha256};
 use frost_backup::{ShareBackup, bip39_words};
 use frostsnap_core::{
-    DeviceId, KeyId, Versioned, WireSignTask,
+    AccessStructureRef, DeviceId, KeyId, Versioned, WireSignTask,
     device::{
         DevicePrf, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose, Mutation,
         SignPhase1,
@@ -15,8 +15,8 @@ use frostsnap_core::{
     },
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
     message::{
-        CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend, DeviceToCoordinatorMessage,
-        keygen::Keygen, signing::CoordinatorSigning,
+        CoordinatorRestoration, CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend,
+        DeviceToCoordinatorMessage, keygen::Keygen, signing::CoordinatorSigning,
     },
     schnorr_fun::frost::ShareIndex,
     schnorr_fun::fun::{KeyPair, Scalar, marker::*},
@@ -32,7 +32,8 @@ mod backup_quiz;
 const NONCE_SLOTS: usize = 4;
 /// 2: share-encryption keys and nonce seeds switched to frostsnap's derivation (which needs the
 /// coordinator to decrypt a share); a version 1 vault's shares can't be read any more.
-const SNAPSHOT_VERSION: u8 = 2;
+/// 3: shares can be moved to the device key store (`keystore`, `new_shares_on_keystore`).
+const SNAPSHOT_VERSION: u8 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // Persistent nonce slots
@@ -99,10 +100,32 @@ impl DevicePrf for Derivation {
 struct Snapshot {
     device_secret: [u8; 32],
     name: String,
+    /// Every mutation, except the `SaveShare`s of shares on the device key store.
     history: Vec<Mutation>,
     nonce_slots: Vec<Option<Versioned<SecretNonceSlot>>>,
     /// transactions the user approved in round 1 and has not signed yet: (key id, txid)
     reviewed: Vec<([u8; 32], [u8; 32])>,
+    /// Shares on the device key store: (key id, what the key store sealed from
+    /// [`Signer::share_for_keystore`]).
+    keystore: Vec<([u8; 32], Vec<u8>)>,
+    new_shares_on_keystore: bool,
+}
+
+#[derive(bincode::Decode)]
+struct SnapshotV2 {
+    device_secret: [u8; 32],
+    name: String,
+    history: Vec<Mutation>,
+    nonce_slots: Vec<Option<Versioned<SecretNonceSlot>>>,
+    reviewed: Vec<([u8; 32], [u8; 32])>,
+}
+
+/// What [`Signer::share_for_keystore`] hands the key store to seal: the key and its `SaveShare`
+/// mutations.
+#[derive(bincode::Encode, bincode::Decode)]
+struct KeystoreShare {
+    key_id: [u8; 32],
+    mutations: Vec<Mutation>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -180,6 +203,9 @@ pub enum Step {
     },
     /// Finished locally; nothing to show the coordinator.
     Done { message: String },
+    /// The message needs this key's share, which is on the device key store and not opened yet.
+    /// Open it with `keystore_share` / `open_keystore_share`, then feed the same payload again.
+    UnlockShare { key_id: String, key_name: String },
     /// The coordinator wants the user to type in a physical backup (key number + 25 words).
     /// Answer with `submit_backup`, or call `reject` to give up.
     EnterBackup,
@@ -222,6 +248,8 @@ pub struct StepResult {
     /// If `Some`, the signer's persistent state changed. The caller MUST durably store these bytes
     /// before showing `step`: after signing, they contain the burned nonce.
     pub snapshot: Option<Vec<u8>>,
+    /// The key whose share was just stored, on disk, by this step.
+    pub new_share: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -230,6 +258,8 @@ pub struct KeyInfo {
     pub name: String,
     pub threshold: u16,
     pub network: String,
+    /// The share is on the device key store rather than on disk.
+    pub on_keystore: bool,
 }
 
 enum Pending {
@@ -251,18 +281,28 @@ pub struct Signer {
     pending: Option<Pending>,
     /// transactions the user reviewed in round 1, by key
     reviewed: BTreeMap<KeyId, bitcoin::Txid>,
+    /// Shares on the device key store, sealed. Their `SaveShare` mutations are not in `history`.
+    keystore: BTreeMap<KeyId, Vec<u8>>,
+    /// The `SaveShare` mutations of key store shares opened this session, applied to `inner`.
+    opened: BTreeMap<KeyId, Vec<Mutation>>,
+    new_shares_on_keystore: bool,
+    /// Set when a step stored a new share, for `StepResult::new_share`.
+    new_share: Option<KeyId>,
     dirty: bool,
     /// The coordinator step being answered; replies are labelled with its title.
     step: Option<minifrost_wire::Step>,
 }
 
-fn build(
-    device_secret: [u8; 32],
-    name: String,
-    history: Vec<Mutation>,
-    slot_values: Vec<Option<Versioned<SecretNonceSlot>>>,
-    reviewed: Vec<([u8; 32], [u8; 32])>,
-) -> Signer {
+fn build(snap: Snapshot) -> Signer {
+    let Snapshot {
+        device_secret,
+        name,
+        history,
+        nonce_slots: slot_values,
+        reviewed,
+        keystore,
+        new_shares_on_keystore,
+    } = snap;
     let slots: Vec<SharedSlot> = (0..NONCE_SLOTS)
         .map(|i| SharedSlot(Arc::new(Mutex::new(slot_values.get(i).cloned().flatten()))))
         .collect();
@@ -283,8 +323,18 @@ fn build(
             .into_iter()
             .map(|(k, t)| (KeyId(k), bitcoin::Txid::from_byte_array(t)))
             .collect(),
+        keystore: keystore.into_iter().map(|(k, s)| (KeyId(k), s)).collect(),
+        opened: BTreeMap::new(),
+        new_shares_on_keystore,
+        new_share: None,
         dirty: false,
     }
+}
+
+/// Whether `m` stores a share of `key_id`.
+fn is_share_of(m: &Mutation, key_id: KeyId) -> bool {
+    use frostsnap_core::device::keys::KeyMutation::SaveShare;
+    matches!(m, Mutation::Keygen(SaveShare(s)) if s.access_structure_ref.key_id == key_id)
 }
 
 type Res<T> = Result<T, String>;
@@ -295,7 +345,15 @@ impl Signer {
         use rand::RngCore;
         let mut secret = [0u8; 32];
         OsRng.fill_bytes(&mut secret);
-        let mut s = build(secret, name, vec![], vec![], vec![]);
+        let mut s = build(Snapshot {
+            device_secret: secret,
+            name,
+            history: vec![],
+            nonce_slots: vec![],
+            reviewed: vec![],
+            keystore: vec![],
+            new_shares_on_keystore: false,
+        });
         s.dirty = true;
         s
     }
@@ -309,19 +367,30 @@ impl Signer {
                     .into(),
             );
         }
-        if version != SNAPSHOT_VERSION {
-            return Err(format!("unknown snapshot version {version}"));
-        }
-        let (snap, _): (Snapshot, _) =
-            bincode::decode_from_slice(rest, bincode::config::standard())
-                .map_err(|e| format!("corrupt snapshot: {e}"))?;
-        Ok(build(
-            snap.device_secret,
-            snap.name,
-            snap.history,
-            snap.nonce_slots,
-            snap.reviewed,
-        ))
+        let corrupt = |e: bincode::error::DecodeError| format!("corrupt snapshot: {e}");
+        let snap = match version {
+            2 => {
+                let (v2, _): (SnapshotV2, _) =
+                    bincode::decode_from_slice(rest, bincode::config::standard())
+                        .map_err(corrupt)?;
+                Snapshot {
+                    device_secret: v2.device_secret,
+                    name: v2.name,
+                    history: v2.history,
+                    nonce_slots: v2.nonce_slots,
+                    reviewed: v2.reviewed,
+                    keystore: vec![],
+                    new_shares_on_keystore: false,
+                }
+            }
+            SNAPSHOT_VERSION => {
+                bincode::decode_from_slice(rest, bincode::config::standard())
+                    .map_err(corrupt)?
+                    .0
+            }
+            _ => return Err(format!("unknown snapshot version {version}")),
+        };
+        Ok(build(snap))
     }
 
     pub fn snapshot(&self) -> Vec<u8> {
@@ -339,6 +408,12 @@ impl Signer {
                 .iter()
                 .map(|(k, t)| (k.0, t.to_byte_array()))
                 .collect(),
+            keystore: self
+                .keystore
+                .iter()
+                .map(|(k, s)| (k.0, s.clone()))
+                .collect(),
+            new_shares_on_keystore: self.new_shares_on_keystore,
         };
         let mut out = vec![SNAPSHOT_VERSION];
         out.extend(bincode::encode_to_vec(&snap, bincode::config::standard()).expect("encodes"));
@@ -381,6 +456,7 @@ impl Signer {
                                 name: key_name.clone(),
                                 threshold: 0,
                                 network: network_name(purpose),
+                                on_keystore: self.keystore.contains_key(key_id),
                             },
                         );
                     }
@@ -405,6 +481,12 @@ impl Signer {
         let staged: Vec<Mutation> = self.inner.staged_mutations().drain(..).collect();
         if !staged.is_empty() {
             self.dirty = true;
+            use frostsnap_core::device::keys::KeyMutation::SaveShare;
+            for m in &staged {
+                if let Mutation::Keygen(SaveShare(s)) = m {
+                    self.new_share = Some(s.access_structure_ref.key_id);
+                }
+            }
             self.history.extend(staged);
         }
         std::mem::take(&mut self.dirty).then(|| self.snapshot())
@@ -415,6 +497,7 @@ impl Signer {
         // forces a snapshot.
         StepResult {
             snapshot: self.take_snapshot(),
+            new_share: self.new_share.take().map(|k| k.to_string()),
             step,
         }
     }
@@ -437,8 +520,16 @@ impl Signer {
                     },
                     Some((_, msg)) => {
                         step.check(&msg)?;
-                        self.step = Some(step);
-                        self.receive_message(msg)?
+                        match self.locked_share_needed(&msg) {
+                            Some(key_id) => Step::UnlockShare {
+                                key_name: self.key_name(key_id),
+                                key_id: key_id.to_string(),
+                            },
+                            None => {
+                                self.step = Some(step);
+                                self.receive_message(msg)?
+                            }
+                        }
                     }
                 }
             }
@@ -883,6 +974,142 @@ impl Signer {
                 })
             })
             .collect()
+    }
+
+    // ---- device key store
+    //
+    // The app seals and opens; the signer only decides what goes in and keeps the sealed bytes.
+    // A share on the key store has its `SaveShare` mutations in `keystore` (sealed) instead of in
+    // `history`, so the snapshot on disk holds no ciphertext of it. It is applied to `inner` only
+    // once opened.
+
+    fn find_key(&self, key_id: &str) -> Res<KeyId> {
+        use frostsnap_core::device::keys::KeyMutation::NewKey;
+        self.history
+            .iter()
+            .find_map(|m| match m {
+                Mutation::Keygen(NewKey { key_id: k, .. }) if k.to_string() == key_id => Some(*k),
+                _ => None,
+            })
+            .ok_or_else(|| "This signer does not hold that key.".to_string())
+    }
+
+    fn key_name(&self, key_id: KeyId) -> String {
+        self.keys()
+            .into_iter()
+            .find(|k| k.key_id == key_id.to_string())
+            .map_or_else(|| key_id.to_string(), |k| k.name)
+    }
+
+    /// The key store share `msg` needs, when it is not opened yet.
+    fn locked_share_needed(&self, msg: &CoordinatorToDeviceMessage) -> Option<KeyId> {
+        let key_id = match msg {
+            CoordinatorToDeviceMessage::Signing(CoordinatorSigning::RequestSign(req)) => {
+                KeyId::from_rootkey(req.device_sign_req.rootkey)
+            }
+            CoordinatorToDeviceMessage::Restoration(
+                CoordinatorRestoration::DisplayBackup {
+                    root_shared_key, ..
+                }
+                | CoordinatorRestoration::CheckBackup {
+                    root_shared_key, ..
+                },
+            ) => AccessStructureRef::from_root_shared_key(root_shared_key).key_id,
+            _ => return None,
+        };
+        (self.keystore.contains_key(&key_id) && !self.opened.contains_key(&key_id))
+            .then_some(key_id)
+    }
+
+    pub fn new_shares_on_keystore(&self) -> bool {
+        self.new_shares_on_keystore
+    }
+
+    /// Returns the snapshot to store.
+    pub fn set_new_shares_on_keystore(&mut self, on: bool) -> Vec<u8> {
+        self.new_shares_on_keystore = on;
+        self.snapshot()
+    }
+
+    /// The bytes the key store must seal to move this key's share there; hand the sealed result to
+    /// [`Signer::moved_to_keystore`].
+    pub fn share_for_keystore(&self, key_id: &str) -> Res<Vec<u8>> {
+        let key_id = self.find_key(key_id)?;
+        let mutations: Vec<Mutation> = self
+            .history
+            .iter()
+            .filter(|m| is_share_of(m, key_id))
+            .cloned()
+            .collect();
+        if mutations.is_empty() {
+            return Err("This share is not on disk.".into());
+        }
+        let share = KeystoreShare {
+            key_id: key_id.0,
+            mutations,
+        };
+        Ok(bincode::encode_to_vec(&share, bincode::config::standard()).expect("encodes"))
+    }
+
+    /// The key store sealed [`Signer::share_for_keystore`]: drop the share from disk. Returns the
+    /// snapshot to store.
+    pub fn moved_to_keystore(&mut self, key_id: &str, sealed: Vec<u8>) -> Res<Vec<u8>> {
+        let key_id = self.find_key(key_id)?;
+        let (mutations, rest): (Vec<Mutation>, Vec<Mutation>) = std::mem::take(&mut self.history)
+            .into_iter()
+            .partition(|m| is_share_of(m, key_id));
+        self.history = rest;
+        if mutations.is_empty() {
+            return Err("This share is not on disk.".into());
+        }
+        // still applied to `inner`, so it counts as opened for the rest of this session
+        self.opened.insert(key_id, mutations);
+        self.keystore.insert(key_id, sealed);
+        Ok(self.snapshot())
+    }
+
+    /// The sealed share for the key store to open, then pass to [`Signer::open_keystore_share`].
+    pub fn keystore_share(&self, key_id: &str) -> Res<Vec<u8>> {
+        let key_id = self.find_key(key_id)?;
+        self.keystore
+            .get(&key_id)
+            .cloned()
+            .ok_or_else(|| "This share is not on the device key store.".into())
+    }
+
+    /// The key store opened the share: use it for the rest of this session.
+    pub fn open_keystore_share(&mut self, key_id: &str, share: Vec<u8>) -> Res<()> {
+        let key_id = self.find_key(key_id)?;
+        if !self.keystore.contains_key(&key_id) {
+            return Err("This share is not on the device key store.".into());
+        }
+        if self.opened.contains_key(&key_id) {
+            return Ok(());
+        }
+        let (share, _): (KeystoreShare, _) =
+            bincode::decode_from_slice(&share, bincode::config::standard())
+                .map_err(|e| format!("the device key store returned a damaged share: {e}"))?;
+        if share.key_id != key_id.0 || !share.mutations.iter().all(|m| is_share_of(m, key_id)) {
+            return Err("The device key store returned the share of another key.".into());
+        }
+        for m in &share.mutations {
+            self.inner.apply_mutation(m.clone());
+        }
+        self.opened.insert(key_id, share.mutations);
+        Ok(())
+    }
+
+    /// Put an opened key store share back on disk. Returns the snapshot to store; the app can then
+    /// forget the sealed copy.
+    pub fn move_to_disk(&mut self, key_id: &str) -> Res<Vec<u8>> {
+        let key_id = self.find_key(key_id)?;
+        let mutations = self
+            .opened
+            .remove(&key_id)
+            .ok_or("Open the share from the device key store first.")?;
+        self.history.extend(mutations);
+        self.keystore.remove(&key_id);
+        Ok(self.snapshot())
     }
 }
 

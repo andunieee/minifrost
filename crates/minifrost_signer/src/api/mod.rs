@@ -79,6 +79,43 @@ impl SignerApp {
     pub fn pending_backups(&self) -> Vec<PendingBackup> {
         self.inner.lock().unwrap().pending_backups()
     }
+
+    // ---- device key store (the app seals and opens, see `Signer::share_for_keystore`)
+    pub fn new_shares_on_keystore(&self) -> bool {
+        self.inner.lock().unwrap().new_shares_on_keystore()
+    }
+    /// Returns the snapshot to store.
+    pub fn set_new_shares_on_keystore(&self, enabled: bool) -> Vec<u8> {
+        self.inner
+            .lock()
+            .unwrap()
+            .set_new_shares_on_keystore(enabled)
+    }
+    /// The bytes to seal with the key store before `moved_to_keystore`.
+    pub fn share_for_keystore(&self, key_id: String) -> Result<Vec<u8>, String> {
+        self.inner.lock().unwrap().share_for_keystore(&key_id)
+    }
+    /// Returns the snapshot to store.
+    pub fn moved_to_keystore(&self, key_id: String, sealed: Vec<u8>) -> Result<Vec<u8>, String> {
+        self.inner
+            .lock()
+            .unwrap()
+            .moved_to_keystore(&key_id, sealed)
+    }
+    /// The sealed share, for the key store to open before `open_keystore_share`.
+    pub fn keystore_share(&self, key_id: String) -> Result<Vec<u8>, String> {
+        self.inner.lock().unwrap().keystore_share(&key_id)
+    }
+    pub fn open_keystore_share(&self, key_id: String, share: Vec<u8>) -> Result<(), String> {
+        self.inner
+            .lock()
+            .unwrap()
+            .open_keystore_share(&key_id, share)
+    }
+    /// The share must be opened first. Returns the snapshot to store.
+    pub fn move_to_disk(&self, key_id: String) -> Result<Vec<u8>, String> {
+        self.inner.lock().unwrap().move_to_disk(&key_id)
+    }
 }
 
 /// BIP39 words that start with `prefix`, for the backup entry autocomplete.

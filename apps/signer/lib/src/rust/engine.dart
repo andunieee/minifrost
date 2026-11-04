@@ -15,16 +15,24 @@ class KeyInfo {
   final int threshold;
   final String network;
 
+  /// The share is on the device key store rather than on disk.
+  final bool onKeystore;
+
   const KeyInfo({
     required this.keyId,
     required this.name,
     required this.threshold,
     required this.network,
+    required this.onKeystore,
   });
 
   @override
   int get hashCode =>
-      keyId.hashCode ^ name.hashCode ^ threshold.hashCode ^ network.hashCode;
+      keyId.hashCode ^
+      name.hashCode ^
+      threshold.hashCode ^
+      network.hashCode ^
+      onKeystore.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -34,7 +42,8 @@ class KeyInfo {
           keyId == other.keyId &&
           name == other.name &&
           threshold == other.threshold &&
-          network == other.network;
+          network == other.network &&
+          onKeystore == other.onKeystore;
 }
 
 class OutputSummary {
@@ -205,6 +214,13 @@ sealed class Step with _$Step {
   /// Finished locally; nothing to show the coordinator.
   const factory Step.done({required String message}) = Step_Done;
 
+  /// The message needs this key's share, which is on the device key store and not opened yet.
+  /// Open it with `keystore_share` / `open_keystore_share`, then feed the same payload again.
+  const factory Step.unlockShare({
+    required String keyId,
+    required String keyName,
+  }) = Step_UnlockShare;
+
   /// The coordinator wants the user to type in a physical backup (key number + 25 words).
   /// Answer with `submit_backup`, or call `reject` to give up.
   const factory Step.enterBackup() = Step_EnterBackup;
@@ -221,10 +237,13 @@ class StepResult {
   /// before showing `step`: after signing, they contain the burned nonce.
   final Uint8List? snapshot;
 
-  const StepResult({required this.step, this.snapshot});
+  /// The key whose share was just stored, on disk, by this step.
+  final String? newShare;
+
+  const StepResult({required this.step, this.snapshot, this.newShare});
 
   @override
-  int get hashCode => step.hashCode ^ snapshot.hashCode;
+  int get hashCode => step.hashCode ^ snapshot.hashCode ^ newShare.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -232,7 +251,8 @@ class StepResult {
       other is StepResult &&
           runtimeType == other.runtimeType &&
           step == other.step &&
-          snapshot == other.snapshot;
+          snapshot == other.snapshot &&
+          newShare == other.newShare;
 }
 
 class TxSummary {

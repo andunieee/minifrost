@@ -56,7 +56,26 @@ abstract class SignerApp implements RustOpaqueInterface {
 
   Future<List<KeyInfo>> keys();
 
+  /// The sealed share, for the key store to open before `open_keystore_share`.
+  Future<Uint8List> keystoreShare({required String keyId});
+
+  /// The share must be opened first. Returns the snapshot to store.
+  Future<Uint8List> moveToDisk({required String keyId});
+
+  /// Returns the snapshot to store.
+  Future<Uint8List> movedToKeystore({
+    required String keyId,
+    required List<int> sealed,
+  });
+
   Future<String> name();
+
+  Future<bool> newSharesOnKeystore();
+
+  Future<void> openKeystoreShare({
+    required String keyId,
+    required List<int> share,
+  });
 
   /// Backups typed into this signer that are still waiting for the coordinator.
   Future<List<PendingBackup>> pendingBackups();
@@ -70,6 +89,12 @@ abstract class SignerApp implements RustOpaqueInterface {
   Future<StepResult> receive({required List<int> payload});
 
   Future<void> reject();
+
+  /// Returns the snapshot to store.
+  Future<Uint8List> setNewSharesOnKeystore({required bool enabled});
+
+  /// The bytes to seal with the key store before `moved_to_keystore`.
+  Future<Uint8List> shareForKeystore({required String keyId});
 
   Future<Uint8List> snapshot();
 

@@ -37,7 +37,7 @@ String? _readKind(Step step) => switch (step) {
       Step_EnterBackup() => 'request to enter a backup',
       Step_CheckBackup() => 'request to check a backup',
       Step_Reply() || Step_Done() => 'coordinator message',
-      Step_Ignored() => null,
+      Step_Ignored() || Step_UnlockShare() => null,
     };
 
 Future<void> _handle(BuildContext context, SignerController c, Future<StepResult> Function() action) async {
@@ -55,6 +55,9 @@ Future<void> _handle(BuildContext context, SignerController c, Future<StepResult
   switch (step) {
     case Step_Ignored(:final reason):
       messenger.showSnackBar(SnackBar(content: Text(reason)));
+    case Step_UnlockShare(:final keyName):
+      // the controller opens the share and reads the code again; this is only left if that failed
+      messenger.showSnackBar(SnackBar(content: Text('The share of “$keyName” could not be opened.')));
     case Step_Done(:final message):
       await showDialog<void>(
         context: context,

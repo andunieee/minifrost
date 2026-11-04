@@ -1,14 +1,19 @@
 package dev.minifrost.minifrost_signer
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     // Lets the Rust sound code reach the Java audio APIs, see sound_transport::android.
     private external fun initAudio(context: Context)
+
+    private val keystore = ShareKeystore(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,5 +23,16 @@ class MainActivity : FlutterActivity() {
         // are exempt so the screens can be captured over adb while testing.
         val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         if (!debuggable) window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ShareKeystore.CHANNEL)
+            .setMethodCallHandler(keystore::handle)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!keystore.onActivityResult(requestCode, resultCode)) super.onActivityResult(requestCode, resultCode, data)
     }
 }

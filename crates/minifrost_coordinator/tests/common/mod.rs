@@ -165,6 +165,7 @@ pub fn run_keygen(coord: &mut Coordinator, signers: &mut [Signer], first: Update
             r.snapshot.is_some(),
             "approving the check code stores the share"
         );
+        assert!(r.new_share.is_some(), "the app is told about the new share");
     }
     let mut up = up;
     for (i, s) in signers.iter().enumerate() {
@@ -259,10 +260,12 @@ pub fn fund_and_sign(
     let bundle = frames_of(&up);
     let mut sigs = vec![];
     for &i in chosen {
-        assert!(matches!(
-            signer_step(&mut signers[i], &bundle),
-            Step::Confirm(Prompt::SignTransaction(_))
-        ));
+        let mut step = signer_step(&mut signers[i], &bundle);
+        if let Step::UnlockShare { key_id, .. } = &step {
+            open_from_keystore(&mut signers[i], key_id);
+            step = signer_step(&mut signers[i], &bundle);
+        }
+        assert!(matches!(step, Step::Confirm(Prompt::SignTransaction(_))));
         sigs.push(approve_persisting(&mut signers[i]));
     }
     let mut up = Update::default();
@@ -287,4 +290,19 @@ pub fn fund_and_sign(
             .expect("valid BIP340 signature");
     }
     tx_hex
+}
+
+/// Stand-in for the Android key store: anything reversible the signer can't read itself.
+pub fn keystore_seal(bytes: &[u8]) -> Vec<u8> {
+    bytes.iter().map(|b| b ^ 0x5a).collect()
+}
+
+pub fn move_to_keystore(s: &mut Signer, key_id: &str) -> Vec<u8> {
+    let sealed = keystore_seal(&s.share_for_keystore(key_id).unwrap());
+    s.moved_to_keystore(key_id, sealed).unwrap()
+}
+
+pub fn open_from_keystore(s: &mut Signer, key_id: &str) {
+    let opened = keystore_seal(&s.keystore_share(key_id).unwrap());
+    s.open_keystore_share(key_id, opened).unwrap();
 }

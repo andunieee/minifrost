@@ -15,7 +15,18 @@ class Home extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('Minifrost Signer')),
+        appBar: AppBar(title: const Text('Minifrost Signer'), actions: [
+          if (controller.keystore.supported)
+            PopupMenuButton<void>(
+              itemBuilder: (_) => [
+                CheckedPopupMenuItem(
+                  checked: controller.newSharesOnKeystore,
+                  onTap: () => _toggleNewSharesOnKeystore(context, controller),
+                  child: const Text('Store new shares on the device key store'),
+                ),
+              ],
+            ),
+        ]),
         body: ListView(padding: const EdgeInsets.all(16), children: [
           FutureBuilder(
             future: Future.wait([controller.signer.name(), controller.signer.deviceId()]),
@@ -42,7 +53,7 @@ class Home extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Text('None yet. Show your enrolment code to a coordinator, then scan its key generation codes.'),
             ),
-          for (final k in controller.keys) _KeyTile(k),
+          for (final k in controller.keys) _KeyTile(k, controller),
           if (controller.pendingBackups.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('Restoring', style: Theme.of(context).textTheme.titleMedium),
@@ -88,15 +99,117 @@ class Home extends StatelessWidget {
 }
 
 class _KeyTile extends StatelessWidget {
-  const _KeyTile(this.k);
+  const _KeyTile(this.k, this.controller);
   final KeyInfo k;
+  final SignerController controller;
   @override
   Widget build(BuildContext context) => Card(
         child: ListTile(
           leading: const Icon(Icons.vpn_key_outlined),
           title: Text(k.name),
-          subtitle: Text('${k.threshold}-of-? · ${networkLabel(k.network)}\n${k.keyId.substring(0, 16)}…'),
+          subtitle: Text('${k.threshold}-of-? · ${networkLabel(k.network)} · ${k.onKeystore ? 'on keystore' : 'on disk'}\n'
+              '${k.keyId.substring(0, 16)}…'),
           isThreeLine: true,
+          onTap: controller.keystore.supported ? () => _keyMenu(context) : null,
         ),
       );
+
+  Future<void> _keyMenu(BuildContext context) async {
+    final move = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(title: Text(k.name), subtitle: Text(k.onKeystore ? 'On keystore' : 'On disk')),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(k.onKeystore ? Icons.save_outlined : Icons.lock_outline),
+            title: Text(k.onKeystore ? 'Move this share back to disk' : 'Move this share to the device key store'),
+            onTap: () => Navigator.pop(sheet, true),
+          ),
+        ]),
+      ),
+    );
+    if (move != true || !context.mounted) return;
+    if (k.onKeystore) {
+      final ok = await _confirm(
+        context,
+        title: 'Move this share back to disk?',
+        body: 'Confirm your screen lock to take the share out of the device key store. '
+            'It is then stored in this app\'s file, like before.',
+        action: 'Move to disk',
+      );
+      if (ok && context.mounted) await _run(context, () => controller.moveToDisk(k.keyId), 'The share is on disk.');
+    } else {
+      if (!await _screenLockReady(context, controller) || !context.mounted) return;
+      final ok = await _confirm(
+        context,
+        title: 'Move this share to the device key store?',
+        body: 'Using this share (signing, showing or checking its backup) will then need this phone\'s '
+            'screen lock: PIN, pattern or password.\n\n$_screenLockRisk\n\n'
+            'Make sure this share\'s backup is written down and checked before you continue.',
+        action: 'Move',
+      );
+      if (ok && context.mounted) await _run(context, () => controller.moveToKeystore(k.keyId), 'The share is on the device key store.');
+    }
+  }
+}
+
+const _screenLockRisk = 'If you ever remove the screen lock, Android permanently deletes the device key store key, and '
+    'every share on the key store can no longer be used. You would have to restore each one from its backup words.';
+
+Future<void> _toggleNewSharesOnKeystore(BuildContext context, SignerController c) async {
+  if (c.newSharesOnKeystore) {
+    await _run(context, () => c.setNewSharesOnKeystore(false), 'New shares will be stored on disk.');
+    return;
+  }
+  if (!await _screenLockReady(context, c) || !context.mounted) return;
+  final ok = await _confirm(
+    context,
+    title: 'Store new shares on the device key store?',
+    body: 'Every share this signer creates from now on goes to the device key store as soon as it is stored. '
+        'Using those shares will need this phone\'s screen lock: PIN, pattern or password. '
+        'Shares already on this signer stay where they are.\n\n$_screenLockRisk\n\n'
+        'Write down and check the backup of each new share.',
+    action: 'Turn on',
+  );
+  if (ok && context.mounted) await _run(context, () => c.setNewSharesOnKeystore(true), 'New shares will be stored on the device key store.');
+}
+
+/// The key store needs a screen lock; says so when there is none.
+Future<bool> _screenLockReady(BuildContext context, SignerController c) async {
+  if (await c.keystore.screenLockSet()) return true;
+  if (!context.mounted) return false;
+  await showDialog<void>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: const Text('No screen lock'),
+      content: const Text('The device key store needs a screen lock. Set up a PIN, pattern or password in the phone\'s settings first.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialog), child: const Text('OK'))],
+    ),
+  );
+  return false;
+}
+
+Future<bool> _confirm(BuildContext context, {required String title, required String body, required String action}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(body)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(action)),
+        ],
+      ),
+    ) ==
+    true;
+
+Future<void> _run(BuildContext context, Future<void> Function() action, String done) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await action();
+    messenger.showSnackBar(SnackBar(content: Text(done)));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('$e')));
+  }
 }

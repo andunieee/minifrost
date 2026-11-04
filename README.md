@@ -133,8 +133,17 @@ signer phones), and knowing the wallet's name, network and threshold to check th
   the keys from their backup words.
 - Rust hands the app a snapshot, which `lib/vault.dart` writes **unencrypted** to a file in the
   app-private directory (atomic temp file + rename). Backups and device transfer are disabled;
-  `FLAG_SECURE` blocks screenshots (release builds only). Minimum Android is 7 (API 24). No screen lock, biometrics or
-  Keystore are involved, so anyone with file access to the phone (root, forensics) can read the share.
+  `FLAG_SECURE` blocks screenshots (release builds only). Minimum Android is 8 (API 26). By default no screen lock,
+  biometrics or Keystore are involved, so anyone with file access to the phone (root, forensics) can read the share.
+- Opt-in, per share: tapping a key on the home screen offers "Move this share to the device key store" (and back
+  to disk); the menu's "Store new shares on the device key store" does it for every share created afterwards.
+  The share's `SaveShare` mutations are sealed with an AES-GCM key in the Android Keystore
+  (`ShareKeystore.kt`, StrongBox when available) that only works for 30 s after the screen lock was confirmed, and
+  are dropped from the vault file. A restarted signer opens the share (asking for the screen lock) only when a
+  message needs it: the final signing round, or showing or checking its backup (`Step::UnlockShare`). This keeps
+  the share itself off the disk; `device_secret`, the identity key and the nonce seeds stay in the file. Removing
+  the phone's screen lock makes Android delete the Keystore key, and the shares on it with it; both places the
+  option is offered say so. Moving a share does not scrub the old file's blocks from flash.
 - State is persisted **before** any QR derived from it is shown (`controller.dart`). After
   signing, the snapshot contains the burned nonce — so a crash cannot lead to nonce reuse.
 - The manifest asks for `CAMERA` and explicitly removes `INTERNET`, network-state, audio
