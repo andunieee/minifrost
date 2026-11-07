@@ -156,7 +156,8 @@ dependency tree or the APK requests anything beyond those three.
 ## Build and run
 
 Needs: Rust, Flutter (3.47+), `cargo install flutter_rust_bridge_codegen --version 2.13.0`,
-Android SDK + NDK 27.2 for the signer, GTK/cmake/clang for the Linux coordinator.
+Android SDK + NDK 27.2 for the signer, GTK/cmake/clang for the Linux coordinator, and Xcode +
+CocoaPods for the macOS builds.
 
 ```sh
 cargo test --workspace                       # protocol, wallet logic, full QR flow end to end
@@ -174,7 +175,35 @@ After changing `crates/*/src/api`, regenerate the bindings with
 (`cargo test` covers the logic; the e2e test lives in the coordinator crate and `#[path]`-includes
 the signer engine because two FFI crates cannot be linked into one binary.)
 
-The release APK is signed with the debug key; set up your own signing config before distributing.
+The release APK is signed with the debug key unless `apps/<app>/android/key.properties` and the
+keystore it points at exist; set up your own signing config before distributing.
+
+### Releases
+
+`.github/workflows/release.yml` builds both apps for Linux desktop, macOS and Android. Push a
+`v*` tag (or run the workflow manually with a tag) to build everything, attach the artifacts to a
+GitHub release, and publish it:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The release contains, for each app:
+
+- `minifrost_<app>-<version>-linux-x64.tar.gz` and a `.deb` (the bundle plus its `.desktop`
+  entry and icon, installed under `/usr/lib/minifrost_<app>` by the `.deb`)
+- `minifrost_<app>-<version>-macos-<arch>.zip` (an unsigned `.app`; right-click → Open the first
+  time, or sign and notarize it yourself)
+- `minifrost_<app>-<version>-android.apk`
+
+Android release signing is optional. Add these repository secrets to publish properly signed
+APKs; without them the workflow falls back to the debug key:
+
+- `ANDROID_KEYSTORE_BASE64` — the `.jks` file, base64-encoded
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
 
 ## Known limits
 
@@ -194,6 +223,8 @@ The release APK is signed with the debug key; set up your own signing config bef
 - The Linux desktop signer is for dev/testing only: the webcam replaces the phone camera
   (`desktop_camera`). The QR protocol is identical to the phone, so coordinator↔signer flows can be driven
   entirely on one machine.
+- The macOS builds have no webcam capture yet (`desktop_camera` is Linux/V4L2 only); use the
+  sound transport or the paste/raw QR text fields there.
 - The Flutter UI has not been run against a physical phone or webcam in the environment this was
   written in: everything below the UI is covered by tests, the Android and Linux builds are
   verified to compile, the camera and screens need a real device pass.

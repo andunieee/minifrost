@@ -1,0 +1,344 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (for example v1.0.0). Leave empty to only build artifacts."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+
+jobs:
+  meta:
+    name: Release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      release: ${{ steps.meta.outputs.release }}
+    steps:
+      - name: Work out the release tag and app version
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSHED_TAG: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=""
+          if [ "$EVENT_NAME" = "push" ] && [[ "$PUSHED_TAG" == v* ]]; then
+            tag="$PUSHED_TAG"
+          fi
+          if [ -n "${INPUT_TAG:-}" ]; then
+            tag="$INPUT_TAG"
+          fi
+
+          if [ -n "$tag" ]; then
+            version="${tag#v}"
+            release=true
+          else
+            version="0.0.0"
+            release=false
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a version like 1.2.3 or 1.2.3-rc.1"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: Linux desktop (${{ matrix.app }})
+    needs: meta
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [coordinator, signer]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            libclang-dev \
+            cmake \
+            ninja-build \
+            pkg-config \
+            linux-libc-dev \
+            libgtk-3-dev \
+            libasound2-dev \
+            libpulse-dev \
+            liblzma-dev \
+            imagemagick
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          flutter config --enable-linux-desktop
+          cd "apps/${{ matrix.app }}"
+          flutter pub get
+          flutter build linux --release \
+            --build-name="$VERSION" \
+            --build-number="${{ github.run_number }}"
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          APP: ${{ matrix.app }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="apps/$APP/build/linux/x64/release/bundle"
+          dist="dist/minifrost_${APP}-${VERSION}-linux-x64"
+          mkdir -p "$dist"
+          cp -a "$bundle"/. "$dist/"
+          install -Dm644 "packaging/minifrost_${APP}.desktop" "$dist/minifrost_${APP}.desktop"
+          install -Dm644 assets/logo.png "$dist/minifrost.png"
+          tar -C dist -czf "dist/minifrost_${APP}-${VERSION}-linux-x64.tar.gz" "$(basename "$dist")"
+
+          # Also build a .deb, laid out the same way as `just install-desktop`.
+          deb_version="${VERSION//-/\~}"
+          pkg="build/deb/minifrost-${APP}_${deb_version}_amd64"
+          mkdir -p \
+            "$pkg/DEBIAN" \
+            "$pkg/usr/lib/minifrost_${APP}" \
+            "$pkg/usr/bin" \
+            "$pkg/usr/share/applications" \
+            "$pkg/usr/share/icons/hicolor/512x512/apps"
+          cp -a "$bundle"/. "$pkg/usr/lib/minifrost_${APP}/"
+          ln -s "/usr/lib/minifrost_${APP}/minifrost_${APP}" "$pkg/usr/bin/minifrost_${APP}"
+          install -Dm644 "packaging/minifrost_${APP}.desktop" "$pkg/usr/share/applications/minifrost_${APP}.desktop"
+          if command -v magick >/dev/null; then
+            magick assets/logo.png -resize 512x512 "$pkg/usr/share/icons/hicolor/512x512/apps/minifrost.png"
+          else
+            convert assets/logo.png -resize 512x512 "$pkg/usr/share/icons/hicolor/512x512/apps/minifrost.png"
+          fi
+          installed_size="$(du -sk "$pkg" | cut -f1)"
+          cat > "$pkg/DEBIAN/control" <<EOF
+          Package: minifrost-${APP}
+          Version: ${deb_version}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Minifrost <dev@minifrost.dev>
+          Installed-Size: ${installed_size}
+          Depends: libgtk-3-0 | libgtk-3-0t64, libasound2 | libasound2t64, libstdc++6
+          Description: Minifrost ${APP^}
+           Part of Minifrost, a FROST threshold Schnorr Bitcoin wallet.
+          EOF
+          dpkg-deb --build --root-owner-group "$pkg" "dist/minifrost-${APP}_${deb_version}_amd64.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.app }}
+          path: |
+            dist/*.tar.gz
+            dist/*.deb
+          if-no-files-found: error
+
+  macos:
+    name: macOS (${{ matrix.app }})
+    needs: meta
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [coordinator, signer]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          flutter config --enable-macos-desktop
+          cd "apps/${{ matrix.app }}"
+          flutter pub get
+          flutter build macos --release \
+            --build-name="$VERSION" \
+            --build-number="${{ github.run_number }}"
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          APP: ${{ matrix.app }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          app="apps/$APP/build/macos/Build/Products/Release/minifrost_${APP}.app"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$app" \
+            "dist/minifrost_${APP}-${VERSION}-macos-${arch}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.app }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  android:
+    name: Android (${{ matrix.app }})
+    needs: meta
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [coordinator, signer]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install the NDK and CMake the Gradle build expects
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1"
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::notice::No Android signing secrets; the APK will use the debug key."
+            exit 0
+          fi
+          android_dir="apps/${{ matrix.app }}/android"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$android_dir/app/release.jks"
+          cat > "$android_dir/key.properties" <<EOF
+          storeFile=release.jks
+          storePassword=${KEYSTORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          flutter config --enable-android
+          cd "apps/${{ matrix.app }}"
+          flutter pub get
+          flutter build apk --release \
+            --build-name="$VERSION" \
+            --build-number="${{ github.run_number }}"
+
+      - name: Verify the signer has no network access
+        if: matrix.app == 'signer'
+        run: ./scripts/check-signer-offline.sh "apps/signer/build/app/outputs/flutter-apk/app-release.apk"
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          APP: ${{ matrix.app }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp "apps/$APP/build/app/outputs/flutter-apk/app-release.apk" \
+            "dist/minifrost_${APP}-${VERSION}-android.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.app }}
+          path: dist/*.apk
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    if: needs.meta.outputs.release == 'true'
+    needs: [meta, linux, macos, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: Minifrost ${{ needs.meta.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

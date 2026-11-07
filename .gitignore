@@ -4,3 +4,6 @@ build/
 *.iml
 .gradle/
 local.properties
+**/android/key.properties
+**/android/app/*.jks
+**/android/app/*.keystore
