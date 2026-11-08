@@ -260,12 +260,16 @@ jobs:
         with:
           workspaces: ". -> target"
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
-      - name: Install the NDK and CMake the Gradle build expects
+      - name: Install the Android SDK packages the Gradle build expects
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1"
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;27.2.12479018" \
+            "cmake;3.22.1"
 
       - name: Configure release signing
         env:

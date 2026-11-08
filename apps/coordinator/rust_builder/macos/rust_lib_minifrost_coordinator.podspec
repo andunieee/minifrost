@@ -25,7 +25,7 @@ The Minifrost coordinator's FROST protocol and wallet code, built by Cargokit.
   s.script_phase = {
     :name => 'Build Rust library',
     # First argument is the relative path to the Rust crate, second is the library name.
-    :script => 'sh "$PODS_TARGET_SRCROOT/../cargokit/build_pod.sh" ../../crates/minifrost_coordinator minifrost_coordinator',
+    :script => 'sh "$PODS_TARGET_SRCROOT/../cargokit/build_pod.sh" ../../../../crates/minifrost_coordinator minifrost_coordinator',
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/cargokit_phony'],
     # Let Xcode know that the static library referenced in -force_load below is created by this
