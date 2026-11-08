@@ -361,8 +361,11 @@ class _NewRestorationDialogState extends State<_NewRestorationDialog> {
               ListTile(
                 dense: true,
                 selected: signer == s,
-                leading: Icon(signer == s ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                title: Text(s.name),
+                leading: Icon(
+                  signer == s ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: signerColor(s.deviceId, Theme.of(context).brightness),
+                ),
+                title: SignerName(deviceId: s.deviceId, name: s.name),
                 onTap: () => setState(() => signer = s),
               ),
           ]),
