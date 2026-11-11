@@ -18,7 +18,7 @@ use frostsnap_core::{
         CoordinatorRestoration, CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend,
         DeviceToCoordinatorMessage, HeldShare2, keygen::Keygen, signing::CoordinatorSigning,
     },
-    schnorr_fun::frost::ShareIndex,
+    schnorr_fun::frost::{ShareImage, ShareIndex},
     schnorr_fun::fun::{KeyPair, Scalar, marker::*},
 };
 use minifrost_wire::Packet;
@@ -234,6 +234,8 @@ pub struct QuizAnswer {
 /// (waiting for the coordinator to rebuild the wallet).
 #[derive(Debug, Clone)]
 pub struct PendingBackup {
+    /// For [`Signer::delete_pending_backup`].
+    pub id: String,
     pub key_name: Option<String>,
     pub threshold: Option<u16>,
     pub share_index: u32,
@@ -327,6 +329,20 @@ fn build(snap: Snapshot) -> Signer {
         new_share: None,
         dirty: false,
     }
+}
+
+/// The share image a typed-in backup was saved under, for a restoration mutation.
+fn backup_image(m: &Mutation) -> Option<ShareImage> {
+    use frostsnap_core::device::restoration::RestorationMutation::*;
+    match m {
+        Mutation::Restoration(Save(b)) => Some(b.share_backup.share_image()),
+        Mutation::Restoration(Save2(b)) => Some(b.share_backup.share_image()),
+        _ => None,
+    }
+}
+
+fn backup_id(image: ShareImage) -> String {
+    format!("{}:{}", share_index_u32(image.index).unwrap_or(0), image.image)
 }
 
 /// Whether `m` stores a share of `key_id`.
@@ -1028,6 +1044,7 @@ impl Signer {
             .filter(|s| s.needs_consolidation)
             .filter_map(|s| {
                 Some(PendingBackup {
+                    id: backup_id(s.share_image),
                     key_name: s.key_name.clone(),
                     threshold: s.threshold,
                     share_index: share_index_u32(s.share_image.index).ok()?,
@@ -1035,6 +1052,63 @@ impl Signer {
                 })
             })
             .collect()
+    }
+
+    // ---- deleting
+
+    /// Delete this signer's share of a key, for good: only its backup words can bring it back.
+    /// Returns the snapshot to store. A share on the device key store is dropped with its sealed
+    /// copy, opened or not.
+    pub fn delete_key(&mut self, key_id: &str) -> Res<Vec<u8>> {
+        use frostsnap_core::device::keys::KeyMutation::*;
+        let key_id = self.find_key(key_id)?;
+        // the backup it was typed in from, if it was, would come back as a pending backup
+        let images: Vec<ShareImage> = self
+            .inner
+            .held_shares()
+            .filter(|s| s.access_structure_ref.is_some_and(|a| a.key_id == key_id))
+            .map(|s| s.share_image)
+            .collect();
+        self.history.retain(|m| match m {
+            Mutation::Keygen(NewKey { key_id: k, .. }) => *k != key_id,
+            Mutation::Keygen(NewAccessStructure {
+                access_structure_ref,
+                ..
+            }) => access_structure_ref.key_id != key_id,
+            Mutation::Keygen(SaveShare(s)) => s.access_structure_ref.key_id != key_id,
+            m => backup_image(m).is_none_or(|i| !images.contains(&i)),
+        });
+        self.keystore.remove(&key_id);
+        self.opened.remove(&key_id);
+        self.reviewed.remove(&key_id);
+        self.replay();
+        Ok(self.snapshot())
+    }
+
+    /// Delete a typed-in backup that is still waiting for the coordinator. Returns the snapshot to
+    /// store.
+    pub fn delete_pending_backup(&mut self, id: &str) -> Res<Vec<u8>> {
+        let image = self
+            .inner
+            .held_shares()
+            .find(|s| s.needs_consolidation && backup_id(s.share_image) == id)
+            .ok_or("That backup is no longer on this signer.")?
+            .share_image;
+        self.history.retain(|m| backup_image(m) != Some(image));
+        self.replay();
+        Ok(self.snapshot())
+    }
+
+    /// Rebuild the frostsnap state from `history` and the opened key store shares, after
+    /// mutations were taken out of it. Whatever was in progress is dropped.
+    fn replay(&mut self) {
+        let mut inner = FrostSigner::new(self.derivation.keypair(), AbSlots::new(self.slots.clone()));
+        for m in self.history.iter().chain(self.opened.values().flatten()) {
+            inner.apply_mutation(m.clone());
+        }
+        self.inner = inner;
+        self.pending = None;
+        self.step = None;
     }
 
     // ---- device key store

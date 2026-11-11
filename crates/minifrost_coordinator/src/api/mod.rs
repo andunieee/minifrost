@@ -6,7 +6,7 @@ pub mod sound;
 use std::sync::Mutex;
 
 pub use crate::engine::{
-    BackupShare, Broadcast, Finished, KeyView, PendingConsolidationView, RestoringShareView,
+    BackupShare, Broadcast, Finished, KeySigner, KeyView, PendingConsolidationView, RestoringShareView,
     SignerInfo, UnnamedWalletView, Update,
 };
 use crate::engine::{Coordinator, default_esplora};
@@ -62,8 +62,17 @@ impl CoordinatorApp {
     pub fn enroll(&self, payload: Vec<u8>) -> Result<SignerInfo, String> {
         self.inner.lock().unwrap().enroll(&payload)
     }
+    /// Forget a signer and every key this coordinator knows it holds. The signer keeps its keys.
     pub fn forget_signer(&self, device_id: String) -> Result<(), String> {
         self.inner.lock().unwrap().forget_signer(&device_id)
+    }
+    /// Forget that a signer holds its key of this wallet. The signer keeps the key.
+    pub fn forget_share(&self, key_id: String, device_id: String) -> Result<(), String> {
+        self.inner.lock().unwrap().forget_share(&key_id, &device_id)
+    }
+    /// Delete a wallet from this coordinator. The signers keep their keys and can restore it.
+    pub fn delete_wallet(&self, key_id: String) -> Result<(), String> {
+        self.inner.lock().unwrap().delete_wallet(&key_id)
     }
     pub fn esplora_url(&self, network: String) -> Result<String, String> {
         let net = parse_network(&network)?;

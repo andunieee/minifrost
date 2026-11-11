@@ -85,6 +85,16 @@ impl SignerApp {
         self.inner.lock().unwrap().pending_backups()
     }
 
+    // ---- deleting
+    /// Delete this signer's share of a key for good. Returns the snapshot to store.
+    pub fn delete_key(&self, key_id: String) -> Result<Vec<u8>, String> {
+        self.inner.lock().unwrap().delete_key(&key_id)
+    }
+    /// Delete a typed-in backup still waiting for the coordinator. Returns the snapshot to store.
+    pub fn delete_pending_backup(&self, id: String) -> Result<Vec<u8>, String> {
+        self.inner.lock().unwrap().delete_pending_backup(&id)
+    }
+
     // ---- device key store (the app seals and opens, see `Signer::share_for_keystore`)
     pub fn new_shares_on_keystore(&self) -> bool {
         self.inner.lock().unwrap().new_shares_on_keystore()

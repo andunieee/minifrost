@@ -112,6 +112,17 @@ Restore page reads *restore codes* and doesn't care where each one came from:
    cannot sign, and the code can be shown again from the Restore page or the wallet page. Signers
    that kept their key need none of this.
 
+The same key can end up on two signers (one backup typed into both). Both are kept, but they count
+as one key: a wallet shows threshold-of-*keys*, the wallet page groups its signers by key number,
+the restore messages say which signers hold the same key, and signing refuses two of them together.
+
+**Removing things.** On the coordinator, the wallet page can forget that a signer holds its key, the
+Signers page forgets a signer with every key it holds, and the wallet menu deletes the wallet. None
+of these touches the signers: their keys stay, and their restore codes bring the wallet or the
+signer back. On a signer, tapping a key offers **Delete this share** (three confirmations, the last
+one typing the wallet's name), and a backup waiting for the coordinator can be deleted from the
+home screen; only its backup words can bring a deleted share back.
+
 A single typed-in backup can't be told to be a one-signature wallet (there is nothing to check it
 against), so the Restore page offers that as an explicit choice on the share.
 

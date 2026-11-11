@@ -56,11 +56,18 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
   /// signer read the coordinator's code and saved its key.
   Future<Update> confirmSigner({required String deviceId});
 
+  /// Delete a wallet from this coordinator. The signers keep their keys and can restore it.
+  Future<void> deleteWallet({required String keyId});
+
   /// Scan of a signer's "hello" QR.
   Future<SignerInfo> enroll({required List<int> payload});
 
   Future<String> esploraUrl({required String network});
 
+  /// Forget that a signer holds its key of this wallet. The signer keeps the key.
+  Future<void> forgetShare({required String keyId, required String deviceId});
+
+  /// Forget a signer and every key this coordinator knows it holds. The signer keeps its keys.
   Future<void> forgetSigner({required String deviceId});
 
   Future<List<KeyView>> keys();

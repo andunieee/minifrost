@@ -109,7 +109,7 @@ impl BackupSession {
     }
 }
 
-fn index_u32(i: ShareIndex) -> u32 {
+pub(super) fn index_u32(i: ShareIndex) -> u32 {
     i.try_into().expect("share index fits in a u32")
 }
 
@@ -120,7 +120,7 @@ impl Coordinator {
         device_id.parse().map_err(|_| "bad device id".to_string())
     }
 
-    fn access_ref_of(&self, key_id: &str) -> Res<AccessStructureRef> {
+    pub(super) fn access_ref_of(&self, key_id: &str) -> Res<AccessStructureRef> {
         let key = self
             .inner
             .iter_keys()
@@ -136,7 +136,7 @@ impl Coordinator {
             .unwrap_or_default()
     }
 
-    fn require_idle(&self) -> Res<()> {
+    pub(super) fn require_idle(&self) -> Res<()> {
         match self.session {
             Session::Idle => Ok(()),
             _ => Err(
@@ -310,7 +310,7 @@ impl Coordinator {
         Ok(update)
     }
 
-    fn share_index_of(&self, aref: AccessStructureRef, device: DeviceId) -> Res<ShareIndex> {
+    pub(super) fn share_index_of(&self, aref: AccessStructureRef, device: DeviceId) -> Res<ShareIndex> {
         self.inner
             .get_access_structure(aref)
             .and_then(|a| a.device_to_share_indicies().get(&device).copied())
@@ -388,10 +388,33 @@ impl Coordinator {
             .recover_share(aref, share, self.encryption_key)
             .map_err(|e| e.to_string())?;
         self.save()?;
-        self.finish_signers(
-            aref,
-            format!("Key #{} of “{key_name}” is on {name}.", index_u32(index)),
-        )
+        let mut done = format!("Key #{} of “{key_name}” is on {name}.", index_u32(index));
+        if let Some(note) = self.same_key_note(aref) {
+            done = format!("{done} {note}");
+        }
+        self.finish_signers(aref, done)
+    }
+
+    /// Says which signers of a wallet hold the same key, if any do: together they give one
+    /// signature, which the wallet's count of keys already reflects.
+    fn same_key_note(&self, aref: AccessStructureRef) -> Option<String> {
+        let acc = self.inner.get_access_structure(aref)?;
+        let mut holders: BTreeMap<ShareIndex, Vec<String>> = BTreeMap::new();
+        for (device, index) in acc.device_to_share_indicies() {
+            holders.entry(index).or_default().push(self.name_of(&device));
+        }
+        let notes: Vec<String> = holders
+            .into_iter()
+            .filter(|(_, names)| names.len() > 1)
+            .map(|(index, names)| {
+                format!(
+                    "{} hold the same key #{}, which counts once.",
+                    join_names(&names),
+                    index_u32(index)
+                )
+            })
+            .collect();
+        (!notes.is_empty()).then(|| notes.join(" "))
     }
 
     fn gather(&mut self, share: RecoverShare) -> Res<Update> {
@@ -407,11 +430,25 @@ impl Coordinator {
             update.unnamed_wallet = None;
             return Ok(update);
         }
+        let same: Vec<String> = self
+            .restoring
+            .iter()
+            .filter(|s| s.held_share.share_image == share.held_share.share_image)
+            .map(|s| self.name_of(&s.held_by))
+            .collect();
+        let message = if same.is_empty() {
+            format!(
+                "Read key #{index} from {name}. The wallet is rebuilt as soon as there are enough codes."
+            )
+        } else {
+            format!(
+                "Read key #{index} from {name}, the same key {} gave: it counts once. Read a code with another key.",
+                join_names(&same)
+            )
+        };
         self.restoring.push(share);
         self.rebuild_if_possible(Update {
-            message: format!(
-                "Read key #{index} from {name}. The wallet is rebuilt as soon as there are enough codes."
-            ),
+            message,
             ..Default::default()
         })
     }
@@ -500,7 +537,11 @@ impl Coordinator {
         };
         self.restoring.retain(|s| !found.shares.contains(s));
         self.save()?;
-        self.finish_signers(aref, format!("Wallet “{name}” is rebuilt and saved."))
+        let mut done = format!("Wallet “{name}” is rebuilt and saved.");
+        if let Some(note) = self.same_key_note(aref) {
+            done = format!("{done} {note}");
+        }
+        self.finish_signers(aref, done)
     }
 
     /// Every signer of the wallet still waiting for the coordinator's answer gets it from one QR
@@ -651,11 +692,7 @@ impl Coordinator {
         UnnamedWalletView {
             key_id: found.key_id().to_string(),
             threshold: found.key.threshold() as u16,
-            signers: found
-                .shares
-                .iter()
-                .map(|s| self.name_of(&s.held_by))
-                .collect(),
+            signers: found.holders_by_key(self),
         }
     }
 
@@ -761,6 +798,24 @@ impl Rebuild {
         AccessStructureRef::from_root_shared_key(&self.key).key_id
     }
 
+    /// Who gave each key, one entry per key: "alice", or "alice and bob (same key #1)".
+    fn holders_by_key(&self, coord: &Coordinator) -> Vec<String> {
+        let mut holders: BTreeMap<ShareIndex, Vec<String>> = BTreeMap::new();
+        for s in &self.shares {
+            holders
+                .entry(s.held_share.share_image.index)
+                .or_default()
+                .push(coord.name_of(&s.held_by));
+        }
+        holders
+            .into_iter()
+            .map(|(index, names)| match names.len() {
+                1 => names.join(""),
+                _ => format!("{} (same key #{})", join_names(&names), index_u32(index)),
+            })
+            .collect()
+    }
+
     /// The wallet's name and network, when a share knows them: a backup alone doesn't.
     fn details(&self) -> Option<(String, KeyPurpose)> {
         self.shares
@@ -798,6 +853,15 @@ fn single_share_key(image: ShareImage) -> Option<SharedKey> {
 
 fn share_id(s: &RecoverShare) -> String {
     format!("{}:{}", s.held_by, s.held_share.share_image.image)
+}
+
+/// "alice", "alice and bob", "alice, bob and carol".
+fn join_names(names: &[String]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
 }
 
 fn valid_wallet_name(name: String) -> Res<String> {

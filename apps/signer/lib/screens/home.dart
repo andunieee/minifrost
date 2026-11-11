@@ -65,6 +65,11 @@ class Home extends StatelessWidget {
                   subtitle: const Text('Saved on this signer. It becomes a normal key once the coordinator has rebuilt the wallet. Tap to show its restore code.'),
                   isThreeLine: true,
                   onTap: () => runRestoreCode(context, controller, () async => b.restoreCode),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Delete this backup',
+                    onPressed: () => _deletePendingBackup(context, controller, b),
+                  ),
                 ),
               ),
           ],
@@ -105,7 +110,7 @@ class Home extends StatelessWidget {
   }
 }
 
-enum _KeyAction { restore, move }
+enum _KeyAction { restore, move, delete }
 
 class _KeyTile extends StatelessWidget {
   const _KeyTile(this.k, this.controller);
@@ -141,6 +146,11 @@ class _KeyTile extends StatelessWidget {
               title: Text(k.onKeystore ? 'Move this share back to disk' : 'Move this share to the device key store'),
               onTap: () => Navigator.pop(sheet, _KeyAction.move),
             ),
+          ListTile(
+            leading: Icon(Icons.delete_forever, color: Theme.of(sheet).colorScheme.error),
+            title: Text('Delete this share', style: TextStyle(color: Theme.of(sheet).colorScheme.error)),
+            onTap: () => Navigator.pop(sheet, _KeyAction.delete),
+          ),
         ]),
       ),
     );
@@ -149,8 +159,12 @@ class _KeyTile extends StatelessWidget {
       await runRestoreCode(context, controller, () => controller.restoreCode(k.keyId));
       return;
     }
+    if (action == _KeyAction.delete) {
+      await _deleteKey(context, controller, k);
+      return;
+    }
     if (k.onKeystore) {
-      final ok = await _confirm(
+      final ok = await confirmDialog(
         context,
         title: 'Move this share back to disk?',
         body: 'Confirm your screen lock to take the share out of the device key store. '
@@ -160,7 +174,7 @@ class _KeyTile extends StatelessWidget {
       if (ok && context.mounted) await _run(context, () => controller.moveToDisk(k.keyId), 'The share is on disk.');
     } else {
       if (!await _screenLockReady(context, controller) || !context.mounted) return;
-      final ok = await _confirm(
+      final ok = await confirmDialog(
         context,
         title: 'Move this share to the device key store?',
         body: 'Using this share (signing, showing or checking its backup) will then need this phone\'s '
@@ -173,6 +187,50 @@ class _KeyTile extends StatelessWidget {
   }
 }
 
+/// Three steps, since this is the one action on the signer that destroys a key.
+Future<void> _deleteKey(BuildContext context, SignerController controller, KeyInfo k) async {
+  final first = await confirmDialog(
+    context,
+    title: 'Delete this share of “${k.name}”?',
+    body: 'The share is erased from this signer for good. Only its 25 backup words can bring it back.\n\n'
+        'If you don\'t have its backup, and the wallet\'s other signers can\'t make up ${k.threshold} signatures '
+        'without this one, the money in “${k.name}” is lost forever.',
+    action: 'Continue',
+    danger: true,
+  );
+  if (!first || !context.mounted) return;
+  final second = await confirmDialog(
+    context,
+    title: 'Do you have this share\'s backup?',
+    body: 'Check that the 25 words and key number of this share are written down, or that ${k.threshold} other '
+        'signers of “${k.name}” still hold their keys.\n\n'
+        'The coordinator still lists this signer for the wallet: forget it there too, on the wallet\'s page.',
+    action: 'I understand',
+    danger: true,
+  );
+  if (!second || !context.mounted) return;
+  final sure = await confirmByTyping(
+    context,
+    title: 'Delete this share',
+    body: 'This can\'t be undone.',
+    name: k.name,
+    action: 'Delete share',
+  );
+  if (sure && context.mounted) await _run(context, () => controller.deleteKey(k.keyId), 'The share of “${k.name}” was deleted.');
+}
+
+Future<void> _deletePendingBackup(BuildContext context, SignerController c, PendingBackup b) async {
+  final ok = await confirmDialog(
+    context,
+    title: 'Delete backup #${b.shareIndex}?',
+    body: 'The backup you typed in is erased from this signer. Your paper copy is unaffected: you can type it '
+        'in again any time.',
+    action: 'Delete',
+    danger: true,
+  );
+  if (ok && context.mounted) await _run(context, () => c.deletePendingBackup(b.id), 'The backup was deleted.');
+}
+
 const _screenLockRisk = 'If you ever remove the screen lock, Android permanently deletes the device key store key, and '
     'every share on the key store can no longer be used. You would have to restore each one from its backup words.';
 
@@ -182,7 +240,7 @@ Future<void> _toggleNewSharesOnKeystore(BuildContext context, SignerController c
     return;
   }
   if (!await _screenLockReady(context, c) || !context.mounted) return;
-  final ok = await _confirm(
+  final ok = await confirmDialog(
     context,
     title: 'Store new shares on the device key store?',
     body: 'Every share this signer creates from now on goes to the device key store as soon as it is stored. '
@@ -208,20 +266,6 @@ Future<bool> _screenLockReady(BuildContext context, SignerController c) async {
   );
   return false;
 }
-
-Future<bool> _confirm(BuildContext context, {required String title, required String body, required String action}) async =>
-    await showDialog<bool>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(child: Text(body)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(action)),
-        ],
-      ),
-    ) ==
-    true;
 
 Future<void> _run(BuildContext context, Future<void> Function() action, String done) async {
   final messenger = ScaffoldMessenger.of(context);

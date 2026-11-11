@@ -49,6 +49,12 @@ abstract class QrScanner implements RustOpaqueInterface {
 abstract class SignerApp implements RustOpaqueInterface {
   Future<StepResult> approve();
 
+  /// Delete this signer's share of a key for good. Returns the snapshot to store.
+  Future<Uint8List> deleteKey({required String keyId});
+
+  /// Delete a typed-in backup still waiting for the coordinator. Returns the snapshot to store.
+  Future<Uint8List> deletePendingBackup({required String id});
+
   Future<String> deviceId();
 
   /// QR frames that enrol this signer with a coordinator.

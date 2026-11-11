@@ -76,6 +76,8 @@ class OutputSummary {
 /// A backup the user typed into this signer that has not been turned into a real share yet
 /// (waiting for the coordinator to rebuild the wallet).
 class PendingBackup {
+  /// For [`Signer::delete_pending_backup`].
+  final String id;
   final String? keyName;
   final int? threshold;
   final int shareIndex;
@@ -84,6 +86,7 @@ class PendingBackup {
   final Step restoreCode;
 
   const PendingBackup({
+    required this.id,
     this.keyName,
     this.threshold,
     required this.shareIndex,
@@ -92,6 +95,7 @@ class PendingBackup {
 
   @override
   int get hashCode =>
+      id.hashCode ^
       keyName.hashCode ^
       threshold.hashCode ^
       shareIndex.hashCode ^
@@ -102,6 +106,7 @@ class PendingBackup {
       identical(this, other) ||
       other is PendingBackup &&
           runtimeType == other.runtimeType &&
+          id == other.id &&
           keyName == other.keyName &&
           threshold == other.threshold &&
           shareIndex == other.shareIndex &&

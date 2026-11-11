@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -750602721;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -152773759;
 
 // Section: executor
 
@@ -360,6 +360,57 @@ fn wire__crate__api__CoordinatorApp_confirm_signer_impl(
         },
     )
 }
+fn wire__crate__api__CoordinatorApp_delete_wallet_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_delete_wallet",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_key_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::CoordinatorApp::delete_wallet(&*api_that_guard, api_key_id)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__CoordinatorApp_enroll_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -456,6 +507,61 @@ fn wire__crate__api__CoordinatorApp_esplora_url_impl(
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok =
                         crate::api::CoordinatorApp::esplora_url(&*api_that_guard, api_network)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__CoordinatorApp_forget_share_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_forget_share",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_key_id = <String>::sse_decode(&mut deserializer);
+            let api_device_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::CoordinatorApp::forget_share(
+                        &*api_that_guard,
+                        api_key_id,
+                        api_device_id,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -2197,6 +2303,20 @@ impl SseDecode for i64 {
     }
 }
 
+impl SseDecode for crate::engine::KeySigner {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_deviceId = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_shareIndex = <u32>::sse_decode(deserializer);
+        return crate::engine::KeySigner {
+            device_id: var_deviceId,
+            name: var_name,
+            share_index: var_shareIndex,
+        };
+    }
+}
+
 impl SseDecode for crate::engine::KeyView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2204,13 +2324,15 @@ impl SseDecode for crate::engine::KeyView {
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_network = <String>::sse_decode(deserializer);
         let mut var_threshold = <u16>::sse_decode(deserializer);
-        let mut var_signers = <Vec<crate::engine::SignerInfo>>::sse_decode(deserializer);
+        let mut var_signers = <Vec<crate::engine::KeySigner>>::sse_decode(deserializer);
+        let mut var_nKeys = <u16>::sse_decode(deserializer);
         return crate::engine::KeyView {
             key_id: var_keyId,
             name: var_name,
             network: var_network,
             threshold: var_threshold,
             signers: var_signers,
+            n_keys: var_nKeys,
         };
     }
 }
@@ -2248,6 +2370,18 @@ impl SseDecode for Vec<crate::api::camera::CameraInfo> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::camera::CameraInfo>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::engine::KeySigner> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::engine::KeySigner>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -2629,103 +2763,107 @@ fn pde_ffi_dispatcher_primary_impl(
         6 => {
             wire__crate__api__CoordinatorApp_confirm_signer_impl(port, ptr, rust_vec_len, data_len)
         }
-        7 => wire__crate__api__CoordinatorApp_enroll_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__CoordinatorApp_esplora_url_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__CoordinatorApp_forget_signer_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__CoordinatorApp_keys_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__CoordinatorApp_mark_backup_complete_impl(
+        7 => wire__crate__api__CoordinatorApp_delete_wallet_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__CoordinatorApp_enroll_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__CoordinatorApp_esplora_url_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__CoordinatorApp_forget_share_impl(port, ptr, rust_vec_len, data_len),
+        11 => {
+            wire__crate__api__CoordinatorApp_forget_signer_impl(port, ptr, rust_vec_len, data_len)
+        }
+        12 => wire__crate__api__CoordinatorApp_keys_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__CoordinatorApp_mark_backup_complete_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__CoordinatorApp_name_restored_wallet_impl(
+        14 => wire__crate__api__CoordinatorApp_name_restored_wallet_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__CoordinatorApp_pending_consolidations_impl(
+        15 => wire__crate__api__CoordinatorApp_pending_consolidations_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__CoordinatorApp_prepare_send_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__CoordinatorApp_read_restore_code_impl(
+        16 => wire__crate__api__CoordinatorApp_prepare_send_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__CoordinatorApp_read_restore_code_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__CoordinatorApp_receive_impl(port, ptr, rust_vec_len, data_len),
-        17 => {
+        18 => wire__crate__api__CoordinatorApp_receive_impl(port, ptr, rust_vec_len, data_len),
+        19 => {
             wire__crate__api__CoordinatorApp_refresh_wallet_impl(port, ptr, rust_vec_len, data_len)
         }
-        18 => wire__crate__api__CoordinatorApp_remove_restoring_share_impl(
+        20 => wire__crate__api__CoordinatorApp_remove_restoring_share_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__CoordinatorApp_restore_one_signature_wallet_impl(
+        21 => wire__crate__api__CoordinatorApp_restore_one_signature_wallet_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__CoordinatorApp_restoring_shares_impl(
+        22 => wire__crate__api__CoordinatorApp_restoring_shares_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => {
+        23 => {
             wire__crate__api__CoordinatorApp_set_esplora_url_impl(port, ptr, rust_vec_len, data_len)
         }
-        22 => wire__crate__api__CoordinatorApp_signers_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__CoordinatorApp_start_check_backup_impl(
+        24 => wire__crate__api__CoordinatorApp_signers_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__CoordinatorApp_start_check_backup_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__CoordinatorApp_start_display_backup_impl(
+        26 => wire__crate__api__CoordinatorApp_start_display_backup_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__CoordinatorApp_start_finish_restoring_impl(
+        27 => wire__crate__api__CoordinatorApp_start_finish_restoring_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__CoordinatorApp_start_keygen_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
+        28 => wire__crate__api__CoordinatorApp_start_keygen_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => {
+        30 => {
             wire__crate__api__CoordinatorApp_unnamed_wallets_impl(port, ptr, rust_vec_len, data_len)
         }
-        29 => wire__crate__api__QrScanner_push_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__QrScanner_reset_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__open_coordinator_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
-        36 => {
+        31 => wire__crate__api__QrScanner_push_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__QrScanner_reset_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__open_coordinator_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
+        38 => {
             wire__crate__api__sound__start_sound_listening_impl(port, ptr, rust_vec_len, data_len)
         }
-        37 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2914,6 +3052,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::engine::Finished> for crate::engin
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::engine::KeySigner {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.device_id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.share_index.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::KeySigner {}
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::KeySigner> for crate::engine::KeySigner {
+    fn into_into_dart(self) -> crate::engine::KeySigner {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::engine::KeyView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2922,6 +3077,7 @@ impl flutter_rust_bridge::IntoDart for crate::engine::KeyView {
             self.network.into_into_dart().into_dart(),
             self.threshold.into_into_dart().into_dart(),
             self.signers.into_into_dart().into_dart(),
+            self.n_keys.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3277,6 +3433,15 @@ impl SseEncode for i64 {
     }
 }
 
+impl SseEncode for crate::engine::KeySigner {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.device_id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <u32>::sse_encode(self.share_index, serializer);
+    }
+}
+
 impl SseEncode for crate::engine::KeyView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3284,7 +3449,8 @@ impl SseEncode for crate::engine::KeyView {
         <String>::sse_encode(self.name, serializer);
         <String>::sse_encode(self.network, serializer);
         <u16>::sse_encode(self.threshold, serializer);
-        <Vec<crate::engine::SignerInfo>>::sse_encode(self.signers, serializer);
+        <Vec<crate::engine::KeySigner>>::sse_encode(self.signers, serializer);
+        <u16>::sse_encode(self.n_keys, serializer);
     }
 }
 
@@ -3314,6 +3480,16 @@ impl SseEncode for Vec<crate::api::camera::CameraInfo> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::camera::CameraInfo>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::engine::KeySigner> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::engine::KeySigner>::sse_encode(item, serializer);
         }
     }
 }

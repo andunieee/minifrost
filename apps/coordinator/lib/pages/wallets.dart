@@ -70,7 +70,7 @@ class _WalletsPageState extends State<WalletsPage> {
                 child: ListTile(
                   leading: const Icon(Icons.account_balance_wallet),
                   title: Text(k.name),
-                  subtitle: Text('${k.threshold}-of-${k.signers.length} · ${networkLabel(k.network)} · ${k.signers.map((s) => s.name).join(', ')}'),
+                  subtitle: Text('${k.threshold}-of-${k.nKeys} · ${networkLabel(k.network)} · ${k.signers.map((s) => s.name).join(', ')}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (_) => WalletDetailPage(app: widget.app, wallet: k)));

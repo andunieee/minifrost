@@ -78,7 +78,18 @@ pub struct KeyView {
     pub name: String,
     pub network: String,
     pub threshold: u16,
-    pub signers: Vec<SignerInfo>,
+    /// By key number. Two signers can hold the same key (the same backup typed into both).
+    pub signers: Vec<KeySigner>,
+    /// How many different keys the signers hold: the wallet's "n" in threshold-of-n.
+    pub n_keys: u16,
+}
+
+/// A signer of a wallet and the key it holds.
+#[derive(Debug, Clone)]
+pub struct KeySigner {
+    pub device_id: String,
+    pub name: String,
+    pub share_index: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -346,7 +357,7 @@ impl Coordinator {
             .collect()
     }
 
-    fn name_of(&self, id: &DeviceId) -> String {
+    pub(super) fn name_of(&self, id: &DeviceId) -> String {
         self.signers
             .get(id)
             .cloned()
@@ -358,19 +369,28 @@ impl Coordinator {
             .iter_keys()
             .map(|k| {
                 let acc = k.master_access_structure();
+                let mut signers: Vec<KeySigner> = acc
+                    .device_to_share_indicies()
+                    .into_iter()
+                    .map(|(d, i)| KeySigner {
+                        device_id: d.to_string(),
+                        name: self.name_of(&d),
+                        share_index: restore::index_u32(i),
+                    })
+                    .collect();
+                signers.sort_by_key(|s| s.share_index);
+                let n_keys = signers
+                    .iter()
+                    .map(|s| s.share_index)
+                    .collect::<BTreeSet<_>>()
+                    .len() as u16;
                 KeyView {
                     key_id: k.key_id.to_string(),
                     name: k.key_name.clone(),
                     network: purpose_network(&k.purpose).to_string(),
                     threshold: acc.threshold(),
-                    signers: acc
-                        .devices_by_share_index()
-                        .into_iter()
-                        .map(|d| SignerInfo {
-                            device_id: d.to_string(),
-                            name: self.name_of(&d),
-                        })
-                        .collect(),
+                    signers,
+                    n_keys,
                 }
             })
             .collect()
@@ -397,19 +417,56 @@ impl Coordinator {
         }
     }
 
+    /// Forget a signer altogether: it no longer counts for any wallet, and the shares it gave the
+    /// Restore page go too. Nothing changes on the signer: it can still show the restore code of a
+    /// key it holds to join that wallet again.
     pub fn forget_signer(&mut self, device_id: &str) -> Res<()> {
-        let id: DeviceId = device_id.parse().map_err(|_| "bad device id")?;
-        if self
+        let id = self.parse_device(device_id)?;
+        self.require_idle()?;
+        let arefs: Vec<AccessStructureRef> = self
             .inner
             .iter_keys()
-            .any(|k| k.master_access_structure().contains_device(id))
-        {
-            return Err("This signer holds a share of an existing key.".into());
+            .map(|k| k.master_access_structure())
+            .filter(|a| a.contains_device(id))
+            .map(|a| a.access_structure_ref())
+            .collect();
+        for aref in arefs {
+            self.delete_share(aref, id)?;
         }
-        if self.restoring.iter().any(|s| s.held_by == id) {
-            return Err("This signer holds a share being restored.".into());
-        }
+        self.restoring.retain(|s| s.held_by != id);
         self.signers.remove(&id);
+        self.save()
+    }
+
+    /// Forget that a signer holds its key of a wallet. The signer keeps the key: it is only not
+    /// asked to sign anymore, and can join again with its restore code.
+    pub fn forget_share(&mut self, key_id: &str, device_id: &str) -> Res<()> {
+        self.require_idle()?;
+        let device = self.parse_device(device_id)?;
+        let aref = self.access_ref_of(key_id)?;
+        self.share_index_of(aref, device)?;
+        self.delete_share(aref, device)?;
+        self.save()
+    }
+
+    fn delete_share(&mut self, aref: AccessStructureRef, device: DeviceId) -> Res<()> {
+        self.inner
+            .delete_share(aref, device)
+            .map_err(|e| format!("{} can't be removed now: {e:?}", self.name_of(&device)))
+    }
+
+    /// Delete a wallet from this coordinator. The signers keep their keys, so a threshold of them
+    /// (or of their backups) can restore it on the Restore page.
+    pub fn delete_wallet(&mut self, key_id: &str) -> Res<()> {
+        self.require_idle()?;
+        let aref = self.access_ref_of(key_id)?;
+        let key_id = aref.key_id;
+        self.inner.delete_key(key_id);
+        self.backups.retain(|(a, _), _| a.key_id != key_id);
+        self.wallets.remove(&key_id);
+        if self.prepared.as_ref().is_some_and(|(k, _)| *k == key_id) {
+            self.prepared = None;
+        }
         self.save()
     }
 
@@ -496,10 +553,6 @@ impl Coordinator {
             .ok_or("unknown key")?;
         let key_id = key.key_id;
         let acc = key.master_access_structure();
-        let built = match self.prepared.take() {
-            Some((k, b)) if k == key_id => b,
-            _ => return Err("Prepare a payment first.".into()),
-        };
         let devices: BTreeSet<DeviceId> = device_ids
             .iter()
             .map(|d| d.parse().map_err(|_| "bad device id".to_string()))
@@ -510,6 +563,25 @@ impl Coordinator {
         if let Some(d) = devices.iter().find(|d| !acc.contains_device(**d)) {
             return Err(format!("{} holds no share of this key.", self.name_of(d)));
         }
+        // two signers holding the same key give one signature, not two
+        let indices = acc.device_to_share_indicies();
+        let mut chosen = BTreeMap::new();
+        for d in &devices {
+            let index = indices[d];
+            if let Some(other) = chosen.insert(index, *d) {
+                return Err(format!(
+                    "{} and {} hold the same key #{}: choose one of them, and another signer.",
+                    self.name_of(&other),
+                    self.name_of(d),
+                    restore::index_u32(index)
+                ));
+            }
+        }
+        // taken only now, so a wrong choice of signers doesn't lose the payment
+        let built = match self.prepared.take() {
+            Some((k, b)) if k == key_id => b,
+            _ => return Err("Prepare a payment first.".into()),
+        };
         let request = self
             .inner
             .maybe_request_nonce_replenishment(&devices, 1, &mut OsRng);

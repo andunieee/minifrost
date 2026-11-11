@@ -600,6 +600,160 @@ fn wrong_backups_are_refused() {
 }
 
 #[test]
+fn the_same_key_on_two_signers_counts_once() {
+    let mut coord = Coordinator::in_memory();
+    let (mut signers, key_id, backups) =
+        wallet_with_backups(&mut coord, &["alice", "bob", "carol"], 2);
+
+    // alice's backup goes into a spare phone as well: the wallet keeps both, as one key
+    let mut spare = Signer::create("spare".into());
+    let code = type_backup(&mut spare, backups[0].0, &backups[0].1);
+    let up = coord.read_restore_code(&scan(&code)).unwrap();
+    finish_signers(&mut coord, &up, &mut [&mut spare]);
+    assert!(up.message.contains("hold the same key #1"), "{}", up.message);
+    assert!(up.message.contains("alice") && up.message.contains("spare"));
+    let key = &coord.keys()[0];
+    assert_eq!((key.threshold, key.n_keys, key.signers.len()), (2, 3, 4));
+    assert_eq!(
+        key.signers.iter().map(|s| s.share_index).collect::<Vec<_>>(),
+        [1, 1, 2, 3]
+    );
+
+    // the same key twice is one signature, so it can't sign alone
+    let both = [&signers[0], &spare].map(|s| s.device_id().to_string());
+    let err = coord.begin_signing(&key_id, both.to_vec()).unwrap_err();
+    assert!(err.contains("same key #1"), "{err}");
+    signers.push(spare);
+    fund_and_sign(&mut coord, &mut signers, &[3, 1], &key_id);
+
+    // forgetting that alice holds it leaves the spare with key #1
+    let alice = signers[0].device_id().to_string();
+    coord.forget_share(&key_id, &alice).unwrap();
+    assert!(coord.forget_share(&key_id, &alice).is_err(), "already forgotten");
+    let key = &coord.keys()[0];
+    assert_eq!((key.n_keys, key.signers.len()), (3, 3));
+    assert_eq!(coord.signers().len(), 4, "alice is still enrolled");
+
+    // forgetting bob altogether takes his key #2 out of the wallet
+    let bob = signers[1].device_id().to_string();
+    coord.forget_signer(&bob).unwrap();
+    assert_eq!(coord.signers().len(), 3);
+    let key = &coord.keys()[0];
+    assert_eq!((key.n_keys, key.signers.len()), (2, 2));
+    fund_and_sign(&mut coord, &mut signers, &[3, 2], &key_id);
+
+    // alice rejoins with her restore code, since she kept her key
+    let up = coord.read_restore_code(&scan(&key_code(&signers[0]))).unwrap();
+    assert!(up.message.contains("same key #1"), "{}", up.message);
+    assert_eq!(coord.keys()[0].signers.len(), 3);
+}
+
+#[test]
+fn the_same_backup_typed_into_two_phones_while_restoring() {
+    let mut orig = Coordinator::in_memory();
+    let (_, key_id, backups) = wallet_with_backups(&mut orig, &["alice", "bob", "carol"], 2);
+
+    let mut coord = Coordinator::in_memory();
+    let mut phones = fresh_phones(&["p1", "p2", "p3"]);
+    coord
+        .read_restore_code(&scan(&type_backup(&mut phones[0], backups[0].0, &backups[0].1)))
+        .unwrap();
+    // a second copy of key #1 is not a second key
+    let up = coord
+        .read_restore_code(&scan(&type_backup(&mut phones[1], backups[0].0, &backups[0].1)))
+        .unwrap();
+    assert!(up.unnamed_wallet.is_none(), "one key is not enough");
+    assert!(up.message.contains("the same key p1 gave"), "{}", up.message);
+    assert_eq!(coord.restoring_shares().len(), 2);
+
+    let up = coord
+        .read_restore_code(&scan(&type_backup(&mut phones[2], backups[1].0, &backups[1].1)))
+        .unwrap();
+    let unnamed = up.unnamed_wallet.unwrap();
+    assert_eq!(unnamed.signers.len(), 2, "one entry per key");
+    assert!(unnamed.signers.iter().any(|s| s.contains("p1") && s.contains("p2") && s.ends_with("(same key #1)")));
+    assert!(unnamed.signers.contains(&"p3".to_string()));
+    let up = coord
+        .name_restored_wallet(&unnamed.key_id, "family".into(), Network::Signet)
+        .unwrap();
+    assert!(up.message.contains("hold the same key #1"), "{}", up.message);
+    let key = &coord.keys()[0];
+    assert_eq!(key.key_id, key_id);
+    assert_eq!((key.threshold, key.n_keys, key.signers.len()), (2, 2, 3));
+    let [p1, p2, p3] = &mut phones[..] else { panic!() };
+    finish_signers(&mut coord, &up, &mut [p1, p2, p3]);
+    fund_and_sign(&mut coord, &mut phones, &[1, 2], &key_id);
+}
+
+#[test]
+fn delete_a_wallet_and_restore_it_from_the_signers() {
+    let mut coord = Coordinator::in_memory();
+    let (mut signers, key_id) = create_wallet(&mut coord, &["alice", "bob"], 2);
+    let up = coord
+        .start_display_backup(&key_id, &signers[0].device_id().to_string())
+        .unwrap();
+    assert!(up.confirm.is_some());
+    assert!(coord.delete_wallet(&key_id).is_err(), "not during a session");
+    coord.cancel().unwrap();
+
+    coord.delete_wallet(&key_id).unwrap();
+    assert!(coord.keys().is_empty());
+    assert!(coord.backup_shares(&key_id).is_err());
+    assert!(coord.delete_wallet(&key_id).is_err());
+    // the signers are still enrolled, and with no wallet left they can be forgotten as before
+    assert_eq!(coord.signers().len(), 2);
+
+    // the signers kept their keys: their codes bring the wallet back
+    for s in &signers {
+        coord.read_restore_code(&scan(&key_code(s))).unwrap();
+    }
+    assert_eq!(coord.keys()[0].key_id, key_id);
+    fund_and_sign(&mut coord, &mut signers, &[0, 1], &key_id);
+}
+
+#[test]
+fn a_signer_deletes_a_key_or_a_typed_in_backup() {
+    let mut coord = Coordinator::in_memory();
+    let (mut signers, key_id, backups) = wallet_with_backups(&mut coord, &["alice", "bob"], 2);
+
+    // a typed-in backup that was finished into a key: deleting the key doesn't bring the
+    // backup back, not even after a restart
+    let mut spare = Signer::create("spare".into());
+    let code = type_backup(&mut spare, backups[0].0, &backups[0].1);
+    let up = coord.read_restore_code(&scan(&code)).unwrap();
+    finish_signers(&mut coord, &up, &mut [&mut spare]);
+    let snap = spare.delete_key(&key_id).unwrap();
+    assert!(spare.keys().is_empty() && spare.pending_backups().is_empty());
+    let spare = Signer::from_snapshot(&snap).unwrap();
+    assert!(spare.keys().is_empty() && spare.pending_backups().is_empty());
+    assert!(spare.restore_code(&key_id).is_err());
+
+    // a backup still waiting for the coordinator
+    let mut phone = Signer::create("phone".into());
+    type_backup(&mut phone, backups[1].0, &backups[1].1);
+    let id = phone.pending_backups()[0].id.clone();
+    let snap = phone.delete_pending_backup(&id).unwrap();
+    assert!(phone.pending_backups().is_empty());
+    assert!(phone.delete_pending_backup(&id).is_err());
+    let mut phone = Signer::from_snapshot(&snap).unwrap();
+    assert!(phone.pending_backups().is_empty());
+    // ... and it can be typed in again
+    type_backup(&mut phone, backups[1].0, &backups[1].1);
+
+    // a key on the device key store goes with its sealed copy, opened or not
+    let snapshot = common::move_to_keystore(&mut signers[1], &key_id);
+    let mut bob = Signer::from_snapshot(&snapshot).unwrap();
+    let snap = bob.delete_key(&key_id).unwrap();
+    assert!(bob.keys().is_empty());
+    assert!(bob.keystore_share(&key_id).is_err());
+    assert!(Signer::from_snapshot(&snap).unwrap().keys().is_empty());
+
+    // alice is unaffected
+    assert_eq!(signers[0].keys().len(), 1);
+    assert!(signers[0].restore_code(&key_id).is_ok());
+}
+
+#[test]
 fn one_signature_wallets() {
     let mut orig = Coordinator::in_memory();
     let (signers, key_id, backups) = wallet_with_backups(&mut orig, &["alice", "bob"], 1);

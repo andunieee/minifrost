@@ -161,7 +161,7 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
       children: [
         Text(
           missing > 0
-              ? 'Write down every signer’s 25 words. Without backups, losing ${wallet.signers.length - wallet.threshold + 1} '
+              ? 'Write down every signer’s 25 words. Without backups, losing ${wallet.nKeys - wallet.threshold + 1} '
                   'signer(s) loses the wallet.'
               : 'Every key has a recorded backup. Check them from time to time.',
           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -207,6 +207,107 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
         ),
       ],
     );
+  }
+
+  /// Signers by key number. Two of them can hold the same key, when its backup went into both.
+  Map<int, List<KeySigner>> get _holders {
+    final out = <int, List<KeySigner>>{};
+    for (final s in wallet.signers) {
+      (out[s.shareIndex] ??= []).add(s);
+    }
+    return out;
+  }
+
+  Widget _signersCard(ThemeData theme) {
+    final holders = _holders;
+    return _section(theme, title: 'Signers', icon: Icons.groups_outlined, children: [
+      Text(
+        '${wallet.threshold} of these ${wallet.nKeys} keys sign a payment.',
+        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      ),
+      for (final MapEntry(key: index, value: signers) in holders.entries) ...[
+        const Divider(height: 16),
+        Text('Key #$index', style: theme.textTheme.titleSmall),
+        if (signers.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '${_names(signers)} hold the same key. Together they give one signature, not ${signers.length}.',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary),
+            ),
+          ),
+        for (final s in signers)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.phone_android, color: signerColor(s.deviceId, theme.brightness)),
+            title: SignerName(deviceId: s.deviceId, name: s.name),
+            trailing: IconButton(
+              icon: const Icon(Icons.link_off),
+              tooltip: 'Forget that ${s.name} holds key #$index',
+              onPressed: () => _forgetShare(s, signers.length - 1),
+            ),
+          ),
+      ],
+    ]);
+  }
+
+  Future<void> _forgetShare(KeySigner s, int othersWithKey) async {
+    final left = wallet.nKeys - (othersWithKey > 0 ? 0 : 1);
+    final effect = othersWithKey > 0
+        ? 'Another signer still holds key #${s.shareIndex}, so the wallet still has ${wallet.nKeys} keys.'
+        : left < wallet.threshold
+            ? 'No other signer holds key #${s.shareIndex}. The wallet is left with $left key(s) and needs '
+                '${wallet.threshold} signatures: it can’t sign until a signer with that key joins again.'
+            : 'No other signer holds key #${s.shareIndex}. The wallet is left with $left keys, '
+                '${wallet.threshold} of which still sign.';
+    final ok = await confirmDialog(
+      context,
+      title: 'Forget that ${s.name} holds key #${s.shareIndex}?',
+      body: '$effect\n\nThis only changes this coordinator: ${s.name} keeps the key. To add it back, show its '
+          'restore code (tap the key on the signer) on the Restore page.',
+      action: 'Forget',
+      danger: othersWithKey == 0,
+    );
+    if (!ok) return;
+    try {
+      await widget.app.forgetShare(keyId: wallet.keyId, deviceId: s.deviceId);
+    } catch (e) {
+      if (mounted) toast(context, e);
+    }
+    if (mounted) _loadBackups();
+  }
+
+  Future<void> _deleteWallet() async {
+    final balance = summary?.balanceSats.toInt() ?? 0;
+    final ok = await confirmDialog(
+      context,
+      title: 'Delete “${wallet.name}”?',
+      body: '${balance > 0 ? 'This wallet holds ${formatBtc(balance)}. ' : ''}'
+          'This coordinator forgets the wallet. The money stays on the chain and the signers keep their keys: '
+          'to use the wallet again, read the restore codes of ${wallet.threshold} signers (or of their typed-in '
+          'backups) on the Restore page.\n\n'
+          'Without ${wallet.threshold} of its signers or backups, deleting it here loses the money for good.',
+      action: 'Continue',
+      danger: true,
+    );
+    if (!ok || !mounted) return;
+    final sure = await confirmByTyping(
+      context,
+      title: 'Delete “${wallet.name}”',
+      body: 'Make sure you have ${wallet.threshold} of its signers or backups at hand.',
+      name: wallet.name,
+      action: 'Delete wallet',
+    );
+    if (!sure || !mounted) return;
+    try {
+      await widget.app.deleteWallet(keyId: wallet.keyId);
+      if (!mounted) return;
+      showSuccessToast(context, 'Deleted “${wallet.name}” from this coordinator.');
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) toast(context, e);
+    }
   }
 
   Future<void> _refresh() async {
@@ -397,7 +498,20 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(w.name),
-        actions: [IconButton(onPressed: loading ? null : _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh from Esplora')],
+        actions: [
+          IconButton(onPressed: loading ? null : _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh from Esplora'),
+          PopupMenuButton<void>(
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                onTap: _deleteWallet,
+                child: ListTile(
+                  leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                  title: const Text('Delete wallet'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Align(
         alignment: Alignment.topCenter,
@@ -405,7 +519,7 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
           constraints: const BoxConstraints(maxWidth: 640),
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
             Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              _chip('${w.threshold}-of-${w.signers.length}'),
+              _chip('${w.threshold}-of-${w.nKeys}'),
               _chip(networkLabel(w.network)),
               for (final s in w.signers) SignerName(deviceId: s.deviceId, name: s.name, style: theme.textTheme.bodySmall),
             ]),
@@ -427,6 +541,8 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
             ],
             _sendCard(theme, s),
             if (!backupsMissing) ...[gap, _backupCard(theme)],
+            gap,
+            _signersCard(theme),
           ]),
         ),
       ),
@@ -443,12 +559,21 @@ class _ConfirmSendDialog extends StatefulWidget {
 }
 
 class _ConfirmSendDialogState extends State<_ConfirmSendDialog> {
-  late final Set<String> chosen = {for (final s in widget.wallet.signers.take(widget.wallet.threshold)) s.deviceId};
+  /// One signer per key until there are enough: two holding the same key give one signature.
+  late final Set<String> chosen = () {
+    final keys = <int>{};
+    return {
+      for (final s in widget.wallet.signers)
+        if (keys.length < widget.wallet.threshold && keys.add(s.shareIndex)) s.deviceId,
+    };
+  }();
 
   @override
   Widget build(BuildContext context) {
     final p = widget.preview;
-    final ok = chosen.length >= widget.wallet.threshold;
+    final keys = {for (final s in widget.wallet.signers) if (chosen.contains(s.deviceId)) s.shareIndex};
+    final sameKey = keys.length < chosen.length;
+    final ok = !sameKey && keys.length >= widget.wallet.threshold;
     return AlertDialog(
       title: const Text('Confirm payment'),
       content: SizedBox(
@@ -471,9 +596,13 @@ class _ConfirmSendDialogState extends State<_ConfirmSendDialog> {
               CheckboxListTile(
                 dense: true,
                 title: SignerName(deviceId: s.deviceId, name: s.name),
+                subtitle: Text('key #${s.shareIndex}'),
                 value: chosen.contains(s.deviceId),
                 onChanged: (v) => setState(() => v == true ? chosen.add(s.deviceId) : chosen.remove(s.deviceId)),
               ),
+            if (sameKey)
+              Text('Two of the chosen signers hold the same key, which gives one signature. Choose only one of them.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ]),
         ),
       ),
@@ -483,4 +612,11 @@ class _ConfirmSendDialogState extends State<_ConfirmSendDialog> {
       ],
     );
   }
+}
+
+/// "alice", "alice and bob", "alice, bob and carol".
+String _names(List<KeySigner> signers) {
+  final names = signers.map((s) => s.name).toList();
+  if (names.length < 2) return names.join();
+  return '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
 }

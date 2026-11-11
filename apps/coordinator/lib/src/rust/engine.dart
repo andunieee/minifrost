@@ -58,12 +58,42 @@ sealed class Finished with _$Finished {
   }) = Finished_WalletRestored;
 }
 
+/// A signer of a wallet and the key it holds.
+class KeySigner {
+  final String deviceId;
+  final String name;
+  final int shareIndex;
+
+  const KeySigner({
+    required this.deviceId,
+    required this.name,
+    required this.shareIndex,
+  });
+
+  @override
+  int get hashCode => deviceId.hashCode ^ name.hashCode ^ shareIndex.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is KeySigner &&
+          runtimeType == other.runtimeType &&
+          deviceId == other.deviceId &&
+          name == other.name &&
+          shareIndex == other.shareIndex;
+}
+
 class KeyView {
   final String keyId;
   final String name;
   final String network;
   final int threshold;
-  final List<SignerInfo> signers;
+
+  /// By key number. Two signers can hold the same key (the same backup typed into both).
+  final List<KeySigner> signers;
+
+  /// How many different keys the signers hold: the wallet's "n" in threshold-of-n.
+  final int nKeys;
 
   const KeyView({
     required this.keyId,
@@ -71,6 +101,7 @@ class KeyView {
     required this.network,
     required this.threshold,
     required this.signers,
+    required this.nKeys,
   });
 
   @override
@@ -79,7 +110,8 @@ class KeyView {
       name.hashCode ^
       network.hashCode ^
       threshold.hashCode ^
-      signers.hashCode;
+      signers.hashCode ^
+      nKeys.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -90,7 +122,8 @@ class KeyView {
           name == other.name &&
           network == other.network &&
           threshold == other.threshold &&
-          signers == other.signers;
+          signers == other.signers &&
+          nKeys == other.nKeys;
 }
 
 class SignerInfo {

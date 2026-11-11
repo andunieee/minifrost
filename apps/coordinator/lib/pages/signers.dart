@@ -24,6 +24,40 @@ class _SignersPageState extends State<SignersPage> {
     _reload();
   }
 
+  /// Forget a signer, and with it the keys this coordinator knows it holds. The signer keeps them.
+  Future<void> _forget(SignerInfo s) async {
+    final held = [
+      for (final k in await widget.app.keys())
+        for (final h in k.signers)
+          if (h.deviceId == s.deviceId) (k, h.shareIndex),
+    ];
+    if (!mounted) return;
+    final effect = held.isEmpty
+        ? '${s.name} holds no key of a wallet here.'
+        : '${s.name} stops counting for:\n'
+            '${held.map((h) => '• “${h.$1.name}”, key #${h.$2}${_lastHolder(h.$1, h.$2) ? ' (no other signer holds it)' : ''}').join('\n')}';
+    final short = held.any((h) => _lastHolder(h.$1, h.$2) && h.$1.nKeys - 1 < h.$1.threshold);
+    final ok = await confirmDialog(
+      context,
+      title: 'Forget ${s.name}?',
+      body: '$effect\n\n'
+          '${short ? 'A wallet is then left with fewer keys than it needs to sign, until a signer with that key joins again.\n\n' : ''}'
+          'Nothing changes on the signer: it keeps its keys. To add it back, enrol it again, and show the '
+          'restore code of each key (tap the key on the signer) on the Restore page.',
+      action: 'Forget',
+      danger: held.isNotEmpty,
+    );
+    if (!ok) return;
+    try {
+      await widget.app.forgetSigner(deviceId: s.deviceId);
+    } catch (e) {
+      if (mounted) toast(context, e);
+    }
+    _reload();
+  }
+
+  static bool _lastHolder(KeyView k, int shareIndex) => k.signers.where((h) => h.shareIndex == shareIndex).length == 1;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,14 +91,7 @@ class _SignersPageState extends State<SignersPage> {
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Forget',
-                    onPressed: () async {
-                      try {
-                        await widget.app.forgetSigner(deviceId: s.deviceId);
-                        _reload();
-                      } catch (e) {
-                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-                      }
-                    },
+                    onPressed: () => _forget(s),
                   ),
                 ),
               ),

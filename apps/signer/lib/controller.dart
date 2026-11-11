@@ -87,6 +87,20 @@ class SignerController extends ChangeNotifier {
     await vault.save(await signer.moveToDisk(keyId: keyId));
     await refresh();
   }
+  // ---- deleting
+
+  /// Delete this signer's share of a key for good. A share on the key store goes with its sealed
+  /// copy; nothing needs to be opened for that.
+  Future<void> deleteKey(String keyId) async {
+    await vault.save(await signer.deleteKey(keyId: keyId));
+    await refresh();
+  }
+
+  Future<void> deletePendingBackup(String id) async {
+    await vault.save(await signer.deletePendingBackup(id: id));
+    await refresh();
+  }
+
   Future<StepResult> approve() async => _persist(await signer.approve());
   Future<void> reject() => signer.reject();
 

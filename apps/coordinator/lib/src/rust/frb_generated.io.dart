@@ -126,6 +126,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  KeySigner dco_decode_key_signer(dynamic raw);
+
+  @protected
   KeyView dco_decode_key_view(dynamic raw);
 
   @protected
@@ -136,6 +139,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CameraInfo> dco_decode_list_camera_info(dynamic raw);
+
+  @protected
+  List<KeySigner> dco_decode_list_key_signer(dynamic raw);
 
   @protected
   List<KeyView> dco_decode_list_key_view(dynamic raw);
@@ -322,6 +328,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
+  KeySigner sse_decode_key_signer(SseDeserializer deserializer);
+
+  @protected
   KeyView sse_decode_key_view(SseDeserializer deserializer);
 
   @protected
@@ -332,6 +341,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CameraInfo> sse_decode_list_camera_info(SseDeserializer deserializer);
+
+  @protected
+  List<KeySigner> sse_decode_list_key_signer(SseDeserializer deserializer);
 
   @protected
   List<KeyView> sse_decode_list_key_view(SseDeserializer deserializer);
@@ -554,6 +566,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_key_signer(KeySigner self, SseSerializer serializer);
+
+  @protected
   void sse_encode_key_view(KeyView self, SseSerializer serializer);
 
   @protected
@@ -568,6 +583,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_camera_info(
     List<CameraInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_key_signer(
+    List<KeySigner> self,
     SseSerializer serializer,
   );
 
