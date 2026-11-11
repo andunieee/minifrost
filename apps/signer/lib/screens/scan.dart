@@ -7,7 +7,7 @@ import '../qr_backend.dart';
 
 /// Scans an animated QR code (webcam on desktop, phone camera on Android) or takes pasted QR
 /// text. Pops with the completed payload.
-class ScanScreen extends StatelessWidget {
+class ScanScreen extends StatefulWidget {
   const ScanScreen({
     super.key,
     this.hint = 'Point the camera at the coordinator’s QR code',
@@ -15,6 +15,16 @@ class ScanScreen extends StatelessWidget {
   });
   final String hint;
   final String expecting;
+
+  @override
+  State<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends State<ScanScreen> {
+  /// The camera can read the same code again while this screen is still animating out. Only the
+  /// first payload may pop: a second pop would close the screen that replaces this one (the
+  /// acceptance prompt, or the reply QR after it).
+  bool delivered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +38,13 @@ class ScanScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: ScanPanel(
                 backend: const RustQrBackend(),
-                hint: hint,
-                expecting: expecting,
-                onPayload: (bytes) async => Navigator.pop<Uint8List>(context, bytes),
+                hint: widget.hint,
+                expecting: widget.expecting,
+                onPayload: (bytes) async {
+                  if (delivered) return;
+                  delivered = true;
+                  Navigator.pop<Uint8List>(context, bytes);
+                },
               ),
             ),
           ),
