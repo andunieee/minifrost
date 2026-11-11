@@ -29,7 +29,7 @@
 
 use crate::api::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
 
 // Section: boilerplate
@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 316771011;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -750602721;
 
 // Section: executor
 
@@ -48,120 +48,6 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
-fn wire__crate__api__CoordinatorApp_add_held_share_to_restoration_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_add_held_share_to_restoration",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_restoration_id = <String>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            let api_share_index = <u32>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::add_held_share_to_restoration(
-                        &*api_that_guard,
-                        api_restoration_id,
-                        api_device_id,
-                        api_share_index,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__CoordinatorApp_add_held_share_to_wallet_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_add_held_share_to_wallet",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_key_id = <String>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            let api_share_index = <u32>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::add_held_share_to_wallet(
-                        &*api_that_guard,
-                        api_key_id,
-                        api_device_id,
-                        api_share_index,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
 fn wire__crate__api__CoordinatorApp_backup_shares_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -323,59 +209,6 @@ fn wire__crate__api__CoordinatorApp_broadcast_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_cancel_restoration_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_cancel_restoration",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_restoration_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::cancel_restoration(
-                        &*api_that_guard,
-                        api_restoration_id,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
 fn wire__crate__api__CoordinatorApp_cancel_session_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -527,61 +360,6 @@ fn wire__crate__api__CoordinatorApp_confirm_signer_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_delete_restoration_share_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_delete_restoration_share",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_restoration_id = <String>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::delete_restoration_share(
-                        &*api_that_guard,
-                        api_restoration_id,
-                        api_device_id,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
 fn wire__crate__api__CoordinatorApp_enroll_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -678,59 +456,6 @@ fn wire__crate__api__CoordinatorApp_esplora_url_impl(
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok =
                         crate::api::CoordinatorApp::esplora_url(&*api_that_guard, api_network)?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__CoordinatorApp_finish_restoration_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_finish_restoration",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_restoration_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::finish_restoration(
-                        &*api_that_guard,
-                        api_restoration_id,
-                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -893,6 +618,63 @@ fn wire__crate__api__CoordinatorApp_mark_backup_complete_impl(
         },
     )
 }
+fn wire__crate__api__CoordinatorApp_name_restored_wallet_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_name_restored_wallet",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_key_id = <String>::sse_decode(&mut deserializer);
+            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_network = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::CoordinatorApp::name_restored_wallet(
+                        &*api_that_guard,
+                        api_key_id,
+                        api_name,
+                        api_network,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__CoordinatorApp_pending_consolidations_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1003,6 +785,59 @@ fn wire__crate__api__CoordinatorApp_prepare_send_impl(
         },
     )
 }
+fn wire__crate__api__CoordinatorApp_read_restore_code_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_read_restore_code",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_payload = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::CoordinatorApp::read_restore_code(
+                        &*api_that_guard,
+                        api_payload,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__CoordinatorApp_receive_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1105,7 +940,7 @@ fn wire__crate__api__CoordinatorApp_refresh_wallet_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_restorations_impl(
+fn wire__crate__api__CoordinatorApp_remove_restoring_share_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1113,7 +948,117 @@ fn wire__crate__api__CoordinatorApp_restorations_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_restorations",
+            debug_name: "CoordinatorApp_remove_restoring_share",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::CoordinatorApp::remove_restoring_share(
+                        &*api_that_guard,
+                        api_id,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__CoordinatorApp_restore_one_signature_wallet_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_restore_one_signature_wallet",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_network = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::CoordinatorApp::restore_one_signature_wallet(
+                        &*api_that_guard,
+                        api_id,
+                        api_name,
+                        api_network,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__CoordinatorApp_restoring_shares_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_restoring_shares",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -1147,8 +1092,9 @@ fn wire__crate__api__CoordinatorApp_restorations_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok =
-                        Ok::<_, ()>(crate::api::CoordinatorApp::restorations(&*api_that_guard))?;
+                    let output_ok = Ok::<_, ()>(crate::api::CoordinatorApp::restoring_shares(
+                        &*api_that_guard,
+                    ))?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1311,61 +1257,6 @@ fn wire__crate__api__CoordinatorApp_start_check_backup_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_start_consolidate_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_consolidate",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_key_id = <String>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_consolidate(
-                        &*api_that_guard,
-                        api_key_id,
-                        api_device_id,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
 fn wire__crate__api__CoordinatorApp_start_display_backup_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1421,7 +1312,7 @@ fn wire__crate__api__CoordinatorApp_start_display_backup_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_start_enter_backup_new_wallet_impl(
+fn wire__crate__api__CoordinatorApp_start_finish_restoring_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1429,7 +1320,7 @@ fn wire__crate__api__CoordinatorApp_start_enter_backup_new_wallet_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_enter_backup_new_wallet",
+            debug_name: "CoordinatorApp_start_finish_restoring",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -1446,121 +1337,6 @@ fn wire__crate__api__CoordinatorApp_start_enter_backup_new_wallet_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
             >>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            let api_name = <String>::sse_decode(&mut deserializer);
-            let api_network = <String>::sse_decode(&mut deserializer);
-            let api_threshold = <Option<u16>>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_enter_backup_new_wallet(
-                        &*api_that_guard,
-                        api_device_id,
-                        api_name,
-                        api_network,
-                        api_threshold,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__CoordinatorApp_start_enter_backup_restoration_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_enter_backup_restoration",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            let api_restoration_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_enter_backup_restoration(
-                        &*api_that_guard,
-                        api_device_id,
-                        api_restoration_id,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__CoordinatorApp_start_enter_backup_wallet_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_enter_backup_wallet",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
             let api_key_id = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
@@ -1579,9 +1355,8 @@ fn wire__crate__api__CoordinatorApp_start_enter_backup_wallet_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_enter_backup_wallet(
+                    let output_ok = crate::api::CoordinatorApp::start_finish_restoring(
                         &*api_that_guard,
-                        api_device_id,
                         api_key_id,
                     )?;
                     std::result::Result::Ok(output_ok)
@@ -1649,114 +1424,6 @@ fn wire__crate__api__CoordinatorApp_start_keygen_impl(
         },
     )
 }
-fn wire__crate__api__CoordinatorApp_start_request_held_shares_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_request_held_shares",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_request_held_shares(
-                        &*api_that_guard,
-                        api_device_id,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__CoordinatorApp_start_restoration_from_held_share_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoordinatorApp_start_restoration_from_held_share",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
-            >>::sse_decode(&mut deserializer);
-            let api_device_id = <String>::sse_decode(&mut deserializer);
-            let api_share_index = <u32>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::CoordinatorApp::start_restoration_from_held_share(
-                        &*api_that_guard,
-                        api_device_id,
-                        api_share_index,
-                    )?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
 fn wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1806,6 +1473,57 @@ fn wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
                         api_key_id,
                         api_blocks,
                     )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__CoordinatorApp_unnamed_wallets_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoordinatorApp_unnamed_wallets",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Ok::<_, ()>(crate::api::CoordinatorApp::unnamed_wallets(
+                        &*api_that_guard,
+                    ))?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -2458,62 +2176,17 @@ impl SseDecode for crate::engine::Finished {
                 };
             }
             4 => {
-                let mut var_restorationId = <String>::sse_decode(deserializer);
-                let mut var_shareIndex = <u32>::sse_decode(deserializer);
-                let mut var_restorable = <bool>::sse_decode(deserializer);
-                return crate::engine::Finished::BackupSaved {
-                    restoration_id: var_restorationId,
-                    share_index: var_shareIndex,
-                    restorable: var_restorable,
-                };
-            }
-            5 => {
-                let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::engine::Finished::BackupRejected { reason: var_reason };
-            }
-            6 => {
-                let mut var_keyName = <String>::sse_decode(deserializer);
-                let mut var_shareIndex = <u32>::sse_decode(deserializer);
-                return crate::engine::Finished::Consolidated {
-                    key_name: var_keyName,
-                    share_index: var_shareIndex,
-                };
-            }
-            7 => {
-                let mut var_deviceName = <String>::sse_decode(deserializer);
-                let mut var_shares =
-                    <Vec<crate::engine::restore::HeldShareView>>::sse_decode(deserializer);
-                return crate::engine::Finished::HeldShares {
-                    device_name: var_deviceName,
-                    shares: var_shares,
+                let mut var_keyId = <String>::sse_decode(deserializer);
+                let mut var_name = <String>::sse_decode(deserializer);
+                return crate::engine::Finished::WalletRestored {
+                    key_id: var_keyId,
+                    name: var_name,
                 };
             }
             _ => {
                 unimplemented!("");
             }
         }
-    }
-}
-
-impl SseDecode for crate::engine::restore::HeldShareView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_deviceId = <String>::sse_decode(deserializer);
-        let mut var_shareIndex = <u32>::sse_decode(deserializer);
-        let mut var_keyName = <Option<String>>::sse_decode(deserializer);
-        let mut var_threshold = <Option<u16>>::sse_decode(deserializer);
-        let mut var_network = <Option<String>>::sse_decode(deserializer);
-        let mut var_needsConsolidation = <bool>::sse_decode(deserializer);
-        let mut var_knownWallet = <Option<String>>::sse_decode(deserializer);
-        return crate::engine::restore::HeldShareView {
-            device_id: var_deviceId,
-            share_index: var_shareIndex,
-            key_name: var_keyName,
-            threshold: var_threshold,
-            network: var_network,
-            needs_consolidation: var_needsConsolidation,
-            known_wallet: var_knownWallet,
-        };
     }
 }
 
@@ -2580,20 +2253,6 @@ impl SseDecode for Vec<crate::api::camera::CameraInfo> {
     }
 }
 
-impl SseDecode for Vec<crate::engine::restore::HeldShareView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::engine::restore::HeldShareView>::sse_decode(
-                deserializer,
-            ));
-        }
-        return ans_;
-    }
-}
-
 impl SseDecode for Vec<crate::engine::KeyView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2630,27 +2289,13 @@ impl SseDecode for Vec<u8> {
     }
 }
 
-impl SseDecode for Vec<crate::engine::restore::RestorationShareView> {
+impl SseDecode for Vec<crate::engine::restore::RestoringShareView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
-            ans_.push(<crate::engine::restore::RestorationShareView>::sse_decode(
-                deserializer,
-            ));
-        }
-        return ans_;
-    }
-}
-
-impl SseDecode for Vec<crate::engine::restore::RestorationView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::engine::restore::RestorationView>::sse_decode(
+            ans_.push(<crate::engine::restore::RestoringShareView>::sse_decode(
                 deserializer,
             ));
         }
@@ -2665,6 +2310,20 @@ impl SseDecode for Vec<crate::engine::SignerInfo> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::engine::SignerInfo>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::engine::restore::UnnamedWalletView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::engine::restore::UnnamedWalletView>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -2736,6 +2395,19 @@ impl SseDecode for Option<u16> {
     }
 }
 
+impl SseDecode for Option<crate::engine::restore::UnnamedWalletView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::engine::restore::UnnamedWalletView>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2765,43 +2437,24 @@ impl SseDecode for crate::engine::restore::PendingConsolidationView {
     }
 }
 
-impl SseDecode for crate::engine::restore::RestorationShareView {
+impl SseDecode for crate::engine::restore::RestoringShareView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
         let mut var_deviceId = <String>::sse_decode(deserializer);
         let mut var_deviceName = <String>::sse_decode(deserializer);
         let mut var_shareIndex = <u32>::sse_decode(deserializer);
-        let mut var_compatibility = <String>::sse_decode(deserializer);
-        return crate::engine::restore::RestorationShareView {
+        let mut var_keyName = <Option<String>>::sse_decode(deserializer);
+        let mut var_threshold = <Option<u16>>::sse_decode(deserializer);
+        let mut var_network = <Option<String>>::sse_decode(deserializer);
+        return crate::engine::restore::RestoringShareView {
+            id: var_id,
             device_id: var_deviceId,
             device_name: var_deviceName,
             share_index: var_shareIndex,
-            compatibility: var_compatibility,
-        };
-    }
-}
-
-impl SseDecode for crate::engine::restore::RestorationView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_restorationId = <String>::sse_decode(deserializer);
-        let mut var_name = <String>::sse_decode(deserializer);
-        let mut var_network = <String>::sse_decode(deserializer);
-        let mut var_threshold = <Option<u16>>::sse_decode(deserializer);
-        let mut var_shares =
-            <Vec<crate::engine::restore::RestorationShareView>>::sse_decode(deserializer);
-        let mut var_got = <Option<u16>>::sse_decode(deserializer);
-        let mut var_incompatible = <u16>::sse_decode(deserializer);
-        let mut var_restorable = <bool>::sse_decode(deserializer);
-        return crate::engine::restore::RestorationView {
-            restoration_id: var_restorationId,
-            name: var_name,
-            network: var_network,
+            key_name: var_keyName,
             threshold: var_threshold,
-            shares: var_shares,
-            got: var_got,
-            incompatible: var_incompatible,
-            restorable: var_restorable,
+            network: var_network,
         };
     }
 }
@@ -2880,6 +2533,20 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for crate::engine::restore::UnnamedWalletView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_keyId = <String>::sse_decode(deserializer);
+        let mut var_threshold = <u16>::sse_decode(deserializer);
+        let mut var_signers = <Vec<String>>::sse_decode(deserializer);
+        return crate::engine::restore::UnnamedWalletView {
+            key_id: var_keyId,
+            threshold: var_threshold,
+            signers: var_signers,
+        };
+    }
+}
+
 impl SseDecode for crate::engine::Update {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2892,6 +2559,8 @@ impl SseDecode for crate::engine::Update {
         let mut var_checkCode = <Option<String>>::sse_decode(deserializer);
         let mut var_confirm = <Option<String>>::sse_decode(deserializer);
         let mut var_confirmEachSigner = <bool>::sse_decode(deserializer);
+        let mut var_unnamedWallet =
+            <Option<crate::engine::restore::UnnamedWalletView>>::sse_decode(deserializer);
         let mut var_finished = <Option<crate::engine::Finished>>::sse_decode(deserializer);
         let mut var_snapshotSaved = <bool>::sse_decode(deserializer);
         return crate::engine::Update {
@@ -2904,6 +2573,7 @@ impl SseDecode for crate::engine::Update {
             check_code: var_checkCode,
             confirm: var_confirm,
             confirm_each_signer: var_confirmEachSigner,
+            unnamed_wallet: var_unnamedWallet,
             finished: var_finished,
             snapshot_saved: var_snapshotSaved,
         };
@@ -2949,143 +2619,113 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__CoordinatorApp_add_held_share_to_restoration_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        2 => wire__crate__api__CoordinatorApp_add_held_share_to_wallet_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        3 => wire__crate__api__CoordinatorApp_backup_shares_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__CoordinatorApp_begin_signing_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__CoordinatorApp_broadcast_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__CoordinatorApp_cancel_restoration_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        7 => {
+        1 => wire__crate__api__CoordinatorApp_backup_shares_impl(port, ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__CoordinatorApp_begin_signing_impl(port, ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__CoordinatorApp_broadcast_impl(port, ptr, rust_vec_len, data_len),
+        4 => {
             wire__crate__api__CoordinatorApp_cancel_session_impl(port, ptr, rust_vec_len, data_len)
         }
-        8 => wire__crate__api__CoordinatorApp_confirm_impl(port, ptr, rust_vec_len, data_len),
-        9 => {
+        5 => wire__crate__api__CoordinatorApp_confirm_impl(port, ptr, rust_vec_len, data_len),
+        6 => {
             wire__crate__api__CoordinatorApp_confirm_signer_impl(port, ptr, rust_vec_len, data_len)
         }
-        10 => wire__crate__api__CoordinatorApp_delete_restoration_share_impl(
+        7 => wire__crate__api__CoordinatorApp_enroll_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__CoordinatorApp_esplora_url_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__CoordinatorApp_forget_signer_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__CoordinatorApp_keys_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__CoordinatorApp_mark_backup_complete_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__CoordinatorApp_enroll_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__CoordinatorApp_esplora_url_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__CoordinatorApp_finish_restoration_impl(
+        12 => wire__crate__api__CoordinatorApp_name_restored_wallet_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => {
-            wire__crate__api__CoordinatorApp_forget_signer_impl(port, ptr, rust_vec_len, data_len)
-        }
-        15 => wire__crate__api__CoordinatorApp_keys_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__CoordinatorApp_mark_backup_complete_impl(
+        13 => wire__crate__api__CoordinatorApp_pending_consolidations_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__CoordinatorApp_pending_consolidations_impl(
+        14 => wire__crate__api__CoordinatorApp_prepare_send_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__CoordinatorApp_read_restore_code_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__CoordinatorApp_prepare_send_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__CoordinatorApp_receive_impl(port, ptr, rust_vec_len, data_len),
-        20 => {
+        16 => wire__crate__api__CoordinatorApp_receive_impl(port, ptr, rust_vec_len, data_len),
+        17 => {
             wire__crate__api__CoordinatorApp_refresh_wallet_impl(port, ptr, rust_vec_len, data_len)
         }
-        21 => wire__crate__api__CoordinatorApp_restorations_impl(port, ptr, rust_vec_len, data_len),
-        22 => {
+        18 => wire__crate__api__CoordinatorApp_remove_restoring_share_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        19 => wire__crate__api__CoordinatorApp_restore_one_signature_wallet_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        20 => wire__crate__api__CoordinatorApp_restoring_shares_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        21 => {
             wire__crate__api__CoordinatorApp_set_esplora_url_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => wire__crate__api__CoordinatorApp_signers_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__CoordinatorApp_start_check_backup_impl(
+        22 => wire__crate__api__CoordinatorApp_signers_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__CoordinatorApp_start_check_backup_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__CoordinatorApp_start_consolidate_impl(
+        24 => wire__crate__api__CoordinatorApp_start_display_backup_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__CoordinatorApp_start_display_backup_impl(
+        25 => wire__crate__api__CoordinatorApp_start_finish_restoring_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__CoordinatorApp_start_enter_backup_new_wallet_impl(
+        26 => wire__crate__api__CoordinatorApp_start_keygen_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__CoordinatorApp_start_enter_backup_restoration_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        29 => wire__crate__api__CoordinatorApp_start_enter_backup_wallet_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        30 => wire__crate__api__CoordinatorApp_start_keygen_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__CoordinatorApp_start_request_held_shares_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        32 => wire__crate__api__CoordinatorApp_start_restoration_from_held_share_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        33 => wire__crate__api__CoordinatorApp_suggested_fee_rate_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        34 => wire__crate__api__QrScanner_push_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__QrScanner_reset_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__open_coordinator_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
-        41 => {
+        28 => {
+            wire__crate__api__CoordinatorApp_unnamed_wallets_impl(port, ptr, rust_vec_len, data_len)
+        }
+        29 => wire__crate__api__QrScanner_push_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__QrScanner_reset_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__open_coordinator_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
+        36 => {
             wire__crate__api__sound__start_sound_listening_impl(port, ptr, rust_vec_len, data_len)
         }
-        42 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3255,36 +2895,10 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Finished {
                 share_index.into_into_dart().into_dart(),
             ]
             .into_dart(),
-            crate::engine::Finished::BackupSaved {
-                restoration_id,
-                share_index,
-                restorable,
-            } => [
+            crate::engine::Finished::WalletRestored { key_id, name } => [
                 4.into_dart(),
-                restoration_id.into_into_dart().into_dart(),
-                share_index.into_into_dart().into_dart(),
-                restorable.into_into_dart().into_dart(),
-            ]
-            .into_dart(),
-            crate::engine::Finished::BackupRejected { reason } => {
-                [5.into_dart(), reason.into_into_dart().into_dart()].into_dart()
-            }
-            crate::engine::Finished::Consolidated {
-                key_name,
-                share_index,
-            } => [
-                6.into_dart(),
-                key_name.into_into_dart().into_dart(),
-                share_index.into_into_dart().into_dart(),
-            ]
-            .into_dart(),
-            crate::engine::Finished::HeldShares {
-                device_name,
-                shares,
-            } => [
-                7.into_dart(),
-                device_name.into_into_dart().into_dart(),
-                shares.into_into_dart().into_dart(),
+                key_id.into_into_dart().into_dart(),
+                name.into_into_dart().into_dart(),
             ]
             .into_dart(),
             _ => {
@@ -3296,32 +2910,6 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Finished {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::engine::Finished {}
 impl flutter_rust_bridge::IntoIntoDart<crate::engine::Finished> for crate::engine::Finished {
     fn into_into_dart(self) -> crate::engine::Finished {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::engine::restore::HeldShareView {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.device_id.into_into_dart().into_dart(),
-            self.share_index.into_into_dart().into_dart(),
-            self.key_name.into_into_dart().into_dart(),
-            self.threshold.into_into_dart().into_dart(),
-            self.network.into_into_dart().into_dart(),
-            self.needs_consolidation.into_into_dart().into_dart(),
-            self.known_wallet.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::engine::restore::HeldShareView
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::HeldShareView>
-    for crate::engine::restore::HeldShareView
-{
-    fn into_into_dart(self) -> crate::engine::restore::HeldShareView {
         self
     }
 }
@@ -3369,52 +2957,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::PendingConsolidat
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::engine::restore::RestorationShareView {
+impl flutter_rust_bridge::IntoDart for crate::engine::restore::RestoringShareView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.id.into_into_dart().into_dart(),
             self.device_id.into_into_dart().into_dart(),
             self.device_name.into_into_dart().into_dart(),
             self.share_index.into_into_dart().into_dart(),
-            self.compatibility.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::engine::restore::RestorationShareView
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::RestorationShareView>
-    for crate::engine::restore::RestorationShareView
-{
-    fn into_into_dart(self) -> crate::engine::restore::RestorationShareView {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::engine::restore::RestorationView {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.restoration_id.into_into_dart().into_dart(),
-            self.name.into_into_dart().into_dart(),
-            self.network.into_into_dart().into_dart(),
+            self.key_name.into_into_dart().into_dart(),
             self.threshold.into_into_dart().into_dart(),
-            self.shares.into_into_dart().into_dart(),
-            self.got.into_into_dart().into_dart(),
-            self.incompatible.into_into_dart().into_dart(),
-            self.restorable.into_into_dart().into_dart(),
+            self.network.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::engine::restore::RestorationView
+    for crate::engine::restore::RestoringShareView
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::RestorationView>
-    for crate::engine::restore::RestorationView
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::RestoringShareView>
+    for crate::engine::restore::RestoringShareView
 {
-    fn into_into_dart(self) -> crate::engine::restore::RestorationView {
+    fn into_into_dart(self) -> crate::engine::restore::RestoringShareView {
         self
     }
 }
@@ -3473,6 +3037,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::engine::SignerInfo> for crate::eng
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::engine::restore::UnnamedWalletView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.key_id.into_into_dart().into_dart(),
+            self.threshold.into_into_dart().into_dart(),
+            self.signers.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::engine::restore::UnnamedWalletView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::engine::restore::UnnamedWalletView>
+    for crate::engine::restore::UnnamedWalletView
+{
+    fn into_into_dart(self) -> crate::engine::restore::UnnamedWalletView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::engine::Update {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -3485,6 +3071,7 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Update {
             self.check_code.into_into_dart().into_dart(),
             self.confirm.into_into_dart().into_dart(),
             self.confirm_each_signer.into_into_dart().into_dart(),
+            self.unnamed_wallet.into_into_dart().into_dart(),
             self.finished.into_into_dart().into_dart(),
             self.snapshot_saved.into_into_dart().into_dart(),
         ]
@@ -3671,53 +3258,15 @@ impl SseEncode for crate::engine::Finished {
                 <String>::sse_encode(key_name, serializer);
                 <u32>::sse_encode(share_index, serializer);
             }
-            crate::engine::Finished::BackupSaved {
-                restoration_id,
-                share_index,
-                restorable,
-            } => {
+            crate::engine::Finished::WalletRestored { key_id, name } => {
                 <i32>::sse_encode(4, serializer);
-                <String>::sse_encode(restoration_id, serializer);
-                <u32>::sse_encode(share_index, serializer);
-                <bool>::sse_encode(restorable, serializer);
-            }
-            crate::engine::Finished::BackupRejected { reason } => {
-                <i32>::sse_encode(5, serializer);
-                <String>::sse_encode(reason, serializer);
-            }
-            crate::engine::Finished::Consolidated {
-                key_name,
-                share_index,
-            } => {
-                <i32>::sse_encode(6, serializer);
-                <String>::sse_encode(key_name, serializer);
-                <u32>::sse_encode(share_index, serializer);
-            }
-            crate::engine::Finished::HeldShares {
-                device_name,
-                shares,
-            } => {
-                <i32>::sse_encode(7, serializer);
-                <String>::sse_encode(device_name, serializer);
-                <Vec<crate::engine::restore::HeldShareView>>::sse_encode(shares, serializer);
+                <String>::sse_encode(key_id, serializer);
+                <String>::sse_encode(name, serializer);
             }
             _ => {
                 unimplemented!("");
             }
         }
-    }
-}
-
-impl SseEncode for crate::engine::restore::HeldShareView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.device_id, serializer);
-        <u32>::sse_encode(self.share_index, serializer);
-        <Option<String>>::sse_encode(self.key_name, serializer);
-        <Option<u16>>::sse_encode(self.threshold, serializer);
-        <Option<String>>::sse_encode(self.network, serializer);
-        <bool>::sse_encode(self.needs_consolidation, serializer);
-        <Option<String>>::sse_encode(self.known_wallet, serializer);
     }
 }
 
@@ -3769,16 +3318,6 @@ impl SseEncode for Vec<crate::api::camera::CameraInfo> {
     }
 }
 
-impl SseEncode for Vec<crate::engine::restore::HeldShareView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::engine::restore::HeldShareView>::sse_encode(item, serializer);
-        }
-    }
-}
-
 impl SseEncode for Vec<crate::engine::KeyView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3809,22 +3348,12 @@ impl SseEncode for Vec<u8> {
     }
 }
 
-impl SseEncode for Vec<crate::engine::restore::RestorationShareView> {
+impl SseEncode for Vec<crate::engine::restore::RestoringShareView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::engine::restore::RestorationShareView>::sse_encode(item, serializer);
-        }
-    }
-}
-
-impl SseEncode for Vec<crate::engine::restore::RestorationView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::engine::restore::RestorationView>::sse_encode(item, serializer);
+            <crate::engine::restore::RestoringShareView>::sse_encode(item, serializer);
         }
     }
 }
@@ -3835,6 +3364,16 @@ impl SseEncode for Vec<crate::engine::SignerInfo> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::engine::SignerInfo>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::engine::restore::UnnamedWalletView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::engine::restore::UnnamedWalletView>::sse_encode(item, serializer);
         }
     }
 }
@@ -3899,6 +3438,16 @@ impl SseEncode for Option<u16> {
     }
 }
 
+impl SseEncode for Option<crate::engine::restore::UnnamedWalletView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::engine::restore::UnnamedWalletView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3920,27 +3469,16 @@ impl SseEncode for crate::engine::restore::PendingConsolidationView {
     }
 }
 
-impl SseEncode for crate::engine::restore::RestorationShareView {
+impl SseEncode for crate::engine::restore::RestoringShareView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.device_id, serializer);
         <String>::sse_encode(self.device_name, serializer);
         <u32>::sse_encode(self.share_index, serializer);
-        <String>::sse_encode(self.compatibility, serializer);
-    }
-}
-
-impl SseEncode for crate::engine::restore::RestorationView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.restoration_id, serializer);
-        <String>::sse_encode(self.name, serializer);
-        <String>::sse_encode(self.network, serializer);
+        <Option<String>>::sse_encode(self.key_name, serializer);
         <Option<u16>>::sse_encode(self.threshold, serializer);
-        <Vec<crate::engine::restore::RestorationShareView>>::sse_encode(self.shares, serializer);
-        <Option<u16>>::sse_encode(self.got, serializer);
-        <u16>::sse_encode(self.incompatible, serializer);
-        <bool>::sse_encode(self.restorable, serializer);
+        <Option<String>>::sse_encode(self.network, serializer);
     }
 }
 
@@ -4000,6 +3538,15 @@ impl SseEncode for () {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
+impl SseEncode for crate::engine::restore::UnnamedWalletView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.key_id, serializer);
+        <u16>::sse_encode(self.threshold, serializer);
+        <Vec<String>>::sse_encode(self.signers, serializer);
+    }
+}
+
 impl SseEncode for crate::engine::Update {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4012,6 +3559,10 @@ impl SseEncode for crate::engine::Update {
         <Option<String>>::sse_encode(self.check_code, serializer);
         <Option<String>>::sse_encode(self.confirm, serializer);
         <bool>::sse_encode(self.confirm_each_signer, serializer);
+        <Option<crate::engine::restore::UnnamedWalletView>>::sse_encode(
+            self.unnamed_wallet,
+            serializer,
+        );
         <Option<crate::engine::Finished>>::sse_encode(self.finished, serializer);
         <bool>::sse_encode(self.snapshot_saved, serializer);
     }
@@ -4056,7 +3607,7 @@ mod io {
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
-    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -4109,7 +3660,7 @@ mod web {
     };
     use flutter_rust_bridge::for_generated::wasm_bindgen;
     use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate

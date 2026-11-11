@@ -154,20 +154,24 @@ class _CeremonyPageState extends State<CeremonyPage> {
   }
 
   /// Keygen check round: one button per signer, pressed once that signer shows the code and the
-  /// user approved on it.
+  /// user approved on it. Restoration: pressed once that signer read the code and saved its key.
   Widget _signerConfirmations(ThemeData theme) {
     final signers = [
       for (final s in update.received) (s, true),
       for (final s in update.awaiting) (s, false),
     ]..sort((a, b) => a.$1.name.compareTo(b.$1.name));
+    final keygen = update.checkCode != null;
     return Card(
       color: theme.colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text(
-            'Confirm each signer here once it shows the code above and you approved on it. '
-            'Only confirm if you really did: a signer you confirm without approving holds no share.',
+          Text(
+            keygen
+                ? 'Confirm each signer here once it shows the code above and you approved on it. '
+                    'Only confirm if you really did: a signer you confirm without approving holds no share.'
+                : 'Confirm each signer here once it read the code above and says its key is stored. '
+                    'Until it does it cannot sign.',
           ),
           const SizedBox(height: 16),
           for (final (s, done) in signers)
@@ -182,7 +186,7 @@ class _CeremonyPageState extends State<CeremonyPage> {
                       ),
                       onPressed: confirming ? null : () => _confirm(() => widget.app.confirmSigner(deviceId: s.deviceId)),
                       icon: const Icon(Icons.check),
-                      label: Text('${s.name} shows this code and I approved'),
+                      label: Text(keygen ? '${s.name} shows this code and I approved' : '${s.name} saved its key'),
                     ),
             ),
         ]),
@@ -307,7 +311,6 @@ class _CeremonyPageState extends State<CeremonyPage> {
 
   /// Result cards for the backup and restoration sessions.
   List<Widget> _backupSection(Finished f) {
-    final scheme = Theme.of(context).colorScheme;
     final (IconData icon, Color color, String title, String detail) = switch (f) {
       Finished_BackupRecorded(:final keyName, :final shareIndex) => (
           Icons.check_circle,
@@ -321,26 +324,11 @@ class _CeremonyPageState extends State<CeremonyPage> {
           'Backup of key #$shareIndex checked',
           'Every answer matched the signer’s share of “$keyName”.',
         ),
-      Finished_BackupSaved(:final shareIndex, :final restorable) => (
+      Finished_WalletRestored(:final name) => (
           Icons.check_circle,
           Colors.green,
-          'Backup #$shareIndex saved on the signer',
-          restorable
-              ? 'There are enough shares to rebuild the wallet. Finish the restoration from the Restore page.'
-              : 'More backups are needed before the wallet can be rebuilt.',
-        ),
-      Finished_BackupRejected(:final reason) => (Icons.error_outline, scheme.error, 'Backup not accepted', reason),
-      Finished_Consolidated(:final keyName, :final shareIndex) => (
-          Icons.check_circle,
-          Colors.green,
-          'Key #$shareIndex is ready',
-          'The signer now holds its share of “$keyName” and can sign.',
-        ),
-      Finished_HeldShares(:final deviceName, :final shares) => (
-          shares.isEmpty ? Icons.info_outline : Icons.check_circle,
-          shares.isEmpty ? scheme.outline : Colors.green,
-          '$deviceName holds ${shares.length} share(s)',
-          shares.isEmpty ? 'Nothing to restore from this signer.' : 'Close this page to choose one.',
+          'Wallet “$name” is restored',
+          'Every signer that took part holds its key and can sign.',
         ),
       _ => (Icons.check_circle, Colors.green, 'Done', ''),
     };

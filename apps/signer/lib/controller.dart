@@ -91,9 +91,19 @@ class SignerController extends ChangeNotifier {
   Future<void> reject() => signer.reject();
 
   /// The user typed a physical backup (key number + 25 words). Throws a readable message when the
-  /// words don't form a valid backup; the signer then keeps waiting for a corrected attempt.
+  /// words don't form a valid backup, so they can be corrected. Otherwise the backup is saved and
+  /// the step is its restore code.
   Future<StepResult> submitBackup(int shareIndex, List<String> words) async =>
       _persist(await signer.submitBackup(shareIndex: shareIndex, words: words));
+
+  /// The restore code of a key this signer holds. A share on the key store is opened first (screen
+  /// lock), since the code carries the share's public image.
+  Future<Step> restoreCode(String keyId) async {
+    final step = await signer.restoreCode(keyId: keyId);
+    if (step is! Step_UnlockShare) return step;
+    await openShare(keyId);
+    return signer.restoreCode(keyId: keyId);
+  }
 
   Future<QuizQuestion> quizQuestion() => signer.quizQuestion();
 

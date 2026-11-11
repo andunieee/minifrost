@@ -44,7 +44,7 @@ class ReplyScreen extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         if (next case final next?) ...[
-          Text('Once the coordinator has scanned every signer it shows “$next”.', textAlign: TextAlign.center),
+          Text('Once the coordinator has every code it needs it shows “$next”.', textAlign: TextAlign.center),
           const SizedBox(height: 8),
           FilledButton.icon(
             icon: const Icon(Icons.qr_code_scanner),

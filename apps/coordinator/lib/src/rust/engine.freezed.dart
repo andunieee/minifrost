@@ -56,18 +56,15 @@ extension FinishedPatterns on Finished {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Finished_KeyCreated value)?  keyCreated,TResult Function( Finished_Signed value)?  signed,TResult Function( Finished_BackupRecorded value)?  backupRecorded,TResult Function( Finished_BackupChecked value)?  backupChecked,TResult Function( Finished_BackupSaved value)?  backupSaved,TResult Function( Finished_BackupRejected value)?  backupRejected,TResult Function( Finished_Consolidated value)?  consolidated,TResult Function( Finished_HeldShares value)?  heldShares,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Finished_KeyCreated value)?  keyCreated,TResult Function( Finished_Signed value)?  signed,TResult Function( Finished_BackupRecorded value)?  backupRecorded,TResult Function( Finished_BackupChecked value)?  backupChecked,TResult Function( Finished_WalletRestored value)?  walletRestored,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Finished_KeyCreated() when keyCreated != null:
 return keyCreated(_that);case Finished_Signed() when signed != null:
 return signed(_that);case Finished_BackupRecorded() when backupRecorded != null:
 return backupRecorded(_that);case Finished_BackupChecked() when backupChecked != null:
-return backupChecked(_that);case Finished_BackupSaved() when backupSaved != null:
-return backupSaved(_that);case Finished_BackupRejected() when backupRejected != null:
-return backupRejected(_that);case Finished_Consolidated() when consolidated != null:
-return consolidated(_that);case Finished_HeldShares() when heldShares != null:
-return heldShares(_that);case _:
+return backupChecked(_that);case Finished_WalletRestored() when walletRestored != null:
+return walletRestored(_that);case _:
   return orElse();
 
 }
@@ -85,18 +82,15 @@ return heldShares(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Finished_KeyCreated value)  keyCreated,required TResult Function( Finished_Signed value)  signed,required TResult Function( Finished_BackupRecorded value)  backupRecorded,required TResult Function( Finished_BackupChecked value)  backupChecked,required TResult Function( Finished_BackupSaved value)  backupSaved,required TResult Function( Finished_BackupRejected value)  backupRejected,required TResult Function( Finished_Consolidated value)  consolidated,required TResult Function( Finished_HeldShares value)  heldShares,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Finished_KeyCreated value)  keyCreated,required TResult Function( Finished_Signed value)  signed,required TResult Function( Finished_BackupRecorded value)  backupRecorded,required TResult Function( Finished_BackupChecked value)  backupChecked,required TResult Function( Finished_WalletRestored value)  walletRestored,}){
 final _that = this;
 switch (_that) {
 case Finished_KeyCreated():
 return keyCreated(_that);case Finished_Signed():
 return signed(_that);case Finished_BackupRecorded():
 return backupRecorded(_that);case Finished_BackupChecked():
-return backupChecked(_that);case Finished_BackupSaved():
-return backupSaved(_that);case Finished_BackupRejected():
-return backupRejected(_that);case Finished_Consolidated():
-return consolidated(_that);case Finished_HeldShares():
-return heldShares(_that);}
+return backupChecked(_that);case Finished_WalletRestored():
+return walletRestored(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -110,18 +104,15 @@ return heldShares(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Finished_KeyCreated value)?  keyCreated,TResult? Function( Finished_Signed value)?  signed,TResult? Function( Finished_BackupRecorded value)?  backupRecorded,TResult? Function( Finished_BackupChecked value)?  backupChecked,TResult? Function( Finished_BackupSaved value)?  backupSaved,TResult? Function( Finished_BackupRejected value)?  backupRejected,TResult? Function( Finished_Consolidated value)?  consolidated,TResult? Function( Finished_HeldShares value)?  heldShares,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Finished_KeyCreated value)?  keyCreated,TResult? Function( Finished_Signed value)?  signed,TResult? Function( Finished_BackupRecorded value)?  backupRecorded,TResult? Function( Finished_BackupChecked value)?  backupChecked,TResult? Function( Finished_WalletRestored value)?  walletRestored,}){
 final _that = this;
 switch (_that) {
 case Finished_KeyCreated() when keyCreated != null:
 return keyCreated(_that);case Finished_Signed() when signed != null:
 return signed(_that);case Finished_BackupRecorded() when backupRecorded != null:
 return backupRecorded(_that);case Finished_BackupChecked() when backupChecked != null:
-return backupChecked(_that);case Finished_BackupSaved() when backupSaved != null:
-return backupSaved(_that);case Finished_BackupRejected() when backupRejected != null:
-return backupRejected(_that);case Finished_Consolidated() when consolidated != null:
-return consolidated(_that);case Finished_HeldShares() when heldShares != null:
-return heldShares(_that);case _:
+return backupChecked(_that);case Finished_WalletRestored() when walletRestored != null:
+return walletRestored(_that);case _:
   return null;
 
 }
@@ -138,17 +129,14 @@ return heldShares(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String keyId,  String name)?  keyCreated,TResult Function( String txid,  String txHex)?  signed,TResult Function( String keyName,  int shareIndex)?  backupRecorded,TResult Function( String keyName,  int shareIndex)?  backupChecked,TResult Function( String restorationId,  int shareIndex,  bool restorable)?  backupSaved,TResult Function( String reason)?  backupRejected,TResult Function( String keyName,  int shareIndex)?  consolidated,TResult Function( String deviceName,  List<HeldShareView> shares)?  heldShares,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String keyId,  String name)?  keyCreated,TResult Function( String txid,  String txHex)?  signed,TResult Function( String keyName,  int shareIndex)?  backupRecorded,TResult Function( String keyName,  int shareIndex)?  backupChecked,TResult Function( String keyId,  String name)?  walletRestored,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Finished_KeyCreated() when keyCreated != null:
 return keyCreated(_that.keyId,_that.name);case Finished_Signed() when signed != null:
 return signed(_that.txid,_that.txHex);case Finished_BackupRecorded() when backupRecorded != null:
 return backupRecorded(_that.keyName,_that.shareIndex);case Finished_BackupChecked() when backupChecked != null:
-return backupChecked(_that.keyName,_that.shareIndex);case Finished_BackupSaved() when backupSaved != null:
-return backupSaved(_that.restorationId,_that.shareIndex,_that.restorable);case Finished_BackupRejected() when backupRejected != null:
-return backupRejected(_that.reason);case Finished_Consolidated() when consolidated != null:
-return consolidated(_that.keyName,_that.shareIndex);case Finished_HeldShares() when heldShares != null:
-return heldShares(_that.deviceName,_that.shares);case _:
+return backupChecked(_that.keyName,_that.shareIndex);case Finished_WalletRestored() when walletRestored != null:
+return walletRestored(_that.keyId,_that.name);case _:
   return orElse();
 
 }
@@ -166,17 +154,14 @@ return heldShares(_that.deviceName,_that.shares);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String keyId,  String name)  keyCreated,required TResult Function( String txid,  String txHex)  signed,required TResult Function( String keyName,  int shareIndex)  backupRecorded,required TResult Function( String keyName,  int shareIndex)  backupChecked,required TResult Function( String restorationId,  int shareIndex,  bool restorable)  backupSaved,required TResult Function( String reason)  backupRejected,required TResult Function( String keyName,  int shareIndex)  consolidated,required TResult Function( String deviceName,  List<HeldShareView> shares)  heldShares,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String keyId,  String name)  keyCreated,required TResult Function( String txid,  String txHex)  signed,required TResult Function( String keyName,  int shareIndex)  backupRecorded,required TResult Function( String keyName,  int shareIndex)  backupChecked,required TResult Function( String keyId,  String name)  walletRestored,}) {final _that = this;
 switch (_that) {
 case Finished_KeyCreated():
 return keyCreated(_that.keyId,_that.name);case Finished_Signed():
 return signed(_that.txid,_that.txHex);case Finished_BackupRecorded():
 return backupRecorded(_that.keyName,_that.shareIndex);case Finished_BackupChecked():
-return backupChecked(_that.keyName,_that.shareIndex);case Finished_BackupSaved():
-return backupSaved(_that.restorationId,_that.shareIndex,_that.restorable);case Finished_BackupRejected():
-return backupRejected(_that.reason);case Finished_Consolidated():
-return consolidated(_that.keyName,_that.shareIndex);case Finished_HeldShares():
-return heldShares(_that.deviceName,_that.shares);}
+return backupChecked(_that.keyName,_that.shareIndex);case Finished_WalletRestored():
+return walletRestored(_that.keyId,_that.name);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -190,17 +175,14 @@ return heldShares(_that.deviceName,_that.shares);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String keyId,  String name)?  keyCreated,TResult? Function( String txid,  String txHex)?  signed,TResult? Function( String keyName,  int shareIndex)?  backupRecorded,TResult? Function( String keyName,  int shareIndex)?  backupChecked,TResult? Function( String restorationId,  int shareIndex,  bool restorable)?  backupSaved,TResult? Function( String reason)?  backupRejected,TResult? Function( String keyName,  int shareIndex)?  consolidated,TResult? Function( String deviceName,  List<HeldShareView> shares)?  heldShares,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String keyId,  String name)?  keyCreated,TResult? Function( String txid,  String txHex)?  signed,TResult? Function( String keyName,  int shareIndex)?  backupRecorded,TResult? Function( String keyName,  int shareIndex)?  backupChecked,TResult? Function( String keyId,  String name)?  walletRestored,}) {final _that = this;
 switch (_that) {
 case Finished_KeyCreated() when keyCreated != null:
 return keyCreated(_that.keyId,_that.name);case Finished_Signed() when signed != null:
 return signed(_that.txid,_that.txHex);case Finished_BackupRecorded() when backupRecorded != null:
 return backupRecorded(_that.keyName,_that.shareIndex);case Finished_BackupChecked() when backupChecked != null:
-return backupChecked(_that.keyName,_that.shareIndex);case Finished_BackupSaved() when backupSaved != null:
-return backupSaved(_that.restorationId,_that.shareIndex,_that.restorable);case Finished_BackupRejected() when backupRejected != null:
-return backupRejected(_that.reason);case Finished_Consolidated() when consolidated != null:
-return consolidated(_that.keyName,_that.shareIndex);case Finished_HeldShares() when heldShares != null:
-return heldShares(_that.deviceName,_that.shares);case _:
+return backupChecked(_that.keyName,_that.shareIndex);case Finished_WalletRestored() when walletRestored != null:
+return walletRestored(_that.keyId,_that.name);case _:
   return null;
 
 }
@@ -491,47 +473,46 @@ as int,
 /// @nodoc
 
 
-class Finished_BackupSaved extends Finished {
-  const Finished_BackupSaved({required this.restorationId, required this.shareIndex, required this.restorable}): super._();
+class Finished_WalletRestored extends Finished {
+  const Finished_WalletRestored({required this.keyId, required this.name}): super._();
   
 
- final  String restorationId;
- final  int shareIndex;
- final  bool restorable;
+ final  String keyId;
+ final  String name;
 
 /// Create a copy of Finished
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$Finished_BackupSavedCopyWith<Finished_BackupSaved> get copyWith => _$Finished_BackupSavedCopyWithImpl<Finished_BackupSaved>(this, _$identity);
+$Finished_WalletRestoredCopyWith<Finished_WalletRestored> get copyWith => _$Finished_WalletRestoredCopyWithImpl<Finished_WalletRestored>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Finished_BackupSaved&&(identical(other.restorationId, restorationId) || other.restorationId == restorationId)&&(identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex)&&(identical(other.restorable, restorable) || other.restorable == restorable));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Finished_WalletRestored&&(identical(other.keyId, keyId) || other.keyId == keyId)&&(identical(other.name, name) || other.name == name));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,restorationId,shareIndex,restorable);
+    return Object.hash(runtimeType,keyId,name);
 }
 
 @override
 String toString() {
-    return 'Finished.backupSaved(restorationId: $restorationId, shareIndex: $shareIndex, restorable: $restorable)';
+    return 'Finished.walletRestored(keyId: $keyId, name: $name)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $Finished_BackupSavedCopyWith<$Res> implements $FinishedCopyWith<$Res> {
-  factory $Finished_BackupSavedCopyWith(Finished_BackupSaved value, $Res Function(Finished_BackupSaved) _then) = _$Finished_BackupSavedCopyWithImpl;
+abstract mixin class $Finished_WalletRestoredCopyWith<$Res> implements $FinishedCopyWith<$Res> {
+  factory $Finished_WalletRestoredCopyWith(Finished_WalletRestored value, $Res Function(Finished_WalletRestored) _then) = _$Finished_WalletRestoredCopyWithImpl;
 @useResult
 $Res call({
- String restorationId, int shareIndex, bool restorable
+ String keyId, String name
 });
 
 
@@ -539,235 +520,20 @@ $Res call({
 
 }
 /// @nodoc
-class _$Finished_BackupSavedCopyWithImpl<$Res>
-    implements $Finished_BackupSavedCopyWith<$Res> {
-  _$Finished_BackupSavedCopyWithImpl(this._self, this._then);
+class _$Finished_WalletRestoredCopyWithImpl<$Res>
+    implements $Finished_WalletRestoredCopyWith<$Res> {
+  _$Finished_WalletRestoredCopyWithImpl(this._self, this._then);
 
-  final Finished_BackupSaved _self;
-  final $Res Function(Finished_BackupSaved) _then;
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? restorationId = null,Object? shareIndex = null,Object? restorable = null,}) {
-  return _then(Finished_BackupSaved(
-restorationId: null == restorationId ? _self.restorationId : restorationId // ignore: cast_nullable_to_non_nullable
-as String,shareIndex: null == shareIndex ? _self.shareIndex : shareIndex // ignore: cast_nullable_to_non_nullable
-as int,restorable: null == restorable ? _self.restorable : restorable // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
-}
-
-
-}
-
-/// @nodoc
-
-
-class Finished_BackupRejected extends Finished {
-  const Finished_BackupRejected({required this.reason}): super._();
-  
-
- final  String reason;
+  final Finished_WalletRestored _self;
+  final $Res Function(Finished_WalletRestored) _then;
 
 /// Create a copy of Finished
 /// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$Finished_BackupRejectedCopyWith<Finished_BackupRejected> get copyWith => _$Finished_BackupRejectedCopyWithImpl<Finished_BackupRejected>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Finished_BackupRejected&&(identical(other.reason, reason) || other.reason == reason));
-}
-
-
-@override
-int get hashCode {
-    return Object.hash(runtimeType,reason);
-}
-
-@override
-String toString() {
-    return 'Finished.backupRejected(reason: $reason)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $Finished_BackupRejectedCopyWith<$Res> implements $FinishedCopyWith<$Res> {
-  factory $Finished_BackupRejectedCopyWith(Finished_BackupRejected value, $Res Function(Finished_BackupRejected) _then) = _$Finished_BackupRejectedCopyWithImpl;
-@useResult
-$Res call({
- String reason
-});
-
-
-
-
-}
-/// @nodoc
-class _$Finished_BackupRejectedCopyWithImpl<$Res>
-    implements $Finished_BackupRejectedCopyWith<$Res> {
-  _$Finished_BackupRejectedCopyWithImpl(this._self, this._then);
-
-  final Finished_BackupRejected _self;
-  final $Res Function(Finished_BackupRejected) _then;
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
-  return _then(Finished_BackupRejected(
-reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+@pragma('vm:prefer-inline') $Res call({Object? keyId = null,Object? name = null,}) {
+  return _then(Finished_WalletRestored(
+keyId: null == keyId ? _self.keyId : keyId // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,
-  ));
-}
-
-
-}
-
-/// @nodoc
-
-
-class Finished_Consolidated extends Finished {
-  const Finished_Consolidated({required this.keyName, required this.shareIndex}): super._();
-  
-
- final  String keyName;
- final  int shareIndex;
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$Finished_ConsolidatedCopyWith<Finished_Consolidated> get copyWith => _$Finished_ConsolidatedCopyWithImpl<Finished_Consolidated>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Finished_Consolidated&&(identical(other.keyName, keyName) || other.keyName == keyName)&&(identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex));
-}
-
-
-@override
-int get hashCode {
-    return Object.hash(runtimeType,keyName,shareIndex);
-}
-
-@override
-String toString() {
-    return 'Finished.consolidated(keyName: $keyName, shareIndex: $shareIndex)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $Finished_ConsolidatedCopyWith<$Res> implements $FinishedCopyWith<$Res> {
-  factory $Finished_ConsolidatedCopyWith(Finished_Consolidated value, $Res Function(Finished_Consolidated) _then) = _$Finished_ConsolidatedCopyWithImpl;
-@useResult
-$Res call({
- String keyName, int shareIndex
-});
-
-
-
-
-}
-/// @nodoc
-class _$Finished_ConsolidatedCopyWithImpl<$Res>
-    implements $Finished_ConsolidatedCopyWith<$Res> {
-  _$Finished_ConsolidatedCopyWithImpl(this._self, this._then);
-
-  final Finished_Consolidated _self;
-  final $Res Function(Finished_Consolidated) _then;
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? keyName = null,Object? shareIndex = null,}) {
-  return _then(Finished_Consolidated(
-keyName: null == keyName ? _self.keyName : keyName // ignore: cast_nullable_to_non_nullable
-as String,shareIndex: null == shareIndex ? _self.shareIndex : shareIndex // ignore: cast_nullable_to_non_nullable
-as int,
-  ));
-}
-
-
-}
-
-/// @nodoc
-
-
-class Finished_HeldShares extends Finished {
-  const Finished_HeldShares({required this.deviceName, required  List<HeldShareView> shares}): _shares = shares,super._();
-  
-
- final  String deviceName;
- final  List<HeldShareView> _shares;
- List<HeldShareView> get shares {
-  if (_shares is EqualUnmodifiableListView) return _shares;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_shares);
-}
-
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$Finished_HeldSharesCopyWith<Finished_HeldShares> get copyWith => _$Finished_HeldSharesCopyWithImpl<Finished_HeldShares>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Finished_HeldShares&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&const DeepCollectionEquality().equals(other.shares, _shares));
-}
-
-
-@override
-int get hashCode {
-    return Object.hash(runtimeType,deviceName,const DeepCollectionEquality().hash(_shares));
-}
-
-@override
-String toString() {
-    return 'Finished.heldShares(deviceName: $deviceName, shares: $shares)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $Finished_HeldSharesCopyWith<$Res> implements $FinishedCopyWith<$Res> {
-  factory $Finished_HeldSharesCopyWith(Finished_HeldShares value, $Res Function(Finished_HeldShares) _then) = _$Finished_HeldSharesCopyWithImpl;
-@useResult
-$Res call({
- String deviceName, List<HeldShareView> shares
-});
-
-
-
-
-}
-/// @nodoc
-class _$Finished_HeldSharesCopyWithImpl<$Res>
-    implements $Finished_HeldSharesCopyWith<$Res> {
-  _$Finished_HeldSharesCopyWithImpl(this._self, this._then);
-
-  final Finished_HeldShares _self;
-  final $Res Function(Finished_HeldShares) _then;
-
-/// Create a copy of Finished
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? deviceName = null,Object? shares = null,}) {
-  return _then(Finished_HeldShares(
-deviceName: null == deviceName ? _self.deviceName : deviceName // ignore: cast_nullable_to_non_nullable
-as String,shares: null == shares ? _self._shares : shares // ignore: cast_nullable_to_non_nullable
-as List<HeldShareView>,
   ));
 }
 

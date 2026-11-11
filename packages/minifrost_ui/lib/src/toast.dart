@@ -54,3 +54,9 @@ class QrKindLabel extends StatelessWidget {
     );
   }
 }
+
+/// Show a snackbar with an error.
+void toast(BuildContext context, Object message) {
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$message')));
+}

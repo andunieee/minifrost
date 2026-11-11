@@ -10,6 +10,8 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 [dependencies]
 flutter_rust_bridge = "=2.13.0"
 frostsnap_core = { workspace = true, features = ["std", "coordinator"] }
+# `recovery::find_valid_subset`: which shares read from signers determine a wallet.
+frost_backup = { workspace = true, features = ["bincode"] }
 minifrost_wire = { path = "../minifrost_wire" }
 qr_transport = { path = "../qr_transport" }
 sound_transport = { path = "../sound_transport" }
@@ -28,7 +30,3 @@ image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
-
-[dev-dependencies]
-# The tests compile the signer engine in with `#[path]`, so they need what it needs.
-frost_backup = { workspace = true, features = ["bincode"] }

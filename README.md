@@ -74,8 +74,9 @@ first time you press Listen; like the camera it is only used while the screen is
 
 ### Backups and restoration
 
-These follow frostsnap's flows (`frostsnap_core`'s restoration state machine, with the same
-messages); only the transport and the screens are minifrost's. A share's backup is **25 BIP39 words
+These use `frostsnap_core`'s restoration state machine and messages. Backups follow frostsnap's
+flow, with minifrost's transport and screens; restoration starts on the signers instead of on the
+coordinator. A share's backup is **25 BIP39 words
 plus a key number**. The words carry a checksum tied to the wallet's public polynomial, so a backup
 typed into the wrong wallet is caught.
 
@@ -89,23 +90,30 @@ typed into the wrong wallet is caught.
    Wrong answers change nothing. When all 26 are right the signer says the check is complete and
    the user presses the coordinator's confirmation button. No reply QR is needed.
 
-**Restoration from physical backups** (new coordinator and/or new phones)
-1. Coordinator creates a restoration (wallet name, network, optional threshold) and broadcasts
-   `EnterPhysicalBackup` to a signer. The user types the key number and 25 words; the signer checks
-   the word checksums and replies with the share's public *image* only.
-2. The coordinator checks it fits (not a share it already has, not a different wallet's), then
-   broadcasts `SavePhysicalBackup` → the signer keeps the backup and confirms locally; the user
-   presses the coordinator's confirmation button instead of scanning a `PhysicalSaved` reply.
-3. Repeat with other signers until the shares determine the key (`Restore wallet` becomes available).
-   `finish_restoration` creates the wallet, with the same addresses as before.
-4. **Consolidation**: each signer that was restored from a typed-in backup is asked (`Consolidate`)
-   to turn it into a normal share of the wallet; it does so by itself and replies. Until then it
-   cannot sign. The same path adds a replaced signer to a wallet the coordinator already has.
+**Restoration** starts on the signers, for a new coordinator, new phones or both. The coordinator's
+Restore page reads *restore codes* and doesn't care where each one came from:
+1. A signer shows a restore code for a share. Either the user chose **Restore from a backup** and
+   typed the key number and 25 words (the signer checks the word checksums and stores the backup
+   right away), or the user tapped a key it holds and chose **Restore wallet on coordinator**. The
+   code (`Packet::RestoreShare`) carries the share's public *image*, what the signer knows about its
+   wallet (nothing, for a typed-in backup) and the signer's enrolment data, so a coordinator that
+   doesn't know the signer registers it at the same time. It can be shown again from the home screen.
+2. The coordinator reads the codes one by one. A share of a wallet it already has joins that wallet
+   (that's how a replaced signer comes back). Any other is kept with the shares read so far, which
+   can belong to several wallets, and `frost_backup`'s fuzzy recovery looks for a key among them.
+   The threshold isn't needed: the polynomial fingerprint tells when shares fit.
+3. As soon as the shares determine a key the coordinator saves the wallet, with the same addresses
+   as before. Shares that know the wallet's name and network give them. A backup doesn't, so if
+   every share was typed in the user enters them at that moment.
+4. **Consolidation**: if any signer took a typed-in backup, the coordinator shows one code
+   (`Consolidate`) with what they are missing: the wallet's polynomial, name and network. Each
+   checks its backup against it, turns it into a normal encrypted share and says so on its screen;
+   the user confirms each signer on the coordinator instead of scanning a reply. Until then it
+   cannot sign, and the code can be shown again from the Restore page or the wallet page. Signers
+   that kept their key need none of this.
 
-**Restoration from signers** (the coordinator was lost, the signers still hold their shares): the
-coordinator broadcasts `RequestHeldShares`, each signer answers with the shares it holds (public
-images, wallet name, threshold), and the user picks them into a restoration. A signer that rejoins
-an existing wallet this way needs no consolidation.
+A single typed-in backup can't be told to be a one-signature wallet (there is nothing to check it
+against), so the Restore page offers that as an explicit choice on the share.
 
 As in frostsnap, **a signer can't decrypt its own share without the coordinator**. Only the
 coordinator keeps the wallet's root key (the public point at the root of the key polynomial,
@@ -115,9 +123,9 @@ and root polynomial that the signer mixes into its share-encryption key. The sig
 same hash once, right after keygen, to encrypt the share, then forgets the polynomial.
 
 The coordinator's file is still **not** needed to recover funds: the root key is public data that
-a threshold of shares rebuilds (either restoration flow above), after which the new coordinator
-can give the signers their contributions again. What *is* needed is a threshold of backups (or
-signer phones), and knowing the wallet's name, network and threshold to check the result against.
+a threshold of shares rebuilds (see above), after which the new coordinator can give the signers
+their contributions again. What *is* needed is a threshold of backups (or signer phones), and, when
+every share comes from a backup, knowing the wallet's name and network.
 
 ## Where the signer keeps its secret
 
@@ -212,10 +220,12 @@ APKs; without them the workflow falls back to the debug key:
 - If a phone is wiped, its share is gone unless its 25-word backup was written down (that, and the
   threshold, is what backups are for). The backup words are shown on the phone's screen: nothing
   stops someone looking over the shoulder, and a typed-in backup sits in the signer's plain file
-  until it is consolidated. A backup typed in but not yet saved is kept in memory only, so an app
-  restart in the middle of entering one means entering it again.
-- Restoration state on the coordinator (shares gathered so far) is persisted; which shares each
-  signer *reported* holding is not, so ask the signer again after a restart.
+  until it is consolidated. A backup that never finds its wallet stays on the signer: there is no
+  way to delete one yet.
+- Restoration state on the coordinator (shares read so far) is persisted.
+- The fingerprint that recognises a wallet among typed-in backups is a short hash (18 bits for a
+  2-of-n): two backups of different wallets can pass it about once in 260,000 tries. The signer's
+  polynomial checksum then refuses to consolidate, and the wrong wallet has to be ignored.
 - The `CheckBackup` quiz compares against the signer's own share, so it proves the paper matches
   *that signer*, not that the wallet itself is recoverable.
 - Wallet: single taproot account, largest-first coin selection, one signing session at a time,

@@ -90,6 +90,10 @@ abstract class SignerApp implements RustOpaqueInterface {
 
   Future<void> reject();
 
+  /// The restore code of a key this signer holds, or `Step::UnlockShare` while it is on the key
+  /// store and not opened.
+  Future<Step> restoreCode({required String keyId});
+
   /// Returns the snapshot to store.
   Future<Uint8List> setNewSharesOnKeystore({required bool enabled});
 
@@ -98,8 +102,8 @@ abstract class SignerApp implements RustOpaqueInterface {
 
   Future<Uint8List> snapshot();
 
-  /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
-  /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+  /// The user typed in a physical backup: key number and 25 words. Errors (mistyped word, bad
+  /// checksum) change nothing. Otherwise it is saved and the step is its restore code.
   Future<StepResult> submitBackup({
     required int shareIndex,
     required List<String> words,

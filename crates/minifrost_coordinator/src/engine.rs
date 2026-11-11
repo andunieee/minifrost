@@ -14,7 +14,7 @@ use frostsnap_core::{
     WireSignTask,
     coordinator::{
         BeginKeygen, CoordinatorSend, CoordinatorToUserKeyGenMessage, CoordinatorToUserMessage,
-        CoordinatorToUserSigningMessage, FrostCoordinator, Mutation,
+        CoordinatorToUserSigningMessage, FrostCoordinator, Mutation, restoration::RecoverShare,
     },
     device::KeyPurpose,
     message::{
@@ -29,12 +29,11 @@ use crate::wallet::{self, Amt, BuiltSend, HttpEsplora, WalletView};
 
 pub mod restore;
 use restore::BackupSession;
-pub use restore::{
-    BackupShare, EnterTarget, HeldShareView, PendingConsolidationView, RestorationShareView,
-    RestorationView,
-};
+pub use restore::{BackupShare, PendingConsolidationView, RestoringShareView, UnnamedWalletView};
 
-const SNAPSHOT_VERSION: u8 = 2;
+/// 3: shares being restored are gathered here (`restoring`) instead of in `frostsnap_core`
+/// restorations.
+const SNAPSHOT_VERSION: u8 = 3;
 const FILE: &str = "coordinator.bin";
 
 type Res<T> = Result<T, String>;
@@ -49,6 +48,17 @@ struct Snapshot {
     esplora_url: Option<String>,
     /// Backup run: (wallet, share index, backup recorded). Wallets that were restored have no
     /// entry and count as backed up, like in frostsnap.
+    backups: Vec<(AccessStructureRef, u32, bool)>,
+    /// Shares read from signers whose wallet isn't rebuilt yet.
+    restoring: Vec<RecoverShare>,
+}
+
+#[derive(bincode::Decode)]
+struct SnapshotV2 {
+    encryption_key: [u8; 32],
+    signers: BTreeMap<DeviceId, String>,
+    history: Vec<Mutation>,
+    esplora_url: Option<String>,
     backups: Vec<(AccessStructureRef, u32, bool)>,
 }
 
@@ -97,25 +107,10 @@ pub enum Finished {
         key_name: String,
         share_index: u32,
     },
-    /// An entered backup was saved on its signer as part of a restoration.
-    BackupSaved {
-        restoration_id: String,
-        share_index: u32,
-        restorable: bool,
-    },
-    /// An entered backup (or a reply for one) was refused; the session is over.
-    BackupRejected {
-        reason: String,
-    },
-    /// A signer turned a typed-in backup into a normal share of a wallet.
-    Consolidated {
-        key_name: String,
-        share_index: u32,
-    },
-    /// The shares a signer reported holding.
-    HeldShares {
-        device_name: String,
-        shares: Vec<HeldShareView>,
+    /// A wallet is rebuilt and no signer is waiting for anything, or a signer rejoined it.
+    WalletRestored {
+        key_id: String,
+        name: String,
     },
 }
 
@@ -139,6 +134,9 @@ pub struct Update {
     /// Keygen check round: no signer reply either, but the user confirms each signer in
     /// `awaiting` separately, with `confirm_signer`, once it shows the check code and approved.
     pub confirm_each_signer: bool,
+    /// Restoration: the shares read so far rebuild this wallet, but none knows its name and
+    /// network. Ask the user, then call `name_restored_wallet`.
+    pub unnamed_wallet: Option<UnnamedWalletView>,
     pub finished: Option<Finished>,
     pub snapshot_saved: bool,
 }
@@ -200,9 +198,7 @@ pub struct Coordinator {
     wallets: BTreeMap<KeyId, WalletView>,
     prepared: Option<(KeyId, BuiltSend)>,
     backups: BTreeMap<(AccessStructureRef, u32), bool>,
-    /// What each signer last said it holds (restoration picks shares from here). Not persisted:
-    /// ask the signer again after a restart.
-    held: BTreeMap<DeviceId, Vec<frostsnap_core::message::HeldShare2>>,
+    restoring: Vec<RecoverShare>,
 }
 
 impl Coordinator {
@@ -221,6 +217,7 @@ impl Coordinator {
                     history: vec![],
                     esplora_url: None,
                     backups: vec![],
+                    restoring: vec![],
                 })
             }
             Err(e) => return Err(format!("could not read {}: {e}", path.display())),
@@ -239,6 +236,7 @@ impl Coordinator {
             history: vec![],
             esplora_url: None,
             backups: vec![],
+            restoring: vec![],
         })
     }
 
@@ -263,19 +261,37 @@ impl Coordinator {
                 .into_iter()
                 .map(|(a, i, done)| ((a, i), done))
                 .collect(),
-            held: Default::default(),
+            restoring: snap.restoring,
         }
     }
 
     fn from_snapshot(bytes: &[u8]) -> Res<Self> {
         let (&v, rest) = bytes.split_first().ok_or("empty coordinator file")?;
-        if v != SNAPSHOT_VERSION {
-            return Err(format!("unknown coordinator file version {v}"));
+        let corrupt = |e: bincode::error::DecodeError| format!("corrupt coordinator file: {e}");
+        match v {
+            2 => {
+                let (v2, _): (SnapshotV2, _) =
+                    bincode::decode_from_slice(rest, bincode::config::standard())
+                        .map_err(corrupt)?;
+                let mut me = Self::from_parts(Snapshot {
+                    encryption_key: v2.encryption_key,
+                    signers: v2.signers,
+                    history: v2.history,
+                    esplora_url: v2.esplora_url,
+                    backups: v2.backups,
+                    restoring: vec![],
+                });
+                me.migrate_restorations();
+                Ok(me)
+            }
+            SNAPSHOT_VERSION => {
+                let (snap, _): (Snapshot, _) =
+                    bincode::decode_from_slice(rest, bincode::config::standard())
+                        .map_err(corrupt)?;
+                Ok(Self::from_parts(snap))
+            }
+            _ => Err(format!("unknown coordinator file version {v}")),
         }
-        let (snap, _): (Snapshot, _) =
-            bincode::decode_from_slice(rest, bincode::config::standard())
-                .map_err(|e| format!("corrupt coordinator file: {e}"))?;
-        Ok(Self::from_parts(snap))
     }
 
     fn snapshot_bytes(&self) -> Vec<u8> {
@@ -289,6 +305,7 @@ impl Coordinator {
                 .iter()
                 .map(|((a, i), done)| (*a, *i, *done))
                 .collect(),
+            restoring: self.restoring.clone(),
         };
         let mut out = vec![SNAPSHOT_VERSION];
         out.extend(bincode::encode_to_vec(&snap, bincode::config::standard()).expect("encodes"));
@@ -363,15 +380,20 @@ impl Coordinator {
     pub fn enroll(&mut self, payload: &[u8]) -> Res<SignerInfo> {
         match Packet::from_bytes(payload).map_err(|e| e.to_string())? {
             Packet::Hello { device_id, name } => {
-                let name = name.trim().chars().take(40).collect::<String>();
-                self.signers.insert(device_id, name.clone());
+                let info = self.register_signer(device_id, &name);
                 self.save()?;
-                Ok(SignerInfo {
-                    device_id: device_id.to_string(),
-                    name,
-                })
+                Ok(info)
             }
             _ => Err("That is not a signer enrolment code.".into()),
+        }
+    }
+
+    fn register_signer(&mut self, device_id: DeviceId, name: &str) -> SignerInfo {
+        let name = name.trim().chars().take(40).collect::<String>();
+        self.signers.insert(device_id, name.clone());
+        SignerInfo {
+            device_id: device_id.to_string(),
+            name,
         }
     }
 
@@ -383,6 +405,9 @@ impl Coordinator {
             .any(|k| k.master_access_structure().contains_device(id))
         {
             return Err("This signer holds a share of an existing key.".into());
+        }
+        if self.restoring.iter().any(|s| s.held_by == id) {
+            return Err("This signer holds a share being restored.".into());
         }
         self.signers.remove(&id);
         self.save()
@@ -548,7 +573,7 @@ impl Coordinator {
             Session::Idle => Default::default(),
             Session::Keygen(k) => k.devices.iter().copied().collect(),
             Session::Signing(s) => s.devices.clone(),
-            Session::Backup(b) => [b.device()].into(),
+            Session::Backup(b) => b.devices(),
         }
     }
 
@@ -558,6 +583,12 @@ impl Coordinator {
     /// wallet is created once every signer is confirmed.
     pub fn confirm_signer(&mut self, device_id: &str) -> Res<Update> {
         let device = self.parse_device(device_id)?;
+        if matches!(
+            self.session,
+            Session::Backup(BackupSession::FinishRestoring { .. })
+        ) {
+            return self.confirm_restored_signer(device);
+        }
         let (keygen_id, ack_session_hash) = match &self.session {
             Session::Keygen(KeygenSession {
                 id,
@@ -615,10 +646,19 @@ impl Coordinator {
         let (from, message) = match packet {
             Packet::FromDevice { device_id, message } => (device_id, message),
             Packet::Hello { .. } => return Err("That is an enrolment code, not a reply.".into()),
+            Packet::RestoreShare { .. } => {
+                return Err("That is a restore code: read it on the Restore page.".into());
+            }
             _ => return Err("That code is meant for signers.".into()),
         };
         if matches!(self.session, Session::Idle) {
             return Err("No keygen, signing or backup session is running.".into());
+        }
+        if matches!(self.session, Session::Backup(_)) {
+            return Err(
+                "Nothing to scan for this step: confirm it on this screen once the signer is done."
+                    .into(),
+            );
         }
         let expected = self.expected();
         if !expected.contains(&from) {
@@ -626,20 +666,6 @@ impl Coordinator {
                 "{} is not part of this session.",
                 self.name_of(&from)
             ));
-        }
-        if matches!(self.session, Session::Backup(_)) {
-            // A backup session is a short back and forth with one signer: the same signer
-            // answers more than once, so the "already replied" bookkeeping doesn't apply.
-            let mut update = self.receive_backup(from, message)?;
-            update.from = Some(SignerInfo {
-                device_id: from.to_string(),
-                name: self.name_of(&from),
-            });
-            update.snapshot_saved = {
-                self.save()?;
-                self.dir.is_some()
-            };
-            return Ok(update);
         }
         // frostsnap_core drops the whole pending keygen when it rejects a keygen message, so a
         // signer's reply to an earlier round (its old QR still on screen) must not reach it.

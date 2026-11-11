@@ -5,7 +5,7 @@ import '../controller.dart';
 import '../src/rust/api.dart';
 
 /// Type in a physical backup: the key number and the 25 words, in order. The signer checks the
-/// words' own checksums; the coordinator then checks the share fits the wallet.
+/// words' own checksums, stores the backup and pops with its restore code for the coordinator.
 class EnterBackupScreen extends StatefulWidget {
   const EnterBackupScreen({super.key, required this.controller});
   final SignerController controller;

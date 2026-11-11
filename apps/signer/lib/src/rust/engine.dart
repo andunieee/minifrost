@@ -74,17 +74,28 @@ class OutputSummary {
 }
 
 /// A backup the user typed into this signer that has not been turned into a real share yet
-/// (waiting for the coordinator to finish the restoration).
+/// (waiting for the coordinator to rebuild the wallet).
 class PendingBackup {
   final String? keyName;
   final int? threshold;
   final int shareIndex;
 
-  const PendingBackup({this.keyName, this.threshold, required this.shareIndex});
+  /// Its restore code, to show the coordinator (again).
+  final Step restoreCode;
+
+  const PendingBackup({
+    this.keyName,
+    this.threshold,
+    required this.shareIndex,
+    required this.restoreCode,
+  });
 
   @override
   int get hashCode =>
-      keyName.hashCode ^ threshold.hashCode ^ shareIndex.hashCode;
+      keyName.hashCode ^
+      threshold.hashCode ^
+      shareIndex.hashCode ^
+      restoreCode.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -93,7 +104,8 @@ class PendingBackup {
           runtimeType == other.runtimeType &&
           keyName == other.keyName &&
           threshold == other.threshold &&
-          shareIndex == other.shareIndex;
+          shareIndex == other.shareIndex &&
+          restoreCode == other.restoreCode;
 }
 
 @freezed
@@ -220,10 +232,6 @@ sealed class Step with _$Step {
     required String keyId,
     required String keyName,
   }) = Step_UnlockShare;
-
-  /// The coordinator wants the user to type in a physical backup (key number + 25 words).
-  /// Answer with `submit_backup`, or call `reject` to give up.
-  const factory Step.enterBackup() = Step_EnterBackup;
 
   /// The coordinator wants the user to prove their physical backup is right. Walk through the
   /// questions with `quiz_question` / `quiz_answer`, or call `reject` to give up.

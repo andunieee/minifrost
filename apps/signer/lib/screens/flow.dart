@@ -18,6 +18,17 @@ Future<void> runScanFlow(BuildContext context, SignerController c) async {
   await _receive(context, c, payload);
 }
 
+/// Type in a backup. Once its words check out the signer stored it and shows its restore code.
+Future<void> runEnterBackup(BuildContext context, SignerController c) async {
+  final next = await Navigator.push<StepResult>(context, MaterialPageRoute(builder: (_) => EnterBackupScreen(controller: c)));
+  if (next == null || !context.mounted) return;
+  await _handle(context, c, () async => next);
+}
+
+/// Show a restore code, then read the coordinator's answer if the user scans it from there.
+Future<void> runRestoreCode(BuildContext context, SignerController c, Future<Step> Function() code) =>
+    _handle(context, c, () async => StepResult(step: await code()));
+
 Future<void> _receive(BuildContext context, SignerController c, Uint8List payload) => _handle(context, c, () async {
       final r = await c.receive(payload);
       final kind = _readKind(r.step);
@@ -34,7 +45,6 @@ String? _readKind(Step step) => switch (step) {
           Prompt_SignTransaction() => 'transaction to sign',
           Prompt_DisplayBackup() => 'backup request',
         },
-      Step_EnterBackup() => 'request to enter a backup',
       Step_CheckBackup() => 'request to check a backup',
       Step_Reply() || Step_Done() => 'coordinator message',
       Step_Ignored() || Step_UnlockShare() => null,
@@ -67,16 +77,6 @@ Future<void> _handle(BuildContext context, SignerController c, Future<StepResult
           actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
         ),
       );
-    case Step_EnterBackup():
-      // The screen submits the words itself; it pops with the signer's next step, or null if the
-      // user gave up.
-      final next = await nav.push<StepResult>(MaterialPageRoute(builder: (_) => EnterBackupScreen(controller: c)));
-      if (next == null) {
-        await c.reject();
-        return;
-      }
-      if (!context.mounted) return;
-      await _handle(context, c, () async => next);
     case Step_CheckBackup(:final keyName):
       final next = await nav.push<StepResult>(MaterialPageRoute(builder: (_) => QuizScreen(controller: c, keyName: keyName)));
       if (next == null) {

@@ -34,18 +34,6 @@ Future<List<String>> decodeQrLuma({
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoordinatorApp>>
 abstract class CoordinatorApp implements RustOpaqueInterface {
-  Future<void> addHeldShareToRestoration({
-    required String restorationId,
-    required String deviceId,
-    required int shareIndex,
-  });
-
-  Future<void> addHeldShareToWallet({
-    required String keyId,
-    required String deviceId,
-    required int shareIndex,
-  });
-
   /// Every share of the wallet and whether its backup was recorded.
   Future<List<BackupShare>> backupShares({required String keyId});
 
@@ -58,30 +46,20 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
   /// Publish a signed transaction through the Esplora backend. Returns the txid.
   Future<String> broadcast({required String keyId, required String txHex});
 
-  Future<void> cancelRestoration({required String restorationId});
-
   Future<void> cancelSession();
 
-  /// Confirm a step whose only missing response is the user's: writing a backup down, passing
-  /// a backup check, or watching the signer save a typed-in backup. The next step arrives in
-  /// `Update.finished`.
+  /// Confirm a step whose only missing response is the user's: writing a backup down, or passing
+  /// a backup check. The next step arrives in `Update.finished`.
   Future<Update> confirm();
 
-  /// Keygen check round: the user approved the check code on this signer.
+  /// Keygen check round: the user approved the check code on this signer. Restoration: this
+  /// signer read the coordinator's code and saved its key.
   Future<Update> confirmSigner({required String deviceId});
-
-  Future<void> deleteRestorationShare({
-    required String restorationId,
-    required String deviceId,
-  });
 
   /// Scan of a signer's "hello" QR.
   Future<SignerInfo> enroll({required List<int> payload});
 
   Future<String> esploraUrl({required String network});
-
-  /// Turn a restoration with enough shares into a wallet. Returns the wallet's key id.
-  Future<String> finishRestoration({required String restorationId});
 
   Future<void> forgetSigner({required String deviceId});
 
@@ -91,6 +69,12 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
   Future<void> markBackupComplete({
     required String keyId,
     required int shareIndex,
+  });
+
+  Future<Update> nameRestoredWallet({
+    required String keyId,
+    required String name,
+    required String network,
   });
 
   /// Signers whose typed-in backup still has to become a normal share.
@@ -104,12 +88,26 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
     required double feeRate,
   });
 
+  /// A signer's restore code, fully scanned. See `Update.unnamed_wallet` and `Update.broadcast`
+  /// for what may have to happen next.
+  Future<Update> readRestoreCode({required List<int> payload});
+
   /// A signer's reply, fully scanned.
   Future<Update> receive({required List<int> payload});
 
   Future<WalletSummary> refreshWallet({required String keyId});
 
-  Future<List<RestorationView>> restorations();
+  Future<void> removeRestoringShare({required String id});
+
+  /// Rebuild a one-signature wallet from a gathered share: nothing can tell a single backup is one.
+  Future<Update> restoreOneSignatureWallet({
+    required String id,
+    required String name,
+    required String network,
+  });
+
+  /// The shares read so far whose wallet isn't rebuilt yet.
+  Future<List<RestoringShareView>> restoringShares();
 
   Future<void> setEsploraUrl({String? url});
 
@@ -121,36 +119,14 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
     required String deviceId,
   });
 
-  Future<Update> startConsolidate({
-    required String keyId,
-    required String deviceId,
-  });
-
   /// Ask a signer to show its 25-word backup.
   Future<Update> startDisplayBackup({
     required String keyId,
     required String deviceId,
   });
 
-  /// Ask a signer to type in a physical backup that starts a new restoration.
-  Future<Update> startEnterBackupNewWallet({
-    required String deviceId,
-    required String name,
-    required String network,
-    int? threshold,
-  });
-
-  /// ... that joins a restoration already in progress.
-  Future<Update> startEnterBackupRestoration({
-    required String deviceId,
-    required String restorationId,
-  });
-
-  /// ... that adds a share to a wallet this coordinator already has.
-  Future<Update> startEnterBackupWallet({
-    required String deviceId,
-    required String keyId,
-  });
+  /// Show again the code that gives a wallet's waiting signers their keys.
+  Future<Update> startFinishRestoring({required String keyId});
 
   Future<Update> startKeygen({
     required String keyName,
@@ -159,16 +135,11 @@ abstract class CoordinatorApp implements RustOpaqueInterface {
     required String network,
   });
 
-  /// Ask a signer which shares it holds (result arrives as `Finished.heldShares`).
-  Future<Update> startRequestHeldShares({required String deviceId});
-
-  Future<String> startRestorationFromHeldShare({
-    required String deviceId,
-    required int shareIndex,
-  });
-
   /// Fee rate (sat/vB) for roughly the next `blocks` blocks.
   Future<double> suggestedFeeRate({required String keyId, required int blocks});
+
+  /// Wallets there are enough shares for, waiting for the user to name them.
+  Future<List<UnnamedWalletView>> unnamedWallets();
 }
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<QrScanner>>

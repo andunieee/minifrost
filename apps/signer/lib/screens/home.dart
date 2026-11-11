@@ -51,7 +51,7 @@ class Home extends StatelessWidget {
           if (controller.keys.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('None yet. Show your enrolment code to a coordinator, then scan its key generation codes.'),
+              child: Text('None yet. Show your enrolment code to a coordinator, then scan its key generation codes, or restore a key from its backup.'),
             ),
           for (final k in controller.keys) _KeyTile(k, controller),
           if (controller.pendingBackups.isNotEmpty) ...[
@@ -62,12 +62,19 @@ class Home extends StatelessWidget {
                 child: ListTile(
                   leading: const Icon(Icons.history),
                   title: Text('Backup #${b.shareIndex}${b.keyName == null ? '' : ' of “${b.keyName}”'}'),
-                  subtitle: const Text('Saved on this signer. It becomes a normal share once the coordinator finishes restoring the wallet.'),
+                  subtitle: const Text('Saved on this signer. It becomes a normal key once the coordinator has rebuilt the wallet. Tap to show its restore code.'),
                   isThreeLine: true,
+                  onTap: () => runRestoreCode(context, controller, () async => b.restoreCode),
                 ),
               ),
           ],
           const SizedBox(height: 16),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.edit_note),
+            label: const Text('Restore from a backup'),
+            onPressed: () => runEnterBackup(context, controller),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.qr_code),
             label: const Text('Show enrolment code'),
@@ -98,6 +105,8 @@ class Home extends StatelessWidget {
   }
 }
 
+enum _KeyAction { restore, move }
+
 class _KeyTile extends StatelessWidget {
   const _KeyTile(this.k, this.controller);
   final KeyInfo k;
@@ -110,26 +119,36 @@ class _KeyTile extends StatelessWidget {
           subtitle: Text('${k.threshold}-of-? · ${networkLabel(k.network)} · ${k.onKeystore ? 'on keystore' : 'on disk'}\n'
               '${k.keyId.substring(0, 16)}…'),
           isThreeLine: true,
-          onTap: controller.keystore.supported ? () => _keyMenu(context) : null,
+          onTap: () => _keyMenu(context),
         ),
       );
 
   Future<void> _keyMenu(BuildContext context) async {
-    final move = await showModalBottomSheet<bool>(
+    final action = await showModalBottomSheet<_KeyAction>(
       context: context,
       builder: (sheet) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(title: Text(k.name), subtitle: Text(k.onKeystore ? 'On keystore' : 'On disk')),
           const Divider(height: 1),
           ListTile(
-            leading: Icon(k.onKeystore ? Icons.save_outlined : Icons.lock_outline),
-            title: Text(k.onKeystore ? 'Move this share back to disk' : 'Move this share to the device key store'),
-            onTap: () => Navigator.pop(sheet, true),
+            leading: const Icon(Icons.qr_code),
+            title: const Text('Restore wallet on coordinator'),
+            onTap: () => Navigator.pop(sheet, _KeyAction.restore),
           ),
+          if (controller.keystore.supported)
+            ListTile(
+              leading: Icon(k.onKeystore ? Icons.save_outlined : Icons.lock_outline),
+              title: Text(k.onKeystore ? 'Move this share back to disk' : 'Move this share to the device key store'),
+              onTap: () => Navigator.pop(sheet, _KeyAction.move),
+            ),
         ]),
       ),
     );
-    if (move != true || !context.mounted) return;
+    if (action == null || !context.mounted) return;
+    if (action == _KeyAction.restore) {
+      await runRestoreCode(context, controller, () => controller.restoreCode(k.keyId));
+      return;
+    }
     if (k.onKeystore) {
       final ok = await _confirm(
         context,

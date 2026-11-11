@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use bitcoin::hashes::{Hash, HashEngine, Hmac, HmacEngine, sha256};
 use frost_backup::{ShareBackup, bip39_words};
 use frostsnap_core::{
-    AccessStructureRef, DeviceId, KeyId, Versioned, WireSignTask,
+    AccessStructureRef, DeviceId, EnterPhysicalId, KeyId, Versioned, WireSignTask,
     device::{
         DevicePrf, DeviceToUserMessage, FrostSigner, KeyGenPhase3, KeyPurpose, Mutation,
         SignPhase1,
@@ -16,7 +16,7 @@ use frostsnap_core::{
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
     message::{
         CoordinatorRestoration, CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend,
-        DeviceToCoordinatorMessage, keygen::Keygen, signing::CoordinatorSigning,
+        DeviceToCoordinatorMessage, HeldShare2, keygen::Keygen, signing::CoordinatorSigning,
     },
     schnorr_fun::frost::ShareIndex,
     schnorr_fun::fun::{KeyPair, Scalar, marker::*},
@@ -206,9 +206,6 @@ pub enum Step {
     /// The message needs this key's share, which is on the device key store and not opened yet.
     /// Open it with `keystore_share` / `open_keystore_share`, then feed the same payload again.
     UnlockShare { key_id: String, key_name: String },
-    /// The coordinator wants the user to type in a physical backup (key number + 25 words).
-    /// Answer with `submit_backup`, or call `reject` to give up.
-    EnterBackup,
     /// The coordinator wants the user to prove their physical backup is right. Walk through the
     /// questions with `quiz_question` / `quiz_answer`, or call `reject` to give up.
     CheckBackup { key_name: String },
@@ -234,12 +231,14 @@ pub struct QuizAnswer {
 }
 
 /// A backup the user typed into this signer that has not been turned into a real share yet
-/// (waiting for the coordinator to finish the restoration).
+/// (waiting for the coordinator to rebuild the wallet).
 #[derive(Debug, Clone)]
 pub struct PendingBackup {
     pub key_name: Option<String>,
     pub threshold: Option<u16>,
     pub share_index: u32,
+    /// Its restore code, to show the coordinator (again).
+    pub restore_code: Step,
 }
 
 #[derive(Debug, Clone)]
@@ -267,7 +266,6 @@ enum Pending {
     CheckKeygen(Box<KeyGenPhase3>),
     Nonces(CoordinatorToDeviceMessage, bitcoin::Txid, KeyId),
     Sign(Box<SignPhase1>),
-    EnterBackup(EnterBackupPhase),
     DisplayBackup,
     Quiz(backup_quiz::Quiz),
 }
@@ -509,9 +507,11 @@ impl Signer {
         let packet = Packet::from_bytes(payload).map_err(|e| e.to_string())?;
         let me = self.device_id();
         let step = match packet {
-            Packet::Hello { .. } | Packet::FromDevice { .. } => Step::Ignored {
-                reason: "This code is meant for a coordinator, not for a signer.".into(),
-            },
+            Packet::Hello { .. } | Packet::FromDevice { .. } | Packet::RestoreShare { .. } => {
+                Step::Ignored {
+                    reason: "This code is meant for a coordinator, not for a signer.".into(),
+                }
+            }
             Packet::SignPrepare(prep) => self.receive_prepare(me, prep)?,
             Packet::ToDevices { step, entries } => {
                 match entries.into_iter().find(|(to, _)| to.contains(&me)) {
@@ -605,29 +605,27 @@ impl Signer {
         }
     }
 
-    /// What `frostsnap_core` tells the user about a restoration or backup message. Most of it
-    /// needs no decision here: saving an entered backup and consolidating it into a real share
-    /// are automatic, exactly as on a frostsnap device (the user can't meaningfully verify
-    /// either).
+    /// What `frostsnap_core` tells the user about a restoration or backup message. Consolidating
+    /// a typed-in backup into a real share is automatic, exactly as on a frostsnap device (the
+    /// user can't meaningfully verify it). The signer starts and saves a backup entry by itself
+    /// (see `submit_backup`), so the coordinator's versions of those two steps never get here.
     fn handle_restoration(&mut self, msg: ToUserRestoration) -> Res<Option<Step>> {
         Ok(match msg {
-            ToUserRestoration::EnterBackup { phase } => {
-                self.pending = Some(Pending::EnterBackup(phase));
-                Some(Step::EnterBackup)
-            }
-            // Saving is automatic and the coordinator confirms it with its own button, so there is
-            // no reply to show: just tell the user the signer is done.
-            ToUserRestoration::BackupSaved { .. } => Some(Step::Done {
-                message: "The backup is saved on this signer.".into(),
-            }),
+            ToUserRestoration::EnterBackup { .. } | ToUserRestoration::BackupSaved { .. } => None,
             ToUserRestoration::ConsolidateBackup(phase) => {
-                let sends: Vec<DeviceSend> = self
+                let key_name = phase.complete_share.key_name.clone();
+                // Its `FinishedConsolidation` says only that the share is stored, so the user
+                // confirms on the coordinator instead of scanning a code back.
+                let _ = self
                     .inner
                     .finish_consolidation(&mut self.derivation, phase, &mut OsRng)
                     .into_iter()
-                    .collect();
-                // the freshly consolidated share is a new key the home screen should list
-                Some(self.handle_sends(sends)?)
+                    .count();
+                Some(Step::Done {
+                    message: format!(
+                        "Your share of “{key_name}” is stored on this signer. Now confirm this signer on the coordinator."
+                    ),
+                })
             }
             ToUserRestoration::DisplayBackup {
                 key_name,
@@ -731,14 +729,17 @@ impl Signer {
         for send in sends {
             match send {
                 DeviceSend::ToCoordinator(m) => {
-                    // The coordinator records a saved physical backup with a button of its own.
-                    // Showing a QR reply for this would only ask the user to scan nothing useful.
+                    // The same code read again after consolidating: the coordinator records it
+                    // with a button of its own, so there is nothing to show it.
                     if matches!(
                         m.as_ref(),
-                        DeviceToCoordinatorMessage::Restoration(DeviceRestoration::PhysicalSaved(
-                            _
-                        ))
+                        DeviceToCoordinatorMessage::Restoration(
+                            DeviceRestoration::FinishedConsolidation { .. }
+                        )
                     ) {
+                        step = Some(Step::Done {
+                            message: "This signer already holds that key.".into(),
+                        });
                         continue;
                     }
                     step = Some(self.reply(me, *m));
@@ -770,10 +771,7 @@ impl Signer {
     /// The user tapped "approve" on the current [`Prompt`].
     pub fn approve(&mut self) -> Res<StepResult> {
         let me = self.device_id();
-        if matches!(
-            self.pending,
-            Some(Pending::EnterBackup(_) | Pending::Quiz(_))
-        ) {
+        if matches!(self.pending, Some(Pending::Quiz(_))) {
             return Err("This step is not answered with approve.".into());
         }
         let pending = self
@@ -855,7 +853,7 @@ impl Signer {
             Pending::DisplayBackup => Step::Done {
                 message: "Backup written down. You can close this screen.".into(),
             },
-            Pending::EnterBackup(_) | Pending::Quiz(_) => unreachable!("rejected above"),
+            Pending::Quiz(_) => unreachable!("rejected above"),
             Pending::Sign(phase) => {
                 let key_id = phase.sign_task().master_appkey.key_id();
                 let sends = self
@@ -878,19 +876,15 @@ impl Signer {
     }
 
     pub fn reject(&mut self) {
-        if let Some(Pending::EnterBackup(_)) = self.pending.take() {
-            // forget a backup that was typed in but never saved
-            self.inner.clear_tmp_data();
-        }
+        self.pending = None;
         self.inner.clear_unfinished_keygens();
     }
 
     /// The user typed in a physical backup: the key number and the 25 words. Errors (a mistyped
-    /// word, a failed checksum) leave the signer waiting so the user can correct them.
+    /// word, a failed checksum) change nothing, so the user can correct them. Otherwise the backup
+    /// is saved right away, since the coordinator may need other signers' codes before it can
+    /// answer, and the step is this share's restore code.
     pub fn submit_backup(&mut self, share_index: u32, words: Vec<String>) -> Res<StepResult> {
-        if !matches!(self.pending, Some(Pending::EnterBackup(_))) {
-            return Err("The coordinator has not asked for a backup.".into());
-        }
         if share_index == 0 {
             return Err("The key number is at least 1.".into());
         }
@@ -909,16 +903,82 @@ impl Signer {
         }
         let backup = ShareBackup::from_words(share_index, words)
             .map_err(|e| format!("These words are not a valid backup: {e}"))?;
-        let Some(Pending::EnterBackup(phase)) = self.pending.take() else {
-            unreachable!()
+        let share_image = backup.share_image();
+        if self
+            .inner
+            .held_shares()
+            .any(|s| s.share_image == share_image && !s.needs_consolidation)
+        {
+            return Err("This signer already holds this key. Tap it on the home screen to restore its wallet on a coordinator.".into());
+        }
+        // What frostsnap does on the coordinator's "enter a backup" and "save it" requests, without
+        // the coordinator: it knows nothing about this backup until it reads the restore code.
+        let phase = EnterBackupPhase {
+            enter_physical_id: EnterPhysicalId::new(&mut OsRng),
         };
-        let sends: Vec<DeviceSend> = self
+        let _ = self
             .inner
             .tell_coordinator_about_backup_load_result(phase, backup)
             .into_iter()
-            .collect();
-        let step = self.handle_sends(sends)?;
+            .count();
+        let share = HeldShare2 {
+            access_structure_ref: None,
+            share_image,
+            threshold: None,
+            key_name: None,
+            purpose: None,
+            needs_consolidation: true,
+        };
+        self.inner
+            .recv_coordinator_message(
+                CoordinatorToDeviceMessage::Restoration(
+                    CoordinatorRestoration::SavePhysicalBackup2(Box::new(share.clone())),
+                ),
+                &mut OsRng,
+            )
+            .map_err(|e| e.to_string())?;
+        let step = self.restore_step(share)?;
         Ok(self.result(step))
+    }
+
+    /// The QR code that gives the coordinator this share (and this signer's enrolment data). A
+    /// typed-in backup still needs the coordinator's answer once it has rebuilt the wallet.
+    fn restore_step(&self, share: HeldShare2) -> Res<Step> {
+        let what = format!(
+            "Restore code for key #{}. Read it on the coordinator’s Restore page.",
+            share_index_u32(share.share_image.index)?
+        );
+        let next = share
+            .needs_consolidation
+            .then(|| minifrost_wire::Step::FinishRestoring.title().to_string());
+        let bytes = Packet::RestoreShare {
+            device_id: self.device_id(),
+            name: self.name.clone(),
+            share,
+        }
+        .to_bytes();
+        Ok(Step::Reply {
+            frames: qr_transport::split(&bytes, qr_transport::DEFAULT_FRAME_CHARS),
+            what,
+            next,
+        })
+    }
+
+    /// "Restore wallet on coordinator" on a key this signer holds.
+    pub fn restore_code(&self, key_id: &str) -> Res<Step> {
+        let key_id = self.find_key(key_id)?;
+        if self.keystore.contains_key(&key_id) && !self.opened.contains_key(&key_id) {
+            return Ok(Step::UnlockShare {
+                key_name: self.key_name(key_id),
+                key_id: key_id.to_string(),
+            });
+        }
+        let share = self
+            .inner
+            .held_shares()
+            .find(|s| s.access_structure_ref.is_some_and(|a| a.key_id == key_id))
+            .ok_or("This signer does not hold that key.")?;
+        self.restore_step(share)
     }
 
     /// The question the check-backup quiz is on.
@@ -961,16 +1021,17 @@ impl Signer {
         }
     }
 
-    /// Backups typed into this signer that await the coordinator finishing a restoration.
+    /// Backups typed into this signer that await the coordinator rebuilding their wallet.
     pub fn pending_backups(&self) -> Vec<PendingBackup> {
         self.inner
-            .saved_backups()
-            .values()
-            .filter_map(|b| {
+            .held_shares()
+            .filter(|s| s.needs_consolidation)
+            .filter_map(|s| {
                 Some(PendingBackup {
-                    key_name: b.key_name.clone(),
-                    threshold: b.threshold,
-                    share_index: share_index_u32(b.share_backup.index()).ok()?,
+                    key_name: s.key_name.clone(),
+                    threshold: s.threshold,
+                    share_index: share_index_u32(s.share_image.index).ok()?,
+                    restore_code: self.restore_step(s).ok()?,
                 })
             })
             .collect()
@@ -1006,6 +1067,9 @@ impl Signer {
         let key_id = match msg {
             CoordinatorToDeviceMessage::Signing(CoordinatorSigning::RequestSign(req)) => {
                 KeyId::from_rootkey(req.device_sign_req.rootkey)
+            }
+            CoordinatorToDeviceMessage::Restoration(CoordinatorRestoration::Consolidate(c)) => {
+                AccessStructureRef::from_root_shared_key(&c.root_shared_key).key_id
             }
             CoordinatorToDeviceMessage::Restoration(
                 CoordinatorRestoration::DisplayBackup {

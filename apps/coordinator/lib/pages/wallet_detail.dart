@@ -7,7 +7,6 @@ import '../src/rust/api.dart';
 import '../src/rust/engine.dart';
 import '../src/rust/engine/restore.dart';
 import 'ceremony.dart';
-import 'pick_signer.dart';
 
 class WalletDetailPage extends StatefulWidget {
   const WalletDetailPage({super.key, required this.app, required this.wallet});
@@ -91,24 +90,6 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
       if (mounted) toast(context, e);
     }
     if (mounted) _loadBackups();
-  }
-
-  /// A signer that was replaced or wiped rejoins the wallet through its paper backup.
-  Future<void> _addSignerFromBackup() async {
-    final all = await widget.app.signers();
-    if (!mounted) return;
-    final candidates = all.where((s) => !wallet.signers.any((w) => w.deviceId == s.deviceId)).toList();
-    final signer = await pickSigner(
-      context,
-      signers: candidates,
-      title: 'Which signer takes the backup?',
-      hint: 'A signer that does not hold a share of this wallet yet. You will type the backup into it.',
-    );
-    if (signer == null || !mounted) return;
-    await _session(
-      'Add ${signer.name} from a backup',
-      () => widget.app.startEnterBackupWallet(deviceId: signer.deviceId, keyId: wallet.keyId),
-    );
   }
 
   Widget _section(ThemeData theme, {required String title, IconData? icon, Color? iconColor, required List<Widget> children}) {
@@ -210,8 +191,8 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
                 padding: const EdgeInsets.only(left: 34),
                 child: FilledButton(
                   onPressed: () => _session(
-                    'Finish ${p.deviceName}',
-                    () => widget.app.startConsolidate(keyId: p.keyId, deviceId: p.deviceId),
+                    'Finish restoring “${wallet.name}”',
+                    () => widget.app.startFinishRestoring(keyId: p.keyId),
                   ),
                   child: const Text('Finish'),
                 ),
@@ -220,13 +201,9 @@ class _WalletDetailPageState extends State<WalletDetailPage> {
           ),
         ],
         const Divider(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _addSignerFromBackup,
-            icon: const Icon(Icons.edit_note),
-            label: const Text('Add a signer from a backup'),
-          ),
+        Text(
+          'To add a replaced signer, type its backup into it and read its code on the Restore page.',
+          style: theme.textTheme.bodySmall,
         ),
       ],
     );

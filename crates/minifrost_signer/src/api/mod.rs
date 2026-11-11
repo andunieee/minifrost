@@ -59,14 +59,19 @@ impl SignerApp {
     }
 
     // ---- backups
-    /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
-    /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+    /// The user typed in a physical backup: key number and 25 words. Errors (mistyped word, bad
+    /// checksum) change nothing. Otherwise it is saved and the step is its restore code.
     pub fn submit_backup(
         &self,
         share_index: u32,
         words: Vec<String>,
     ) -> Result<StepResult, String> {
         self.inner.lock().unwrap().submit_backup(share_index, words)
+    }
+    /// The restore code of a key this signer holds, or `Step::UnlockShare` while it is on the key
+    /// store and not opened.
+    pub fn restore_code(&self, key_id: String) -> Result<Step, String> {
+        self.inner.lock().unwrap().restore_code(&key_id)
     }
     /// The check-backup quiz question currently on screen (after `Step::CheckBackup`).
     pub fn quiz_question(&self) -> Result<QuizQuestion, String> {

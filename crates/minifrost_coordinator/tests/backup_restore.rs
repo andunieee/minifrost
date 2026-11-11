@@ -1,18 +1,18 @@
 //! Backups and restoration over QR frames only, following frostsnap's flows:
 //!
 //! * display a signer's 25-word backup, confirm it was written down, check it with the quiz;
-//! * rebuild a wallet on a fresh coordinator and fresh signers from typed-in physical backups,
-//!   consolidate them, and sign with the result;
-//! * rebuild a wallet whose coordinator was lost from signers that still hold their shares;
-//! * refuse backups that don't fit.
+//! * rebuild a wallet on a fresh coordinator and fresh signers from backups typed into the signers,
+//!   give the signers the rest, and sign with the result;
+//! * rebuild a wallet whose coordinator was lost from signers that still hold their shares, or from
+//!   a mix of both;
+//! * sort out shares of several wallets, and refuse the ones that can't count.
 
 use bitcoin::Network;
 use minifrost_coordinator::engine::{Coordinator, Finished, Update};
+use minifrost_wire::Packet;
 
 mod common;
-use common::{
-    Prompt, Signer, Step, auto_reply, create_wallet, frames_of, fund_and_sign, scan, signer_step,
-};
+use common::{Prompt, Signer, Step, create_wallet, frames_of, fund_and_sign, scan, signer_step};
 
 /// Ask `signer` to display its backup; return (share index, words) after the user confirms.
 fn display_backup(
@@ -35,7 +35,7 @@ fn display_backup(
     };
     assert_eq!(words.len(), 25);
     assert_eq!(key_name, "family");
-    assert_eq!(threshold, 2);
+    assert_eq!(threshold, coord.keys()[0].threshold);
     // confirming on the signer only ends its local prompt; there is no reply to show
     assert!(matches!(signer.approve().unwrap().step, Step::Done { .. }));
     let up = coord.confirm_backup().unwrap();
@@ -45,47 +45,79 @@ fn display_backup(
     (share_index, words)
 }
 
-/// The user types `words` into a signer that was asked to enter a backup; returns the reply frames.
+/// The user types `words` into a signer, which checks them and shows its restore code.
 fn type_backup(signer: &mut Signer, share_index: u32, words: &[String]) -> Vec<String> {
-    match signer
-        .submit_backup(share_index, words.to_vec())
-        .unwrap()
-        .step
-    {
+    let r = signer.submit_backup(share_index, words.to_vec()).unwrap();
+    assert!(
+        r.snapshot.is_some(),
+        "the backup is stored before its code is shown"
+    );
+    restore_frames(r.step)
+}
+
+fn restore_frames(step: Step) -> Vec<String> {
+    match step {
         Step::Reply { frames, .. } => frames,
-        other => panic!("expected a reply, got {other:?}"),
+        other => panic!("expected a restore code, got {other:?}"),
     }
 }
 
-fn restoration_id(coord: &Coordinator) -> String {
-    let r = coord.restorations();
-    assert_eq!(r.len(), 1);
-    r[0].restoration_id.clone()
+/// "Restore wallet on coordinator" on the signer's only key.
+fn key_code(signer: &Signer) -> Vec<String> {
+    let key_id = signer.keys()[0].key_id.clone();
+    restore_frames(signer.restore_code(&key_id).unwrap())
 }
 
-/// One full "enter a backup" round trip for a restoration: signer enters it, coordinator accepts,
-/// signer saves it. Returns the final update.
-fn enter_backup(
+/// A wallet with `names` as signers and all their backups written down.
+fn wallet_with_backups(
     coord: &mut Coordinator,
-    signer: &mut Signer,
-    start: Update,
-    share_index: u32,
-    words: &[String],
-) -> Update {
-    assert!(matches!(
-        signer_step(signer, &frames_of(&start)),
-        Step::EnterBackup
-    ));
-    let entered = type_backup(signer, share_index, words);
-    let up = coord.receive(&scan(&entered)).unwrap();
-    assert!(up.finished.is_none(), "{:?}", up.finished);
-    assert_eq!(up.confirm.as_deref(), Some("The signer saved the backup"));
-    // the signer saves by itself; it only says so locally, and the user confirms on this side
-    assert!(matches!(
-        signer_step(signer, &frames_of(&up)),
-        Step::Done { .. }
-    ));
-    coord.confirm_backup().unwrap()
+    names: &[&str],
+    threshold: u16,
+) -> (Vec<Signer>, String, Vec<(u32, Vec<String>)>) {
+    let (mut signers, key_id) = create_wallet(coord, names, threshold);
+    let backups = signers
+        .iter_mut()
+        .map(|s| display_backup(coord, s, &key_id))
+        .collect();
+    (signers, key_id, backups)
+}
+
+fn fresh_phones(names: &[&str]) -> Vec<Signer> {
+    names
+        .iter()
+        .map(|n| Signer::create(n.to_string()))
+        .collect()
+}
+
+/// The wallet's code reaches each signer, which saves its key; the user confirms it on the
+/// coordinator. Returns the rebuilt wallet's key id.
+fn finish_signers(coord: &mut Coordinator, up: &Update, signers: &mut [&mut Signer]) -> String {
+    assert_eq!(
+        up.broadcast.as_ref().unwrap().title,
+        minifrost_wire::Step::FinishRestoring.title()
+    );
+    assert!(up.confirm_each_signer);
+    assert_eq!(up.awaiting.len(), signers.len());
+    let code = frames_of(up);
+    let mut last = up.clone();
+    for s in signers.iter_mut() {
+        let r = s.receive(&scan(&code)).unwrap();
+        assert!(matches!(r.step, Step::Done { .. }), "{:?}", r.step);
+        assert!(r.snapshot.is_some(), "the key is stored");
+        assert!(r.new_share.is_some(), "the app is told about the new share");
+        assert_eq!(s.keys().len(), 1);
+        assert!(s.pending_backups().is_empty());
+        // reading the same code again changes nothing
+        assert!(matches!(
+            s.receive(&scan(&code)).unwrap().step,
+            Step::Done { .. }
+        ));
+        last = coord.confirm_signer(&s.device_id().to_string()).unwrap();
+    }
+    match last.finished {
+        Some(Finished::WalletRestored { key_id, .. }) => key_id,
+        other => panic!("{other:?}"),
+    }
 }
 
 #[test]
@@ -208,7 +240,6 @@ fn display_backup_then_pass_the_quiz() {
 #[test]
 fn signer_needs_the_coordinator_to_decrypt_its_backup() {
     use frostsnap_core::message::{CoordinatorRestoration, CoordinatorToDeviceMessage};
-    use minifrost_wire::Packet;
 
     let mut coord = Coordinator::in_memory();
     let (mut signers, key_id) = create_wallet(&mut coord, &["alice", "bob"], 2);
@@ -238,34 +269,14 @@ fn signer_needs_the_coordinator_to_decrypt_its_backup() {
 fn restore_wallet_from_physical_backups_and_sign() {
     // --- an original wallet; write its backups down
     let mut orig = Coordinator::in_memory();
-    let (mut orig_signers, orig_key) = create_wallet(&mut orig, &["alice", "bob", "carol"], 2);
-    let backups: Vec<(u32, Vec<String>)> = orig_signers
-        .iter_mut()
-        .map(|s| display_backup(&mut orig, s, &orig_key))
-        .collect();
+    let (_, orig_key, backups) = wallet_with_backups(&mut orig, &["alice", "bob", "carol"], 2);
     let (orig_master, _) = orig.wallet_params(&orig_key).unwrap();
 
-    // --- everything is lost: new coordinator, new phones
+    // --- everything is lost: new coordinator, new phones nobody enrolled
     let mut coord = Coordinator::in_memory();
-    let mut phones: Vec<Signer> = ["new-alice", "new-bob", "new-carol"]
-        .iter()
-        .map(|n| Signer::create(n.to_string()))
-        .collect();
-    for p in &phones {
-        coord.enroll(&scan(&p.hello_frames())).unwrap();
-    }
-    let ids: Vec<String> = phones.iter().map(|p| p.device_id().to_string()).collect();
+    let mut phones = fresh_phones(&["new-alice", "new-bob", "new-carol"]);
 
-    // first backup starts the restoration (name and network asked up front, threshold unknown)
-    let start = coord
-        .start_enter_backup_new_wallet(&ids[0], "family".into(), Network::Signet, None)
-        .unwrap();
-    assert!(matches!(
-        signer_step(&mut phones[0], &frames_of(&start)),
-        Step::EnterBackup
-    ));
-
-    // mistyped words are refused by the signer and it keeps waiting
+    // mistyped words are refused by the signer, which stores nothing
     let mut bad = backups[0].1.clone();
     bad[3] = "notaword".into();
     let err = phones[0].submit_backup(backups[0].0, bad).unwrap_err();
@@ -282,83 +293,86 @@ fn restore_wallet_from_physical_backups_and_sign() {
             .is_err()
     );
     assert!(phones[0].submit_backup(0, backups[0].1.clone()).is_err());
+    assert!(phones[0].pending_backups().is_empty());
 
-    let entered = type_backup(&mut phones[0], backups[0].0, &backups[0].1);
-    let up = coord.receive(&scan(&entered)).unwrap();
-    assert!(matches!(
-        signer_step(&mut phones[0], &frames_of(&up)),
-        Step::Done { .. }
-    ));
-    let up = coord.confirm_backup().unwrap();
-    let Some(Finished::BackupSaved { restorable, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    assert!(
-        !restorable,
-        "one share of an unknown threshold is not enough"
+    // the first code registers the signer and is not enough
+    let first = type_backup(&mut phones[0], backups[0].0, &backups[0].1);
+    let up = coord.read_restore_code(&scan(&first)).unwrap();
+    assert!(up.broadcast.is_none() && up.finished.is_none() && up.unnamed_wallet.is_none());
+    assert_eq!(up.from.as_ref().unwrap().name, "new-alice");
+    assert_eq!(coord.signers().len(), 1);
+    assert_eq!(
+        coord.signers()[0].device_id,
+        phones[0].device_id().to_string()
     );
-    let rid = restoration_id(&coord);
+    assert_eq!(coord.restoring_shares().len(), 1);
+    assert_eq!(coord.restoring_shares()[0].share_index, backups[0].0);
     let pending = phones[0].pending_backups();
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].share_index, backups[0].0);
 
-    // the same phone entering the same share again is refused
-    let again = coord.start_enter_backup_restoration(&ids[0], &rid).unwrap();
-    assert!(matches!(
-        signer_step(&mut phones[0], &frames_of(&again)),
-        Step::EnterBackup
-    ));
-    let entered = type_backup(&mut phones[0], backups[0].0, &backups[0].1);
-    let up = coord.receive(&scan(&entered)).unwrap();
+    // the camera keeps seeing the same code; the code on the home screen is the same share
+    assert!(coord.read_restore_code(&scan(&first)).unwrap().repeat);
+    let again = restore_frames(pending[0].restore_code.clone());
+    assert!(coord.read_restore_code(&scan(&again)).unwrap().repeat);
+    assert_eq!(coord.restoring_shares().len(), 1);
+
+    // the phones get restarted while the coordinator is still collecting
+    let mut phones: Vec<Signer> = phones
+        .iter()
+        .map(|p| Signer::from_snapshot(&p.snapshot()).unwrap())
+        .collect();
+    assert_eq!(phones[0].pending_backups().len(), 1);
+
+    // the second code is enough, but nobody knows the wallet's name and network
+    let second = type_backup(&mut phones[1], backups[1].0, &backups[1].1);
+    let up = coord.read_restore_code(&scan(&second)).unwrap();
+    let unnamed = up.unnamed_wallet.expect("asks for the name");
+    assert_eq!(unnamed.threshold, 2);
+    assert_eq!(unnamed.signers, ["new-alice", "new-bob"]);
+    assert_eq!(unnamed.key_id, orig_key, "same key found");
+    assert!(coord.keys().is_empty());
+    assert_eq!(coord.unnamed_wallets().len(), 1, "stays offered");
     assert!(
-        matches!(up.finished, Some(Finished::BackupRejected { .. })),
-        "{:?}",
-        up.finished
-    );
-    assert_eq!(
-        coord.restorations().len(),
-        1,
-        "the restoration itself survives a refused backup"
+        coord
+            .name_restored_wallet(&unnamed.key_id, " ".into(), Network::Signet)
+            .is_err()
     );
 
-    // the second backup makes it restorable
-    let start = coord.start_enter_backup_restoration(&ids[1], &rid).unwrap();
-    let up = enter_backup(
-        &mut coord,
-        &mut phones[1],
-        start,
-        backups[1].0,
-        &backups[1].1,
-    );
-    let Some(Finished::BackupSaved { restorable, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    assert!(restorable);
-    let view = &coord.restorations()[0];
-    assert!(view.restorable);
-    assert_eq!(view.got, Some(2));
-
-    // --- finish: the wallet is back with the same key, and two phones await consolidation
-    let key_id = coord.finish_restoration(&rid).unwrap();
-    assert!(coord.restorations().is_empty());
-    let (master, _) = coord.wallet_params(&key_id).unwrap();
-    assert_eq!(master, orig_master, "same wallet, same addresses");
+    // --- named: the wallet is saved right away and the code for the signers comes up
+    let up = coord
+        .name_restored_wallet(&unnamed.key_id, " family ".into(), Network::Signet)
+        .unwrap();
+    assert!(coord.restoring_shares().is_empty() && coord.unnamed_wallets().is_empty());
+    assert_eq!(coord.keys().len(), 1);
+    assert_eq!(coord.keys()[0].name, "family");
     assert_eq!(coord.keys()[0].threshold, 2);
-    let pending = coord.pending_consolidations();
-    assert_eq!(pending.len(), 2);
-    for p in pending {
-        let i = phones
-            .iter()
-            .position(|s| s.device_id().to_string() == p.device_id)
-            .unwrap();
-        let up = coord.start_consolidate(&key_id, &p.device_id).unwrap();
-        let reply = auto_reply(&mut phones[i], &frames_of(&up));
-        let up = coord.receive(&scan(&reply)).unwrap();
-        assert!(matches!(up.finished, Some(Finished::Consolidated { .. })));
-    }
+    let (master, _) = coord.wallet_params(&orig_key).unwrap();
+    assert_eq!(master, orig_master, "same wallet, same addresses");
+    assert_eq!(coord.pending_consolidations().len(), 2);
+
+    // ... and it can be left and shown again
+    coord.cancel().unwrap();
+    let up2 = coord.start_finish_restoring(&orig_key).unwrap();
+    assert_eq!(frames_of(&up2).len(), frames_of(&up).len());
+
+    // a phone that isn't part of it ignores the code
+    assert!(matches!(
+        phones[2].receive(&scan(&frames_of(&up2))).unwrap().step,
+        Step::Ignored { .. }
+    ));
+    let [alice, bob, carol] = &mut phones[..] else {
+        panic!()
+    };
+    assert!(
+        coord
+            .confirm_signer(&carol.device_id().to_string())
+            .is_err(),
+        "carol's phone is not in this session"
+    );
+    let key_id = finish_signers(&mut coord, &up2, &mut [alice, bob]);
+    assert_eq!(key_id, orig_key);
     assert!(coord.pending_consolidations().is_empty());
-    assert!(phones[0].pending_backups().is_empty());
-    assert_eq!(phones[0].keys().len(), 1);
     // a restored wallet counts as backed up: its owner has the paper
     assert!(
         coord
@@ -368,19 +382,19 @@ fn restore_wallet_from_physical_backups_and_sign() {
             .all(|s| s.complete)
     );
 
-    // --- the third phone joins the finished wallet with its backup
-    let up = coord.start_enter_backup_wallet(&ids[2], &key_id).unwrap();
-    assert!(matches!(
-        signer_step(&mut phones[2], &frames_of(&up)),
-        Step::EnterBackup
-    ));
-    let entered = type_backup(&mut phones[2], backups[2].0, &backups[2].1);
-    let up = coord.receive(&scan(&entered)).unwrap();
-    let consolidate = auto_reply(&mut phones[2], &frames_of(&up));
-    let up = coord.receive(&scan(&consolidate)).unwrap();
-    assert!(matches!(up.finished, Some(Finished::Consolidated { .. })));
+    // --- a third phone joins the finished wallet the same way, nothing to choose
+    let third = type_backup(&mut phones[2], backups[2].0, &backups[2].1);
+    let up = coord.read_restore_code(&scan(&third)).unwrap();
+    assert_eq!(coord.signers().len(), 3);
     assert_eq!(coord.keys()[0].signers.len(), 3);
-    assert_eq!(phones[2].keys().len(), 1);
+    let [_, _, carol] = &mut phones[..] else {
+        panic!()
+    };
+    finish_signers(&mut coord, &up, &mut [carol]);
+    assert!(
+        coord.read_restore_code(&scan(&third)).unwrap().repeat,
+        "reading it again is harmless"
+    );
 
     // --- and the restored wallet really signs, with phones that never saw the original keygen
     fund_and_sign(&mut coord, &mut phones, &[0, 2], &key_id);
@@ -397,126 +411,242 @@ fn restore_wallet_from_physical_backups_and_sign() {
 #[test]
 fn restore_wallet_from_signers_when_the_coordinator_is_lost() {
     let mut orig = Coordinator::in_memory();
-    let (mut signers, _) = create_wallet(&mut orig, &["alice", "bob", "carol"], 2);
+    let (mut signers, key_id) = create_wallet(&mut orig, &["alice", "bob", "carol"], 2);
     drop(orig); // the coordinator and its file are gone; the signers kept their shares
 
     let mut coord = Coordinator::in_memory();
-    for s in &signers {
-        coord.enroll(&scan(&s.hello_frames())).unwrap();
-    }
-    let ids: Vec<String> = signers.iter().map(|s| s.device_id().to_string()).collect();
-
-    // ask alice what she holds
-    let up = coord.start_request_held_shares(&ids[0]).unwrap();
-    let reply = auto_reply(&mut signers[0], &frames_of(&up));
-    let up = coord.receive(&scan(&reply)).unwrap();
-    let Some(Finished::HeldShares { shares, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    assert_eq!(shares.len(), 1);
-    assert_eq!(shares[0].key_name.as_deref(), Some("family"));
-    assert_eq!(shares[0].threshold, Some(2));
-    assert!(!shares[0].needs_consolidation);
-    assert!(shares[0].known_wallet.is_none());
-
-    let rid = coord
-        .start_restoration_from_held_share(&ids[0], shares[0].share_index)
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[0])))
         .unwrap();
-    assert!(!coord.restorations()[0].restorable);
+    assert!(up.finished.is_none() && up.unnamed_wallet.is_none());
+    let share = &coord.restoring_shares()[0];
+    assert_eq!(share.key_name.as_deref(), Some("family"));
+    assert_eq!(share.threshold, Some(2));
 
-    // bob adds the second share
-    let up = coord.start_request_held_shares(&ids[1]).unwrap();
-    let reply = auto_reply(&mut signers[1], &frames_of(&up));
-    let up = coord.receive(&scan(&reply)).unwrap();
-    let Some(Finished::HeldShares { shares: bobs, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    coord
-        .add_held_share_to_restoration(&rid, &ids[1], bobs[0].share_index)
+    // bob's code rebuilds it with no question asked, and no code for signers that kept their keys
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[1])))
         .unwrap();
-    assert!(coord.restorations()[0].restorable);
-    // adding the same share twice is refused
+    assert!(up.broadcast.is_none(), "real shares need no consolidation");
+    assert!(matches!(
+        up.finished,
+        Some(Finished::WalletRestored { key_id: ref k, ref name }) if *k == key_id && name == "family"
+    ));
+    assert!(coord.restoring_shares().is_empty());
+    assert_eq!(coord.keys()[0].threshold, 2);
+    assert_eq!(coord.signers().len(), 2);
+
+    // carol rejoins through the same code
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[2])))
+        .unwrap();
+    assert!(matches!(up.finished, Some(Finished::WalletRestored { .. })));
+    assert_eq!(coord.keys()[0].signers.len(), 3);
+    assert!(coord.pending_consolidations().is_empty());
     assert!(
         coord
-            .add_held_share_to_restoration(&rid, &ids[1], bobs[0].share_index)
-            .is_err()
+            .read_restore_code(&scan(&key_code(&signers[2])))
+            .unwrap()
+            .repeat
     );
-
-    let key_id = coord.finish_restoration(&rid).unwrap();
-    assert!(
-        coord.pending_consolidations().is_empty(),
-        "real shares need no consolidation"
-    );
-    assert_eq!(coord.keys()[0].threshold, 2);
-
-    // carol rejoins the wallet through her held share
-    let up = coord.start_request_held_shares(&ids[2]).unwrap();
-    let reply = auto_reply(&mut signers[2], &frames_of(&up));
-    let up = coord.receive(&scan(&reply)).unwrap();
-    let Some(Finished::HeldShares { shares: carols, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    assert_eq!(carols[0].known_wallet.as_deref(), Some("family"));
-    coord
-        .add_held_share_to_wallet(&key_id, &ids[2], carols[0].share_index)
-        .unwrap();
-    assert_eq!(coord.keys()[0].signers.len(), 3);
 
     fund_and_sign(&mut coord, &mut signers, &[0, 2], &key_id);
 }
 
 #[test]
+fn signer_codes_and_backups_mix() {
+    let mut orig = Coordinator::in_memory();
+    let (mut signers, key_id, backups) = wallet_with_backups(&mut orig, &["alice", "bob"], 2);
+    drop(orig);
+
+    // alice still has her phone; bob's backup goes into a new one. The share that knows the name
+    // and network saves the question, in whichever order they are read.
+    let mut coord = Coordinator::in_memory();
+    let mut phone = Signer::create("new-bob".into());
+    let code = type_backup(&mut phone, backups[1].0, &backups[1].1);
+    coord.read_restore_code(&scan(&code)).unwrap();
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[0])))
+        .unwrap();
+    assert!(up.unnamed_wallet.is_none());
+    assert_eq!(coord.keys()[0].name, "family");
+    // only the typed-in backup has anything to wait for
+    assert_eq!(up.awaiting.len(), 1);
+    assert_eq!(up.awaiting[0].name, "new-bob");
+    finish_signers(&mut coord, &up, &mut [&mut phone]);
+
+    let mut all = vec![signers.remove(0), phone];
+    fund_and_sign(&mut coord, &mut all, &[0, 1], &key_id);
+}
+
+#[test]
+fn shares_of_several_wallets_sort_themselves_out() {
+    let mut a = Coordinator::in_memory();
+    let (_, key_a, backups_a) = wallet_with_backups(&mut a, &["a1", "a2"], 2);
+    let mut b = Coordinator::in_memory();
+    let (_, key_b, backups_b) = wallet_with_backups(&mut b, &["b1", "b2", "b3"], 3);
+
+    let mut coord = Coordinator::in_memory();
+    let mut phones = fresh_phones(&["p1", "p2", "p3", "p4", "p5"]);
+    // one share of each is not a wallet, even with several signers' worth of them
+    let mut read = |phone: &mut Signer, backup: &(u32, Vec<String>)| {
+        coord
+            .read_restore_code(&scan(&type_backup(phone, backup.0, &backup.1)))
+            .unwrap()
+    };
+    assert!(read(&mut phones[0], &backups_a[0]).unnamed_wallet.is_none());
+    assert!(read(&mut phones[1], &backups_b[0]).unnamed_wallet.is_none());
+    assert!(read(&mut phones[2], &backups_b[1]).unnamed_wallet.is_none());
+    // the second of A completes A and leaves B's alone
+    let found = read(&mut phones[3], &backups_a[1]).unnamed_wallet.unwrap();
+    assert_eq!(found.key_id, key_a);
+    assert_eq!(found.signers, ["p1", "p4"]);
+    // B needs its third even while A waits for a name
+    let up = read(&mut phones[4], &backups_b[2]);
+    let found = up.unnamed_wallet.unwrap();
+    assert_eq!(coord.unnamed_wallets().len(), 2);
+    assert!(found.key_id == key_a || found.key_id == key_b);
+
+    let up = coord
+        .name_restored_wallet(&key_b, "b".into(), Network::Signet)
+        .unwrap();
+    assert_eq!(coord.keys()[0].threshold, 3);
+    assert_eq!(up.awaiting.len(), 3);
+    coord.cancel().unwrap();
+    coord
+        .name_restored_wallet(&key_a, "a".into(), Network::Bitcoin)
+        .unwrap();
+    assert!(coord.restoring_shares().is_empty());
+    assert_eq!(coord.keys().len(), 2);
+    assert_eq!(coord.pending_consolidations().len(), 5);
+}
+
+#[test]
 fn wrong_backups_are_refused() {
     let mut coord = Coordinator::in_memory();
-    let (mut signers, key_id) = create_wallet(&mut coord, &["alice", "bob"], 2);
-    let (index, words) = display_backup(&mut coord, &mut signers[0], &key_id);
+    let (mut signers, key_id, backups) = wallet_with_backups(&mut coord, &["alice", "bob"], 2);
 
+    // a signer that holds the key is told so instead of keeping a second copy
+    let err = signers[0]
+        .submit_backup(backups[0].0, backups[0].1.clone())
+        .unwrap_err();
+    assert!(err.contains("already holds"), "{err}");
+
+    let mut twice = Coordinator::in_memory();
     let mut phone = Signer::create("phone".into());
-    coord.enroll(&scan(&phone.hello_frames())).unwrap();
-    let phone_id = phone.device_id().to_string();
-
-    // A backup of a share this coordinator already has can't start another restoration ...
-    let start = coord
-        .start_enter_backup_new_wallet(&phone_id, "again".into(), Network::Signet, None)
+    let code0 = type_backup(&mut phone, backups[0].0, &backups[0].1);
+    let code1 = type_backup(&mut phone, backups[1].0, &backups[1].1);
+    twice.read_restore_code(&scan(&code0)).unwrap();
+    // two keys of one wallet on one signer can't rebuild it
+    let up = twice.read_restore_code(&scan(&code1)).unwrap();
+    assert!(up.unnamed_wallet.is_none() && up.broadcast.is_none());
+    assert!(up.message.contains("of the same wallet"), "{}", up.message);
+    assert!(twice.keys().is_empty() && twice.unnamed_wallets().is_empty());
+    // ... until one is taken off the list and typed into another signer
+    let second = twice
+        .restoring_shares()
+        .into_iter()
+        .find(|s| s.share_index == backups[1].0)
         .unwrap();
-    assert!(matches!(
-        signer_step(&mut phone, &frames_of(&start)),
-        Step::EnterBackup
-    ));
-    let entered = type_backup(&mut phone, index, &words);
-    let up = coord.receive(&scan(&entered)).unwrap();
-    let Some(Finished::BackupRejected { reason }) = up.finished else {
-        panic!("{up:?}")
-    };
-    assert!(reason.contains("family"), "{reason}");
+    twice.remove_restoring_share(&second.id).unwrap();
+    let mut other = Signer::create("other".into());
+    let code = type_backup(&mut other, backups[1].0, &backups[1].1);
     assert!(
-        coord.restorations().is_empty(),
-        "a refused first backup leaves no restoration behind"
+        twice
+            .read_restore_code(&scan(&code))
+            .unwrap()
+            .unnamed_wallet
+            .is_some()
     );
 
-    // ... and a backup from another wallet doesn't fit this one.
-    let mut other = Coordinator::in_memory();
-    let (mut other_signers, other_key) = create_wallet(&mut other, &["x", "y"], 2);
-    let (other_index, other_words) = display_backup(&mut other, &mut other_signers[0], &other_key);
-    let start = coord.start_enter_backup_wallet(&phone_id, &key_id).unwrap();
-    // only one session at a time
+    // a known wallet: a signer already in it can't take another of its keys
+    let mut third = Signer::create("third".into());
+    let code = type_backup(&mut third, backups[0].0, &backups[0].1);
+    let up = coord.read_restore_code(&scan(&code)).unwrap();
+    coord.cancel().unwrap();
+    assert!(up.confirm_each_signer);
+    let code = type_backup(&mut third, backups[1].0, &backups[1].1);
+    let err = coord.read_restore_code(&scan(&code)).unwrap_err();
+    assert!(err.contains("already holds"), "{err}");
+
+    // a backup of another wallet doesn't fit: it just stays on the list, and the wallet is unchanged
+    let mut foreign = Coordinator::in_memory();
+    let (_, _, foreign_backups) = wallet_with_backups(&mut foreign, &["x", "y"], 2);
+    let mut phone = Signer::create("phone".into());
+    let code = type_backup(&mut phone, foreign_backups[0].0, &foreign_backups[0].1);
+    let up = coord.read_restore_code(&scan(&code)).unwrap();
+    assert!(up.finished.is_none() && up.broadcast.is_none());
+    assert_eq!(coord.keys().len(), 1);
+    assert_eq!(coord.keys()[0].key_id, key_id);
+    assert_eq!(coord.restoring_shares().len(), 1);
+
+    // only a restore code is read here, and only there
     assert!(
         coord
-            .start_display_backup(&key_id, &signers[0].device_id().to_string())
+            .read_restore_code(&scan(&signers[0].hello_frames()))
             .is_err()
     );
-    assert!(matches!(
-        signer_step(&mut phone, &frames_of(&start)),
-        Step::EnterBackup
-    ));
-    let entered = type_backup(&mut phone, other_index, &other_words);
-    let up = coord.receive(&scan(&entered)).unwrap();
+    let up = coord
+        .start_display_backup(&key_id, &signers[0].device_id().to_string())
+        .unwrap();
     assert!(
-        matches!(up.finished, Some(Finished::BackupRejected { .. })),
-        "{:?}",
-        up.finished
+        coord
+            .read_restore_code(&scan(&key_code(&signers[0])))
+            .is_err(),
+        "only one session at a time"
     );
-    assert_eq!(coord.keys()[0].signers.len(), 2, "the wallet is unchanged");
+    assert!(coord.receive(&scan(&key_code(&signers[0]))).is_err());
+    assert!(up.confirm.is_some());
+}
+
+#[test]
+fn one_signature_wallets() {
+    let mut orig = Coordinator::in_memory();
+    let (signers, key_id, backups) = wallet_with_backups(&mut orig, &["alice", "bob"], 1);
+
+    // a key knows its threshold, so it needs nothing else
+    let mut coord = Coordinator::in_memory();
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[0])))
+        .unwrap();
+    assert!(matches!(up.finished, Some(Finished::WalletRestored { .. })));
+    assert_eq!(coord.keys()[0].threshold, 1);
+
+    // a backup can't tell, so the user says it is one: nothing can be checked
+    let mut coord = Coordinator::in_memory();
+    let mut phone = Signer::create("phone".into());
+    let code = type_backup(&mut phone, backups[0].0, &backups[0].1);
+    let up = coord.read_restore_code(&scan(&code)).unwrap();
+    assert!(up.unnamed_wallet.is_none());
+    let id = coord.restoring_shares()[0].id.clone();
+    let up = coord
+        .restore_one_signature_wallet(&id, "solo".into(), Network::Signet)
+        .unwrap();
+    assert_eq!(coord.keys()[0].key_id, key_id);
+    let key = finish_signers(&mut coord, &up, &mut [&mut phone]);
+    let mut all = vec![phone];
+    fund_and_sign(&mut coord, &mut all, &[0], &key);
+}
+
+#[test]
+fn a_key_on_the_key_store_is_opened_for_its_restore_code() {
+    let mut orig = Coordinator::in_memory();
+    let (mut signers, key_id) = create_wallet(&mut orig, &["alice", "bob"], 2);
+    let snapshot = common::move_to_keystore(&mut signers[0], &key_id);
+    let mut alice = Signer::from_snapshot(&snapshot).unwrap();
+    assert!(matches!(
+        alice.restore_code(&key_id).unwrap(),
+        Step::UnlockShare { .. }
+    ));
+    common::open_from_keystore(&mut alice, &key_id);
+    let mut coord = Coordinator::in_memory();
+    coord
+        .read_restore_code(&scan(&restore_frames(alice.restore_code(&key_id).unwrap())))
+        .unwrap();
+    assert_eq!(
+        coord.restoring_shares()[0].key_name.as_deref(),
+        Some("family")
+    );
 }
 
 fn temp_dir(name: &str) -> std::path::PathBuf {
@@ -561,24 +691,80 @@ fn backup_and_restoration_state_survive_a_restart() {
     );
     drop(coord);
 
-    // a restoration in progress is kept too
+    // shares read so far are kept too, signers included
     let dir2 = temp_dir("restart-restoring");
     let mut lost = Coordinator::open(&dir2).unwrap();
-    for s in &signers {
-        lost.enroll(&scan(&s.hello_frames())).unwrap();
-    }
-    let id = signers[0].device_id().to_string();
-    let up = lost.start_request_held_shares(&id).unwrap();
-    let reply = auto_reply(&mut signers[0], &frames_of(&up));
-    let up = lost.receive(&scan(&reply)).unwrap();
-    let Some(Finished::HeldShares { shares, .. }) = up.finished else {
-        panic!("{up:?}")
-    };
-    lost.start_restoration_from_held_share(&id, shares[0].share_index)
+    lost.read_restore_code(&scan(&key_code(&signers[0])))
         .unwrap();
     let lost = Coordinator::open(&dir2).unwrap();
-    assert_eq!(lost.restorations().len(), 1);
-    assert_eq!(lost.restorations()[0].shares.len(), 1);
+    assert_eq!(lost.restoring_shares().len(), 1);
+    assert_eq!(lost.signers().len(), 1);
+    let mut lost = lost;
+    let up = lost
+        .read_restore_code(&scan(&key_code(&signers[1])))
+        .unwrap();
+    assert!(matches!(up.finished, Some(Finished::WalletRestored { .. })));
+    let lost = Coordinator::open(&dir2).unwrap();
+    assert_eq!(lost.keys().len(), 1);
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&dir2);
+}
+
+/// A coordinator file from before the shares were gathered outside `frostsnap_core`: a restoration
+/// in progress there carries on, and its wallet can be rebuilt by the next code.
+#[test]
+fn a_restoration_from_an_older_file_carries_on() {
+    use frostsnap_core::RestorationId;
+    use frostsnap_core::coordinator::{Mutation, restoration::RestorationMutation};
+    use frostsnap_core::device::KeyPurpose;
+
+    let mut orig = Coordinator::in_memory();
+    let (signers, key_id) = create_wallet(&mut orig, &["alice", "bob"], 2);
+    drop(orig);
+
+    // alice's share is in a restoration, as the older flow left it
+    let Packet::RestoreShare {
+        device_id, share, ..
+    } = Packet::from_bytes(&scan(&key_code(&signers[0]))).unwrap()
+    else {
+        panic!()
+    };
+    let restoration_id = RestorationId([7; 16]);
+    let history = vec![
+        Mutation::Restoration(RestorationMutation::NewRestoration2 {
+            restoration_id,
+            key_name: "family".into(),
+            starting_threshold: Some(2),
+            key_purpose: KeyPurpose::Bitcoin(Network::Signet),
+        }),
+        Mutation::Restoration(RestorationMutation::RestorationProgress2 {
+            restoration_id,
+            device_id,
+            held_share: share,
+        }),
+    ];
+    // what version 2 wrote, field by field
+    let signers_map = std::collections::BTreeMap::from([(device_id, "alice".to_string())]);
+    let backups: Vec<(frostsnap_core::AccessStructureRef, u32, bool)> = vec![];
+    let v2 = ([9u8; 32], signers_map, history, None::<String>, backups);
+    let mut bytes = vec![2u8];
+    bytes.extend(bincode::encode_to_vec(&v2, bincode::config::standard()).unwrap());
+
+    let dir = temp_dir("migrate");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("coordinator.bin"), bytes).unwrap();
+    let mut coord = Coordinator::open(&dir).unwrap();
+    assert_eq!(coord.restoring_shares().len(), 1);
+    assert_eq!(coord.signers().len(), 1);
+    drop(coord);
+    let mut coord = Coordinator::open(&dir).unwrap();
+    assert_eq!(coord.restoring_shares().len(), 1, "moved for good");
+    let up = coord
+        .read_restore_code(&scan(&key_code(&signers[1])))
+        .unwrap();
+    assert!(matches!(
+        up.finished,
+        Some(Finished::WalletRestored { key_id: ref k, .. }) if *k == key_id
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
 }

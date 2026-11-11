@@ -5,11 +5,14 @@
 
 use frostsnap_core::{
     DeviceId, KeyId, WireSignTask,
-    message::{CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, signing::OpenNonceStreams},
+    message::{
+        CoordinatorToDeviceMessage, DeviceToCoordinatorMessage, HeldShare2,
+        signing::OpenNonceStreams,
+    },
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 6;
+pub const WIRE_VERSION: u8 = 7;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -29,6 +32,14 @@ pub enum Packet {
     FromDevice {
         device_id: DeviceId,
         message: DeviceToCoordinatorMessage,
+    },
+    /// signer -> coordinator, on its Restore page: "I hold this share". Comes from a backup typed
+    /// into the signer or from a key it already has. Carries the enrolment data too, so a
+    /// coordinator that doesn't know this signer registers it at the same time.
+    RestoreShare {
+        device_id: DeviceId,
+        name: String,
+        share: HeldShare2,
     },
 }
 
@@ -96,11 +107,7 @@ pub enum Step {
     SignNonces,
     ShowBackup,
     CheckBackup,
-    EnterBackup,
-    SaveBackup,
-    AddBackupToWallet,
     FinishRestoring,
-    HeldShares,
 }
 
 impl Step {
@@ -113,11 +120,7 @@ impl Step {
             Step::SignNonces => "Step 2 · Aggregated nonces",
             Step::ShowBackup => "Show the secret backup",
             Step::CheckBackup => "Check the backup",
-            Step::EnterBackup => "Enter a backup",
-            Step::SaveBackup => "Save the backup on the signer",
-            Step::AddBackupToWallet => "Add the backup to the wallet",
-            Step::FinishRestoring => "Finish restoring this signer",
-            Step::HeldShares => "Which shares does this signer hold?",
+            Step::FinishRestoring => "Save the restored key",
         }
     }
 
@@ -128,7 +131,6 @@ impl Step {
             Step::KeygenJoin => Some(Step::KeygenCertify),
             Step::KeygenCertify => Some(Step::KeygenCheck),
             Step::SignReview => Some(Step::SignNonces),
-            Step::EnterBackup => Some(Step::SaveBackup),
             _ => None,
         }
     }
@@ -147,17 +149,7 @@ impl Step {
             | (Step::SignNonces, M::Signing(CoordinatorSigning::RequestSign(_)))
             | (Step::ShowBackup, M::Restoration(R::DisplayBackup { .. }))
             | (Step::CheckBackup, M::Restoration(R::CheckBackup { .. }))
-            | (Step::EnterBackup, M::Restoration(R::EnterPhysicalBackup { .. }))
-            | (
-                Step::SaveBackup,
-                M::Restoration(R::SavePhysicalBackup { .. } | R::SavePhysicalBackup2(_)),
-            )
-            | (Step::HeldShares, M::Restoration(R::RequestHeldShares)) => true,
-            // the same request finishes both flows
-            (
-                Step::AddBackupToWallet | Step::FinishRestoring,
-                M::Restoration(R::Consolidate(_)),
-            ) => true,
+            | (Step::FinishRestoring, M::Restoration(R::Consolidate(_))) => true,
             _ => false,
         }
     }

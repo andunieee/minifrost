@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -888148484;
+  int get rustContentHash => 262260983;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -140,6 +140,11 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<void> crateApiSignerAppReject({required SignerApp that});
+
+  Future<Step> crateApiSignerAppRestoreCode({
+    required SignerApp that,
+    required String keyId,
+  });
 
   Future<Uint8List> crateApiSignerAppSetNewSharesOnKeystore({
     required SignerApp that,
@@ -808,6 +813,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "SignerApp_reject", argNames: ["that"]);
 
   @override
+  Future<Step> crateApiSignerAppRestoreCode({
+    required SignerApp that,
+    required String keyId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSignerApp(
+            that,
+            serializer,
+          );
+          sse_encode_String(keyId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_step,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSignerAppRestoreCodeConstMeta,
+        argValues: [that, keyId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSignerAppRestoreCodeConstMeta =>
+      const TaskConstMeta(
+        debugName: "SignerApp_restore_code",
+        argNames: ["that", "keyId"],
+      );
+
+  @override
   Future<Uint8List> crateApiSignerAppSetNewSharesOnKeystore({
     required SignerApp that,
     required bool enabled,
@@ -824,7 +867,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -862,7 +905,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -896,7 +939,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -933,7 +976,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -961,7 +1004,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(prefix, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -998,7 +1041,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1027,7 +1070,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1055,7 +1098,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1083,7 +1126,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1112,7 +1155,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1144,7 +1187,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 28,
+              funcId: 29,
               port: port_,
             );
           },
@@ -1178,7 +1221,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 29,
+              funcId: 30,
               port: port_,
             );
           },
@@ -1211,7 +1254,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1241,7 +1284,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1268,7 +1311,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1295,7 +1338,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1598,12 +1641,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PendingBackup dco_decode_pending_backup(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return PendingBackup(
       keyName: dco_decode_opt_String(arr[0]),
       threshold: dco_decode_opt_box_autoadd_u_16(arr[1]),
       shareIndex: dco_decode_u_32(arr[2]),
+      restoreCode: dco_decode_step(arr[3]),
     );
   }
 
@@ -1708,8 +1752,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           keyName: dco_decode_String(raw[2]),
         );
       case 5:
-        return Step_EnterBackup();
-      case 6:
         return Step_CheckBackup(keyName: dco_decode_String(raw[1]));
       default:
         throw Exception("unreachable");
@@ -2145,10 +2187,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_keyName = sse_decode_opt_String(deserializer);
     var var_threshold = sse_decode_opt_box_autoadd_u_16(deserializer);
     var var_shareIndex = sse_decode_u_32(deserializer);
+    var var_restoreCode = sse_decode_step(deserializer);
     return PendingBackup(
       keyName: var_keyName,
       threshold: var_threshold,
       shareIndex: var_shareIndex,
+      restoreCode: var_restoreCode,
     );
   }
 
@@ -2266,8 +2310,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_keyName = sse_decode_String(deserializer);
         return Step_UnlockShare(keyId: var_keyId, keyName: var_keyName);
       case 5:
-        return Step_EnterBackup();
-      case 6:
         var var_keyName = sse_decode_String(deserializer);
         return Step_CheckBackup(keyName: var_keyName);
       default:
@@ -2727,6 +2769,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.keyName, serializer);
     sse_encode_opt_box_autoadd_u_16(self.threshold, serializer);
     sse_encode_u_32(self.shareIndex, serializer);
+    sse_encode_step(self.restoreCode, serializer);
   }
 
   @protected
@@ -2823,10 +2866,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(4, serializer);
         sse_encode_String(keyId, serializer);
         sse_encode_String(keyName, serializer);
-      case Step_EnterBackup():
-        sse_encode_i_32(5, serializer);
       case Step_CheckBackup(keyName: final keyName):
-        sse_encode_i_32(6, serializer);
+        sse_encode_i_32(5, serializer);
         sse_encode_String(keyName, serializer);
     }
   }
@@ -3002,6 +3043,11 @@ class SignerAppImpl extends RustOpaque implements SignerApp {
   Future<void> reject() =>
       RustLib.instance.api.crateApiSignerAppReject(that: this);
 
+  /// The restore code of a key this signer holds, or `Step::UnlockShare` while it is on the key
+  /// store and not opened.
+  Future<Step> restoreCode({required String keyId}) => RustLib.instance.api
+      .crateApiSignerAppRestoreCode(that: this, keyId: keyId);
+
   /// Returns the snapshot to store.
   Future<Uint8List> setNewSharesOnKeystore({required bool enabled}) => RustLib
       .instance
@@ -3017,8 +3063,8 @@ class SignerAppImpl extends RustOpaque implements SignerApp {
   Future<Uint8List> snapshot() =>
       RustLib.instance.api.crateApiSignerAppSnapshot(that: this);
 
-  /// The user typed in a physical backup after `Step::EnterBackup`: key number and 25 words.
-  /// Errors (mistyped word, bad checksum) leave the signer waiting for a corrected attempt.
+  /// The user typed in a physical backup: key number and 25 words. Errors (mistyped word, bad
+  /// checksum) change nothing. Otherwise it is saved and the step is its restore code.
   Future<StepResult> submitBackup({
     required int shareIndex,
     required List<String> words,

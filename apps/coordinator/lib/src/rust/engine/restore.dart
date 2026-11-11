@@ -42,54 +42,6 @@ class BackupShare {
           complete == other.complete;
 }
 
-/// A share a signer reported holding.
-class HeldShareView {
-  final String deviceId;
-  final int shareIndex;
-  final String? keyName;
-  final int? threshold;
-  final String? network;
-
-  /// A physical backup typed into the signer, not yet turned into a normal share.
-  final bool needsConsolidation;
-
-  /// Set when this coordinator already knows the wallet the share belongs to.
-  final String? knownWallet;
-
-  const HeldShareView({
-    required this.deviceId,
-    required this.shareIndex,
-    this.keyName,
-    this.threshold,
-    this.network,
-    required this.needsConsolidation,
-    this.knownWallet,
-  });
-
-  @override
-  int get hashCode =>
-      deviceId.hashCode ^
-      shareIndex.hashCode ^
-      keyName.hashCode ^
-      threshold.hashCode ^
-      network.hashCode ^
-      needsConsolidation.hashCode ^
-      knownWallet.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is HeldShareView &&
-          runtimeType == other.runtimeType &&
-          deviceId == other.deviceId &&
-          shareIndex == other.shareIndex &&
-          keyName == other.keyName &&
-          threshold == other.threshold &&
-          network == other.network &&
-          needsConsolidation == other.needsConsolidation &&
-          knownWallet == other.knownWallet;
-}
-
 /// A signer whose typed-in backup still has to be consolidated into a share of a known wallet.
 class PendingConsolidationView {
   final String keyId;
@@ -126,86 +78,73 @@ class PendingConsolidationView {
           shareIndex == other.shareIndex;
 }
 
-class RestorationShareView {
+/// A share read from a signer whose wallet isn't rebuilt yet.
+class RestoringShareView {
+  final String id;
   final String deviceId;
   final String deviceName;
   final int shareIndex;
 
-  /// `compatible`, `incompatible` or `uncertain` (not enough shares yet to tell).
-  final String compatibility;
+  /// What the share knows about its wallet: nothing, for a typed-in backup.
+  final String? keyName;
+  final int? threshold;
+  final String? network;
 
-  const RestorationShareView({
+  const RestoringShareView({
+    required this.id,
     required this.deviceId,
     required this.deviceName,
     required this.shareIndex,
-    required this.compatibility,
+    this.keyName,
+    this.threshold,
+    this.network,
   });
 
   @override
   int get hashCode =>
+      id.hashCode ^
       deviceId.hashCode ^
       deviceName.hashCode ^
       shareIndex.hashCode ^
-      compatibility.hashCode;
+      keyName.hashCode ^
+      threshold.hashCode ^
+      network.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RestorationShareView &&
+      other is RestoringShareView &&
           runtimeType == other.runtimeType &&
+          id == other.id &&
           deviceId == other.deviceId &&
           deviceName == other.deviceName &&
           shareIndex == other.shareIndex &&
-          compatibility == other.compatibility;
+          keyName == other.keyName &&
+          threshold == other.threshold &&
+          network == other.network;
 }
 
-class RestorationView {
-  final String restorationId;
-  final String name;
-  final String network;
-  final int? threshold;
-  final List<RestorationShareView> shares;
+/// A wallet there are enough shares to rebuild, but whose name and network no share knows.
+class UnnamedWalletView {
+  final String keyId;
+  final int threshold;
+  final List<String> signers;
 
-  /// Compatible shares gathered so far (`None` while it can't be told yet).
-  final int? got;
-  final int incompatible;
-
-  /// Enough compatible shares to rebuild the key: `finish_restoration` will work.
-  final bool restorable;
-
-  const RestorationView({
-    required this.restorationId,
-    required this.name,
-    required this.network,
-    this.threshold,
-    required this.shares,
-    this.got,
-    required this.incompatible,
-    required this.restorable,
+  const UnnamedWalletView({
+    required this.keyId,
+    required this.threshold,
+    required this.signers,
   });
 
   @override
-  int get hashCode =>
-      restorationId.hashCode ^
-      name.hashCode ^
-      network.hashCode ^
-      threshold.hashCode ^
-      shares.hashCode ^
-      got.hashCode ^
-      incompatible.hashCode ^
-      restorable.hashCode;
+  int get hashCode => keyId.hashCode ^ threshold.hashCode ^ signers.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RestorationView &&
+      other is UnnamedWalletView &&
           runtimeType == other.runtimeType &&
-          restorationId == other.restorationId &&
-          name == other.name &&
-          network == other.network &&
+          keyId == other.keyId &&
           threshold == other.threshold &&
-          shares == other.shares &&
-          got == other.got &&
-          incompatible == other.incompatible &&
-          restorable == other.restorable;
+          signers == other.signers;
 }

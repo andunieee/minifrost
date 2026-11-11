@@ -29,7 +29,7 @@
 
 use crate::api::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
 
 // Section: boilerplate
@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -888148484;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 262260983;
 
 // Section: executor
 
@@ -905,6 +905,57 @@ fn wire__crate__api__SignerApp_reject_impl(
                     let output_ok = Ok::<_, ()>({
                         crate::api::SignerApp::reject(&*api_that_guard);
                     })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__SignerApp_restore_code_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SignerApp_restore_code",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SignerApp>,
+            >>::sse_decode(&mut deserializer);
+            let api_key_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::SignerApp::restore_code(&*api_that_guard, api_key_id)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1844,10 +1895,12 @@ impl SseDecode for crate::engine::PendingBackup {
         let mut var_keyName = <Option<String>>::sse_decode(deserializer);
         let mut var_threshold = <Option<u16>>::sse_decode(deserializer);
         let mut var_shareIndex = <u32>::sse_decode(deserializer);
+        let mut var_restoreCode = <crate::engine::Step>::sse_decode(deserializer);
         return crate::engine::PendingBackup {
             key_name: var_keyName,
             threshold: var_threshold,
             share_index: var_shareIndex,
+            restore_code: var_restoreCode,
         };
     }
 }
@@ -1992,9 +2045,6 @@ impl SseDecode for crate::engine::Step {
                 };
             }
             5 => {
-                return crate::engine::Step::EnterBackup;
-            }
-            6 => {
                 let mut var_keyName = <String>::sse_decode(deserializer);
                 return crate::engine::Step::CheckBackup {
                     key_name: var_keyName,
@@ -2120,30 +2170,31 @@ fn pde_ffi_dispatcher_primary_impl(
         15 => wire__crate__api__SignerApp_quiz_question_impl(port, ptr, rust_vec_len, data_len),
         16 => wire__crate__api__SignerApp_receive_impl(port, ptr, rust_vec_len, data_len),
         17 => wire__crate__api__SignerApp_reject_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__SignerApp_set_new_shares_on_keystore_impl(
+        18 => wire__crate__api__SignerApp_restore_code_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__SignerApp_set_new_shares_on_keystore_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => {
+        20 => {
             wire__crate__api__SignerApp_share_for_keystore_impl(port, ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__SignerApp_snapshot_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__SignerApp_submit_backup_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__load_signer_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__new_signer_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
-        29 => {
+        21 => wire__crate__api__SignerApp_snapshot_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__SignerApp_submit_backup_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__decode_qr_luma_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__camera__list_cameras_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__load_signer_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__new_qr_scanner_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__new_signer_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__camera__start_camera_impl(port, ptr, rust_vec_len, data_len),
+        30 => {
             wire__crate__api__sound__start_sound_listening_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__sound__start_sound_playback_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__camera__stop_camera_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__sound__stop_sound_listening_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__sound__stop_sound_playback_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2156,7 +2207,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        22 => wire__crate__api__backup_word_suggestions_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__backup_word_suggestions_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2286,6 +2337,7 @@ impl flutter_rust_bridge::IntoDart for crate::engine::PendingBackup {
             self.key_name.into_into_dart().into_dart(),
             self.threshold.into_into_dart().into_dart(),
             self.share_index.into_into_dart().into_dart(),
+            self.restore_code.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2440,9 +2492,8 @@ impl flutter_rust_bridge::IntoDart for crate::engine::Step {
                 key_name.into_into_dart().into_dart(),
             ]
             .into_dart(),
-            crate::engine::Step::EnterBackup => [5.into_dart()].into_dart(),
             crate::engine::Step::CheckBackup { key_name } => {
-                [6.into_dart(), key_name.into_into_dart().into_dart()].into_dart()
+                [5.into_dart(), key_name.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -2757,6 +2808,7 @@ impl SseEncode for crate::engine::PendingBackup {
         <Option<String>>::sse_encode(self.key_name, serializer);
         <Option<u16>>::sse_encode(self.threshold, serializer);
         <u32>::sse_encode(self.share_index, serializer);
+        <crate::engine::Step>::sse_encode(self.restore_code, serializer);
     }
 }
 
@@ -2871,11 +2923,8 @@ impl SseEncode for crate::engine::Step {
                 <String>::sse_encode(key_id, serializer);
                 <String>::sse_encode(key_name, serializer);
             }
-            crate::engine::Step::EnterBackup => {
-                <i32>::sse_encode(5, serializer);
-            }
             crate::engine::Step::CheckBackup { key_name } => {
-                <i32>::sse_encode(6, serializer);
+                <i32>::sse_encode(5, serializer);
                 <String>::sse_encode(key_name, serializer);
             }
             _ => {
@@ -2964,7 +3013,7 @@ mod io {
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
-    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -3017,7 +3066,7 @@ mod web {
     };
     use flutter_rust_bridge::for_generated::wasm_bindgen;
     use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
+    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate

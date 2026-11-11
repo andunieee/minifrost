@@ -600,7 +600,7 @@ extension StepPatterns on Step {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Step_Ignored value)?  ignored,TResult Function( Step_Confirm value)?  confirm,TResult Function( Step_Reply value)?  reply,TResult Function( Step_Done value)?  done,TResult Function( Step_UnlockShare value)?  unlockShare,TResult Function( Step_EnterBackup value)?  enterBackup,TResult Function( Step_CheckBackup value)?  checkBackup,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Step_Ignored value)?  ignored,TResult Function( Step_Confirm value)?  confirm,TResult Function( Step_Reply value)?  reply,TResult Function( Step_Done value)?  done,TResult Function( Step_UnlockShare value)?  unlockShare,TResult Function( Step_CheckBackup value)?  checkBackup,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
@@ -608,8 +608,7 @@ return ignored(_that);case Step_Confirm() when confirm != null:
 return confirm(_that);case Step_Reply() when reply != null:
 return reply(_that);case Step_Done() when done != null:
 return done(_that);case Step_UnlockShare() when unlockShare != null:
-return unlockShare(_that);case Step_EnterBackup() when enterBackup != null:
-return enterBackup(_that);case Step_CheckBackup() when checkBackup != null:
+return unlockShare(_that);case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that);case _:
   return orElse();
 
@@ -628,7 +627,7 @@ return checkBackup(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Step_Ignored value)  ignored,required TResult Function( Step_Confirm value)  confirm,required TResult Function( Step_Reply value)  reply,required TResult Function( Step_Done value)  done,required TResult Function( Step_UnlockShare value)  unlockShare,required TResult Function( Step_EnterBackup value)  enterBackup,required TResult Function( Step_CheckBackup value)  checkBackup,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Step_Ignored value)  ignored,required TResult Function( Step_Confirm value)  confirm,required TResult Function( Step_Reply value)  reply,required TResult Function( Step_Done value)  done,required TResult Function( Step_UnlockShare value)  unlockShare,required TResult Function( Step_CheckBackup value)  checkBackup,}){
 final _that = this;
 switch (_that) {
 case Step_Ignored():
@@ -636,8 +635,7 @@ return ignored(_that);case Step_Confirm():
 return confirm(_that);case Step_Reply():
 return reply(_that);case Step_Done():
 return done(_that);case Step_UnlockShare():
-return unlockShare(_that);case Step_EnterBackup():
-return enterBackup(_that);case Step_CheckBackup():
+return unlockShare(_that);case Step_CheckBackup():
 return checkBackup(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -652,7 +650,7 @@ return checkBackup(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Step_Ignored value)?  ignored,TResult? Function( Step_Confirm value)?  confirm,TResult? Function( Step_Reply value)?  reply,TResult? Function( Step_Done value)?  done,TResult? Function( Step_UnlockShare value)?  unlockShare,TResult? Function( Step_EnterBackup value)?  enterBackup,TResult? Function( Step_CheckBackup value)?  checkBackup,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Step_Ignored value)?  ignored,TResult? Function( Step_Confirm value)?  confirm,TResult? Function( Step_Reply value)?  reply,TResult? Function( Step_Done value)?  done,TResult? Function( Step_UnlockShare value)?  unlockShare,TResult? Function( Step_CheckBackup value)?  checkBackup,}){
 final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
@@ -660,8 +658,7 @@ return ignored(_that);case Step_Confirm() when confirm != null:
 return confirm(_that);case Step_Reply() when reply != null:
 return reply(_that);case Step_Done() when done != null:
 return done(_that);case Step_UnlockShare() when unlockShare != null:
-return unlockShare(_that);case Step_EnterBackup() when enterBackup != null:
-return enterBackup(_that);case Step_CheckBackup() when checkBackup != null:
+return unlockShare(_that);case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that);case _:
   return null;
 
@@ -679,15 +676,14 @@ return checkBackup(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what,  String? next)?  reply,TResult Function( String message)?  done,TResult Function( String keyId,  String keyName)?  unlockShare,TResult Function()?  enterBackup,TResult Function( String keyName)?  checkBackup,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String reason)?  ignored,TResult Function( Prompt field0)?  confirm,TResult Function( List<String> frames,  String what,  String? next)?  reply,TResult Function( String message)?  done,TResult Function( String keyId,  String keyName)?  unlockShare,TResult Function( String keyName)?  checkBackup,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
 return reply(_that.frames,_that.what,_that.next);case Step_Done() when done != null:
 return done(_that.message);case Step_UnlockShare() when unlockShare != null:
-return unlockShare(_that.keyId,_that.keyName);case Step_EnterBackup() when enterBackup != null:
-return enterBackup();case Step_CheckBackup() when checkBackup != null:
+return unlockShare(_that.keyId,_that.keyName);case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that.keyName);case _:
   return orElse();
 
@@ -706,15 +702,14 @@ return checkBackup(_that.keyName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what,  String? next)  reply,required TResult Function( String message)  done,required TResult Function( String keyId,  String keyName)  unlockShare,required TResult Function()  enterBackup,required TResult Function( String keyName)  checkBackup,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String reason)  ignored,required TResult Function( Prompt field0)  confirm,required TResult Function( List<String> frames,  String what,  String? next)  reply,required TResult Function( String message)  done,required TResult Function( String keyId,  String keyName)  unlockShare,required TResult Function( String keyName)  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored():
 return ignored(_that.reason);case Step_Confirm():
 return confirm(_that.field0);case Step_Reply():
 return reply(_that.frames,_that.what,_that.next);case Step_Done():
 return done(_that.message);case Step_UnlockShare():
-return unlockShare(_that.keyId,_that.keyName);case Step_EnterBackup():
-return enterBackup();case Step_CheckBackup():
+return unlockShare(_that.keyId,_that.keyName);case Step_CheckBackup():
 return checkBackup(_that.keyName);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -729,15 +724,14 @@ return checkBackup(_that.keyName);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what,  String? next)?  reply,TResult? Function( String message)?  done,TResult? Function( String keyId,  String keyName)?  unlockShare,TResult? Function()?  enterBackup,TResult? Function( String keyName)?  checkBackup,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String reason)?  ignored,TResult? Function( Prompt field0)?  confirm,TResult? Function( List<String> frames,  String what,  String? next)?  reply,TResult? Function( String message)?  done,TResult? Function( String keyId,  String keyName)?  unlockShare,TResult? Function( String keyName)?  checkBackup,}) {final _that = this;
 switch (_that) {
 case Step_Ignored() when ignored != null:
 return ignored(_that.reason);case Step_Confirm() when confirm != null:
 return confirm(_that.field0);case Step_Reply() when reply != null:
 return reply(_that.frames,_that.what,_that.next);case Step_Done() when done != null:
 return done(_that.message);case Step_UnlockShare() when unlockShare != null:
-return unlockShare(_that.keyId,_that.keyName);case Step_EnterBackup() when enterBackup != null:
-return enterBackup();case Step_CheckBackup() when checkBackup != null:
+return unlockShare(_that.keyId,_that.keyName);case Step_CheckBackup() when checkBackup != null:
 return checkBackup(_that.keyName);case _:
   return null;
 
@@ -1106,38 +1100,6 @@ as String,
 
 
 }
-
-/// @nodoc
-
-
-class Step_EnterBackup extends Step {
-  const Step_EnterBackup(): super._();
-  
-
-
-
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Step_EnterBackup);
-}
-
-
-@override
-int get hashCode => runtimeType.hashCode;
-
-@override
-String toString() {
-    return 'Step.enterBackup()';
-}
-
-
-}
-
-
-
 
 /// @nodoc
 

@@ -107,6 +107,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_u_16(dynamic raw);
 
   @protected
+  UnnamedWalletView dco_decode_box_autoadd_unnamed_wallet_view(dynamic raw);
+
+  @protected
   Broadcast dco_decode_broadcast(dynamic raw);
 
   @protected
@@ -120,9 +123,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Finished dco_decode_finished(dynamic raw);
-
-  @protected
-  HeldShareView dco_decode_held_share_view(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
@@ -140,9 +140,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CameraInfo> dco_decode_list_camera_info(dynamic raw);
 
   @protected
-  List<HeldShareView> dco_decode_list_held_share_view(dynamic raw);
-
-  @protected
   List<KeyView> dco_decode_list_key_view(dynamic raw);
 
   @protected
@@ -157,15 +154,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  List<RestorationShareView> dco_decode_list_restoration_share_view(
-    dynamic raw,
-  );
-
-  @protected
-  List<RestorationView> dco_decode_list_restoration_view(dynamic raw);
+  List<RestoringShareView> dco_decode_list_restoring_share_view(dynamic raw);
 
   @protected
   List<SignerInfo> dco_decode_list_signer_info(dynamic raw);
+
+  @protected
+  List<UnnamedWalletView> dco_decode_list_unnamed_wallet_view(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -186,16 +181,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
 
   @protected
+  UnnamedWalletView? dco_decode_opt_box_autoadd_unnamed_wallet_view(
+    dynamic raw,
+  );
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
 
   @protected
   PendingConsolidationView dco_decode_pending_consolidation_view(dynamic raw);
 
   @protected
-  RestorationShareView dco_decode_restoration_share_view(dynamic raw);
-
-  @protected
-  RestorationView dco_decode_restoration_view(dynamic raw);
+  RestoringShareView dco_decode_restoring_share_view(dynamic raw);
 
   @protected
   ScanProgress dco_decode_scan_progress(dynamic raw);
@@ -217,6 +214,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  UnnamedWalletView dco_decode_unnamed_wallet_view(dynamic raw);
 
   @protected
   Update dco_decode_update(dynamic raw);
@@ -301,6 +301,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
+  UnnamedWalletView sse_decode_box_autoadd_unnamed_wallet_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Broadcast sse_decode_broadcast(SseDeserializer deserializer);
 
   @protected
@@ -314,9 +319,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Finished sse_decode_finished(SseDeserializer deserializer);
-
-  @protected
-  HeldShareView sse_decode_held_share_view(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
@@ -334,11 +336,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CameraInfo> sse_decode_list_camera_info(SseDeserializer deserializer);
 
   @protected
-  List<HeldShareView> sse_decode_list_held_share_view(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<KeyView> sse_decode_list_key_view(SseDeserializer deserializer);
 
   @protected
@@ -353,17 +350,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  List<RestorationShareView> sse_decode_list_restoration_share_view(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<RestorationView> sse_decode_list_restoration_view(
+  List<RestoringShareView> sse_decode_list_restoring_share_view(
     SseDeserializer deserializer,
   );
 
   @protected
   List<SignerInfo> sse_decode_list_signer_info(SseDeserializer deserializer);
+
+  @protected
+  List<UnnamedWalletView> sse_decode_list_unnamed_wallet_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -386,6 +383,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
+  UnnamedWalletView? sse_decode_opt_box_autoadd_unnamed_wallet_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -394,12 +396,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  RestorationShareView sse_decode_restoration_share_view(
+  RestoringShareView sse_decode_restoring_share_view(
     SseDeserializer deserializer,
   );
-
-  @protected
-  RestorationView sse_decode_restoration_view(SseDeserializer deserializer);
 
   @protected
   ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
@@ -421,6 +420,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  UnnamedWalletView sse_decode_unnamed_wallet_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   Update sse_decode_update(SseDeserializer deserializer);
@@ -528,6 +532,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_unnamed_wallet_view(
+    UnnamedWalletView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_broadcast(Broadcast self, SseSerializer serializer);
 
   @protected
@@ -541,9 +551,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_finished(Finished self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_held_share_view(HeldShareView self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
@@ -567,12 +574,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_held_share_view(
-    List<HeldShareView> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_key_view(List<KeyView> self, SseSerializer serializer);
 
   @protected
@@ -591,20 +592,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_restoration_share_view(
-    List<RestorationShareView> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_restoration_view(
-    List<RestorationView> self,
+  void sse_encode_list_restoring_share_view(
+    List<RestoringShareView> self,
     SseSerializer serializer,
   );
 
   @protected
   void sse_encode_list_signer_info(
     List<SignerInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_unnamed_wallet_view(
+    List<UnnamedWalletView> self,
     SseSerializer serializer,
   );
 
@@ -639,6 +640,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_unnamed_wallet_view(
+    UnnamedWalletView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
     Uint8List? self,
     SseSerializer serializer,
@@ -651,14 +658,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_restoration_share_view(
-    RestorationShareView self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_restoration_view(
-    RestorationView self,
+  void sse_encode_restoring_share_view(
+    RestoringShareView self,
     SseSerializer serializer,
   );
 
@@ -682,6 +683,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_unnamed_wallet_view(
+    UnnamedWalletView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_update(Update self, SseSerializer serializer);

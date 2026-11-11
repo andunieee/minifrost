@@ -51,28 +51,11 @@ sealed class Finished with _$Finished {
     required int shareIndex,
   }) = Finished_BackupChecked;
 
-  /// An entered backup was saved on its signer as part of a restoration.
-  const factory Finished.backupSaved({
-    required String restorationId,
-    required int shareIndex,
-    required bool restorable,
-  }) = Finished_BackupSaved;
-
-  /// An entered backup (or a reply for one) was refused; the session is over.
-  const factory Finished.backupRejected({required String reason}) =
-      Finished_BackupRejected;
-
-  /// A signer turned a typed-in backup into a normal share of a wallet.
-  const factory Finished.consolidated({
-    required String keyName,
-    required int shareIndex,
-  }) = Finished_Consolidated;
-
-  /// The shares a signer reported holding.
-  const factory Finished.heldShares({
-    required String deviceName,
-    required List<HeldShareView> shares,
-  }) = Finished_HeldShares;
+  /// A wallet is rebuilt and no signer is waiting for anything, or a signer rejoined it.
+  const factory Finished.walletRestored({
+    required String keyId,
+    required String name,
+  }) = Finished_WalletRestored;
 }
 
 class KeyView {
@@ -155,6 +138,10 @@ class Update {
   /// Keygen check round: no signer reply either, but the user confirms each signer in
   /// `awaiting` separately, with `confirm_signer`, once it shows the check code and approved.
   final bool confirmEachSigner;
+
+  /// Restoration: the shares read so far rebuild this wallet, but none knows its name and
+  /// network. Ask the user, then call `name_restored_wallet`.
+  final UnnamedWalletView? unnamedWallet;
   final Finished? finished;
   final bool snapshotSaved;
 
@@ -168,6 +155,7 @@ class Update {
     this.checkCode,
     this.confirm,
     required this.confirmEachSigner,
+    this.unnamedWallet,
     this.finished,
     required this.snapshotSaved,
   });
@@ -183,6 +171,7 @@ class Update {
       checkCode.hashCode ^
       confirm.hashCode ^
       confirmEachSigner.hashCode ^
+      unnamedWallet.hashCode ^
       finished.hashCode ^
       snapshotSaved.hashCode;
 
@@ -200,6 +189,7 @@ class Update {
           checkCode == other.checkCode &&
           confirm == other.confirm &&
           confirmEachSigner == other.confirmEachSigner &&
+          unnamedWallet == other.unnamedWallet &&
           finished == other.finished &&
           snapshotSaved == other.snapshotSaved;
 }
