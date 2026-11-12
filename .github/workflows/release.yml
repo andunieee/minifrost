@@ -281,8 +281,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::notice::No Android signing secrets; the APK will use the debug key."
-            exit 0
+            echo "::error::Android signing secrets are missing; refusing to build a debug-signed APK."
+            exit 1
           fi
           android_dir="apps/${{ matrix.app }}/android"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$android_dir/app/release.jks"
@@ -304,6 +304,25 @@ jobs:
           flutter build apk --release \
             --build-name="$VERSION" \
             --build-number="${{ github.run_number }}"
+
+      - name: Verify the release signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="apps/${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk"
+          # SHA-256 of the certificate in ~/android-release/release.jks. A debug-signed APK
+          # must never be published: it would break updatability from the real key.
+          expected="dfd2e1acac8964bf3262e05497a4a623978d335663472c76e75b62c25b02ea8e"
+          actual="$(
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" |
+              awk -F': ' '/SHA-256 digest/ {print $NF; exit}' |
+              tr '[:upper:]' '[:lower:]' | tr -d ':'
+          )"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::APK is signed by $actual, expected $expected"
+            exit 1
+          fi
+          echo "APK signed with the release key ($actual)."
 
       - name: Verify the signer has no network access
         if: matrix.app == 'signer'
