@@ -1,0 +1,21 @@
+# Zapstore listing for the signer APK. Published by the "Publish to Zapstore"
+# job in .github/workflows/release.yml after the GitHub release is up.
+repository: https://github.com/andunieee/minifrost
+release_filter: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+match: '^minifrost_signer-.*-android\.apk$'
+
+name: Minifrost Signer
+summary: Air-gapped FROST signer for a Minifrost Bitcoin wallet.
+description: |
+  **Minifrost Signer** holds a key share for a Minifrost FROST threshold Bitcoin
+  wallet. It has no network access: it shows a QR code to the coordinator, reads
+  the coordinator's codes with the camera, and approves each operation on
+  screen.
+
+  Pair it with **Minifrost** on another phone. Several signers can share one
+  wallet, and any threshold of them is enough to sign.
+
+website: https://github.com/andunieee/minifrost
+tags: [bitcoin, wallet, frost, air-gapped, signer]
+icon: ./assets/logo.png
+metadata_sources: [github]

@@ -365,3 +365,56 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publishes each release's APK to Zapstore (zapstore.yaml and zapstore-signer.yaml). Needs
+  # ZAPSTORE_OWNER_NSEC: the nsec (or bunker:// URL) of the Nostr key that owns the listings.
+  # Zapstore ties an app to its signing certificate through a NIP-C1 proof, which
+  # packaging/zapstore makes from the release keystore, so the ANDROID_KEYSTORE_* secrets must be
+  # set too.
+  zapstore:
+    name: Publish to Zapstore
+    if: needs.meta.outputs.release == 'true'
+    needs: [meta, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packaging/zapstore/go.mod
+          cache-dependency-path: packaging/zapstore/go.sum
+
+      # keytool converts the release .jks to the PKCS#12 the proof signer reads.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Publish
+        env:
+          SIGN_WITH: ${{ secrets.ZAPSTORE_OWNER_NSEC || secrets.ZAPSTORE_SIGN_WITH }}
+          GITHUB_TOKEN: ${{ github.token }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SIGN_WITH" ]; then
+            echo "::warning::ZAPSTORE_OWNER_NSEC is not set, skipping the Zapstore publish"
+            exit 0
+          fi
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, skipping the Zapstore publish"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | tr -d ' \t\r\n' | base64 -d > "$RUNNER_TEMP/android-release.jks"
+          keytool -importkeystore -noprompt \
+            -srckeystore "$RUNNER_TEMP/android-release.jks" -srcstorepass "$KEYSTORE_PASSWORD" \
+            -srcalias "${KEY_ALIAS:-hyperb}" -srckeypass "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}" \
+            -destkeystore "$RUNNER_TEMP/android-release.p12" -deststoretype PKCS12 \
+            -deststorepass "$KEYSTORE_PASSWORD" -destkeypass "$KEYSTORE_PASSWORD"
+          export ANDROID_KEYSTORE="$RUNNER_TEMP/android-release.p12"
+          export ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD"
+          (cd packaging/zapstore && go build -o "$RUNNER_TEMP/zapstore" .)
+          "$RUNNER_TEMP/zapstore" zapstore.yaml zapstore-signer.yaml

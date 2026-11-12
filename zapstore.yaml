@@ -1,0 +1,22 @@
+# Zapstore listing for the coordinator APK. Published by the "Publish to
+# Zapstore" job in .github/workflows/release.yml after the GitHub release is up.
+repository: https://github.com/andunieee/minifrost
+release_filter: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+match: '^minifrost_coordinator-.*-android\.apk$'
+
+name: Minifrost
+summary: A FROST Bitcoin wallet coordinated between air-gapped phones.
+description: |
+  **Minifrost** is a FROST threshold Schnorr Bitcoin wallet. Key shares live on
+  air-gapped phones, and every exchange with them — key generation, addresses
+  and signatures — travels as animated QR codes, so the signers never touch a
+  network.
+
+  This is the coordinator: the wallet UI that builds transactions, shows QR
+  codes to the signers and combines their signature shares. Install **Minifrost
+  Signer** on one or more other phones.
+
+website: https://github.com/andunieee/minifrost
+tags: [bitcoin, wallet, frost, air-gapped, privacy]
+icon: ./assets/logo.png
+metadata_sources: [github]
