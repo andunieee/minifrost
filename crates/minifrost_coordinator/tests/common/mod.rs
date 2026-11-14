@@ -9,8 +9,7 @@ use std::str::FromStr;
 use bitcoin::{Address, Txid, secp256k1};
 use minifrost_coordinator::engine::{Coordinator, Finished, Update};
 use minifrost_coordinator::wallet::{self, Amt, Esplora, EsploraUtxo};
-// Compile the signer engine straight into the test instead of linking the signer crate: both FFI
-// crates export the same flutter_rust_bridge symbols, so a binary can't link both.
+// Compile the signer engine straight into the test instead of linking the signer crate.
 #[path = "../../../minifrost_signer/src/engine.rs"]
 pub mod signer_engine;
 pub use signer_engine::{Prompt, Signer, Step};

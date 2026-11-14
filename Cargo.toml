@@ -7,6 +7,9 @@ members = [
     "crates/minifrost_wire",
     "crates/minifrost_signer",
     "crates/minifrost_coordinator",
+    "crates/minifrost_ui",
+    "apps/signer",
+    "apps/coordinator",
 ]
 
 [workspace.dependencies]
@@ -25,6 +28,11 @@ schnorr_fun = { version = "0.13", default-features = false }
 rand_core = "0.6"
 rand = "0.8"
 tracing = { version = "0.1", default-features = false }
+# The UI. Pinned to a commit: the apps build against Freya's unreleased 0.4 API.
+freya = { git = "https://github.com/marc2332/freya", rev = "e506b09328e52cc0ab10d0adbef7dbd3ce0f063e", features = ["icons-lucide", "engine"] }
+freya-winit = { git = "https://github.com/marc2332/freya", rev = "e506b09328e52cc0ab10d0adbef7dbd3ce0f063e" }
+futures-channel = "0.3"
+futures-util = "0.3"
 
 [profile.dev]
 opt-level = 2

@@ -35,7 +35,7 @@ use super::{Coordinator, Finished, Res, Session, SignerInfo, Update, purpose_net
 // ---------------------------------------------------------------------------------------------
 
 /// One share of a wallet and whether its backup was recorded.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BackupShare {
     pub device_id: String,
     pub name: String,
@@ -46,7 +46,7 @@ pub struct BackupShare {
 }
 
 /// A share read from a signer whose wallet isn't rebuilt yet.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RestoringShareView {
     pub id: String,
     pub device_id: String,
@@ -59,7 +59,7 @@ pub struct RestoringShareView {
 }
 
 /// A wallet there are enough shares to rebuild, but whose name and network no share knows.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnnamedWalletView {
     pub key_id: String,
     pub threshold: u16,
@@ -67,7 +67,7 @@ pub struct UnnamedWalletView {
 }
 
 /// A signer whose typed-in backup still has to be consolidated into a share of a known wallet.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PendingConsolidationView {
     pub key_id: String,
     pub key_name: String,

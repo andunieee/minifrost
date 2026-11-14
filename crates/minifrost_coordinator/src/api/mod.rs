@@ -1,7 +1,5 @@
-//! The API Flutter sees. Everything here is generated into Dart by flutter_rust_bridge.
-
-pub mod camera;
-pub mod sound;
+//! The coordinator as the app uses it: the engine behind a lock, so the network calls can run on
+//! other threads without holding it.
 
 use std::sync::Mutex;
 
@@ -21,7 +19,7 @@ fn parse_network(n: &str) -> Result<bitcoin::Network, String> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WalletSummary {
     pub balance_sats: i64,
     pub confirmed_sats: i64,
@@ -30,7 +28,7 @@ pub struct WalletSummary {
     pub receive_address: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SendPreview {
     pub recipient: String,
     pub amount_sats: i64,
@@ -276,61 +274,4 @@ impl CoordinatorApp {
         };
         esplora.broadcast(&tx_hex)
     }
-}
-
-// ------------------------------------------------------------------------------------------
-
-#[derive(Debug, Clone)]
-pub struct ScanProgress {
-    pub received: u32,
-    pub total: u32,
-    pub payload: Option<Vec<u8>>,
-    pub problem: Option<String>,
-}
-
-/// Collects the frames of an animated QR code.
-pub struct QrScanner {
-    inner: Mutex<qr_transport::Assembler>,
-}
-
-pub fn new_qr_scanner() -> QrScanner {
-    QrScanner {
-        inner: Mutex::new(qr_transport::Assembler::new()),
-    }
-}
-
-impl QrScanner {
-    pub fn push(&self, text: String) -> ScanProgress {
-        match self.inner.lock().unwrap().push(&text) {
-            Ok(p) => ScanProgress {
-                received: p.received as u32,
-                total: p.total as u32,
-                payload: p.complete,
-                problem: None,
-            },
-            Err(e) => ScanProgress {
-                received: 0,
-                total: 0,
-                payload: None,
-                problem: Some(e.to_string()),
-            },
-        }
-    }
-    pub fn reset(&self) {
-        self.inner.lock().unwrap().reset()
-    }
-}
-
-/// Decode QR codes from one camera frame's luma (Y) plane. `row_stride` is the plane's bytes per
-/// row, which can be wider than `width`.
-pub fn decode_qr_luma(width: u32, height: u32, row_stride: u32, luma: Vec<u8>) -> Vec<String> {
-    let (w, h, stride) = (width as usize, height as usize, row_stride as usize);
-    if w == 0 || h == 0 || stride < w || luma.len() < stride * (h - 1) + w {
-        return vec![];
-    }
-    let mut img = rqrr::PreparedImage::prepare_from_greyscale(w, h, |x, y| luma[y * stride + x]);
-    img.detect_grids()
-        .into_iter()
-        .filter_map(|g| g.decode().ok().map(|(_, text)| text))
-        .collect()
 }

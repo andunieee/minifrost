@@ -132,7 +132,7 @@ struct KeystoreShare {
 // What the UI sees
 // ---------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OutputSummary {
     pub address: String,
     pub amount_sats: i64,
@@ -140,7 +140,7 @@ pub struct OutputSummary {
     pub own_label: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TxSummary {
     pub key_name: String,
     pub network: String,
@@ -155,7 +155,7 @@ pub struct TxSummary {
     pub warnings: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Prompt {
     /// The coordinator wants to create a new key with this signer.
     JoinKeygen {
@@ -188,7 +188,7 @@ pub enum Prompt {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Step {
     /// Packet was valid but needs nothing from this signer.
     Ignored { reason: String },
@@ -211,7 +211,7 @@ pub enum Step {
     CheckBackup { key_name: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QuizQuestion {
     pub title: String,
     pub options: Vec<String>,
@@ -220,7 +220,7 @@ pub struct QuizQuestion {
     pub total: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QuizAnswer {
     pub correct: bool,
     /// The next question, unless the quiz is over or the answer was wrong.
@@ -232,7 +232,7 @@ pub struct QuizAnswer {
 
 /// A backup the user typed into this signer that has not been turned into a real share yet
 /// (waiting for the coordinator to rebuild the wallet).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PendingBackup {
     /// For [`Signer::delete_pending_backup`].
     pub id: String,
@@ -243,7 +243,7 @@ pub struct PendingBackup {
     pub restore_code: Step,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StepResult {
     pub step: Step,
     /// If `Some`, the signer's persistent state changed. The caller MUST durably store these bytes
@@ -253,7 +253,7 @@ pub struct StepResult {
     pub new_share: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyInfo {
     pub key_id: String,
     pub name: String,

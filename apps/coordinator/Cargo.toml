@@ -1,0 +1,31 @@
+[package]
+name = "minifrost_coordinator_app"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The Minifrost coordinator app: the desktop binary and the Android library."
+
+# Android loads this library (`android.app.lib_name`); the desktop binary links it.
+[lib]
+name = "minifrost_coordinator_app"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "minifrost_coordinator"
+path = "src/main.rs"
+
+[dependencies]
+minifrost_coordinator = { path = "../../crates/minifrost_coordinator" }
+minifrost_ui = { path = "../../crates/minifrost_ui" }
+tracing = { workspace = true, features = ["std"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+freya-winit = { workspace = true }
+winit = { version = "0.30.12", features = ["android-native-activity", "rwh_06"] }
+# Without a subscriber, tracing events go to `log`, which android_logger sends to logcat.
+tracing = { workspace = true, features = ["std", "log"] }
+android_logger = "0.15"
+log = "0.4"

@@ -1,0 +1,28 @@
+[package]
+name = "minifrost_ui"
+version = "0.1.0"
+edition = "2024"
+description = "What the two Minifrost apps share: the look, the animated QR code, the QR scanner (camera, sound, pasted text) and the Android glue."
+
+# No networking crates: the signer app is built on this, see scripts/check-signer-offline.sh.
+[dependencies]
+freya = { workspace = true }
+qr_transport = { path = "../qr_transport" }
+sound_transport = { path = "../sound_transport" }
+qrcode = { version = "0.14", default-features = false }
+rqrr = "0.10"
+futures-channel = { workspace = true }
+futures-util = { workspace = true }
+tracing = { workspace = true, features = ["std"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+dirs = "6"
+
+# Webcam capture. `v4l` is host capture, not networking.
+[target.'cfg(target_os = "linux")'.dependencies]
+desktop_camera = { path = "../desktop_camera" }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22"
+winit = { version = "0.30.12", features = ["android-native-activity", "rwh_06"] }

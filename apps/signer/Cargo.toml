@@ -1,0 +1,33 @@
+[package]
+name = "minifrost_signer_app"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The Minifrost signer app: the desktop binary and the Android library."
+
+# Android loads this library (`android.app.lib_name`); the desktop binary links it.
+[lib]
+name = "minifrost_signer_app"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "minifrost_signer"
+path = "src/main.rs"
+
+# Like the engine: no networking crates, see scripts/check-signer-offline.sh.
+[dependencies]
+minifrost_signer = { path = "../../crates/minifrost_signer" }
+minifrost_ui = { path = "../../crates/minifrost_ui" }
+frost_backup = { workspace = true }
+tracing = { workspace = true, features = ["std"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+freya-winit = { workspace = true }
+winit = { version = "0.30.12", features = ["android-native-activity", "rwh_06"] }
+# Without a subscriber, tracing events go to `log`, which android_logger sends to logcat.
+tracing = { workspace = true, features = ["std", "log"] }
+android_logger = "0.15"
+log = "0.4"

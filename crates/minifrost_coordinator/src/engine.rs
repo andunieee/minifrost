@@ -66,13 +66,13 @@ struct SnapshotV2 {
 // What the UI sees
 // ---------------------------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SignerInfo {
     pub device_id: String,
     pub name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyView {
     pub key_id: String,
     pub name: String,
@@ -85,20 +85,20 @@ pub struct KeyView {
 }
 
 /// A signer of a wallet and the key it holds.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeySigner {
     pub device_id: String,
     pub name: String,
     pub share_index: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Broadcast {
     pub title: String,
     pub frames: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Finished {
     KeyCreated {
         key_id: String,
@@ -125,7 +125,7 @@ pub enum Finished {
     },
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Update {
     pub message: String,
     /// The signer whose reply produced this update, when there is one.
