@@ -907,7 +907,7 @@ fn a_restoration_from_an_older_file_carries_on() {
     let dir = temp_dir("migrate");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("coordinator.bin"), bytes).unwrap();
-    let mut coord = Coordinator::open(&dir).unwrap();
+    let coord = Coordinator::open(&dir).unwrap();
     assert_eq!(coord.restoring_shares().len(), 1);
     assert_eq!(coord.signers().len(), 1);
     drop(coord);

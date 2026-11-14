@@ -1,7 +1,5 @@
 target/
 build/
-.dart_tool/
-*.iml
 .gradle/
 local.properties
 **/android/key.properties

@@ -1,4 +1,4 @@
-//! The signer state machine. Pure Rust, no I/O: bytes in, a [`Step`] out. The Flutter app owns the
+//! The signer state machine. Pure Rust, no I/O: bytes in, a [`Step`] out. The app owns the
 //! camera, the screen and the encrypted-at-rest storage; this module owns every decision.
 
 use std::collections::BTreeMap;

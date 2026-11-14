@@ -14,18 +14,11 @@ members = [
 
 [workspace.dependencies]
 bincode = { version = "2.0.1", features = ["serde", "alloc", "derive"], default-features = false }
-serde = { version = "1", features = ["derive", "alloc"], default-features = false }
 frostsnap_core = { git = "https://github.com/frostsnap/frostsnap", rev = "f0ae95d03adc030de9c41ccae57f918e395a6f8f", default-features = false }
 # Same rev as frostsnap_core. The 25-word share backup format; `cli` (the default) is not wanted.
 frost_backup = { git = "https://github.com/frostsnap/frostsnap", rev = "f0ae95d03adc030de9c41ccae57f918e395a6f8f", default-features = false }
-rusqlite = { version = "0.31.0", features = ["bundled"] }
-proptest = "=1.6.0"
-rand_chacha = { version = "0.3", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 bitcoin = { version = "0.32", features = ["serde"], default-features = false }
-secp256kfun = { version = "0.12", default-features = false }
-schnorr_fun = { version = "0.13", default-features = false }
-rand_core = "0.6"
 rand = "0.8"
 tracing = { version = "0.1", default-features = false }
 # The UI. Pinned to a commit: the apps build against Freya's unreleased 0.4 API.

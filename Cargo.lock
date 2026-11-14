@@ -2803,7 +2803,6 @@ version = "0.1.0"
 dependencies = [
  "android_logger",
  "freya-winit",
- "frost_backup",
  "log",
  "minifrost_signer",
  "minifrost_ui",
@@ -2836,7 +2835,6 @@ name = "minifrost_wire"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "bitcoin",
  "frostsnap_core",
 ]
 

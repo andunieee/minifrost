@@ -18,8 +18,6 @@ path = "src/main.rs"
 [dependencies]
 minifrost_signer = { path = "../../crates/minifrost_signer" }
 minifrost_ui = { path = "../../crates/minifrost_ui" }
-frost_backup = { workspace = true }
-tracing = { workspace = true, features = ["std"] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }

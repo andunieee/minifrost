@@ -1,8 +1,5 @@
 # Run `just` to list recipes.
 
-# Flutter lives in ~/sdk/flutter on this machine; override with FLUTTER_HOME=/path/to/flutter.
-flutter_home := env("FLUTTER_HOME", env("HOME") / "sdk/flutter")
-export PATH := flutter_home / "bin" + ":" + env("PATH")
 export ANDROID_HOME := env("ANDROID_HOME", "/opt/android-sdk")
 
 default:
@@ -10,29 +7,27 @@ default:
 
 # --- coordinator -----------------------------------------------------------------------------
 
-# Run the coordinator on this machine (debug build, hot reload with `r`).
+# Run the coordinator on this machine (debug build).
 coordinator-desktop:
-    cd apps/coordinator && flutter run -d linux
+    cargo run -p minifrost_coordinator_app
 
 # Build the coordinator debug APK and install it on all connected phones.
-# Install only, no attached shell (no logcat / hot reload). For logs:
-# `adb -s <device> logcat`. Loops over all connected android devices (see `just devices`).
-coordinator-android:
-    cd apps/coordinator && flutter build apk --debug && for d in $(adb devices -l | awk 'NR > 1 && $2 == "device" {print $1}'); do adb -s "$d" install -r -t build/app/outputs/flutter-apk/app-debug.apk; done
+# Install only, no attached shell. For logs: `adb -s <device> logcat`.
+# Loops over all connected android devices (see `just devices`).
+coordinator-android: (android "coordinator")
 
 # --- signer ----------------------------------------------------------------------------------
-# On desktop the key share lives in a plain file (see lib/vault.dart), webcam scanning
-# comes from the shared `desktop_camera` crate. Not for serious funds.
+# On desktop the key share lives in a plain file (see apps/signer/src/ctl.rs), webcam
+# scanning comes from the shared `desktop_camera` crate. Not for serious funds.
 
-# Run the signer on this machine (debug build, hot reload with `r`).
+# Run the signer on this machine (debug build).
 signer-desktop:
-    cd apps/signer && flutter run -d linux
+    cargo run -p minifrost_signer_app
 
 # Build the signer debug APK and install it on all connected phones.
-# Install only, no attached shell (no logcat / hot reload). For logs:
-# `adb -s <device> logcat`. Loops over all connected android devices (see `just devices`).
-signer-android:
-    cd apps/signer && flutter build apk --debug && for d in $(adb devices -l | awk 'NR > 1 && $2 == "device" {print $1}'); do adb -s "$d" install -r -t build/app/outputs/flutter-apk/app-debug.apk; done
+# Install only, no attached shell. For logs: `adb -s <device> logcat`.
+# Loops over all connected android devices (see `just devices`).
+signer-android: (android "signer")
 
 # --- development -----------------------------------------------------------------------------
 
@@ -40,35 +35,31 @@ signer-android:
 test:
     cargo test --workspace
 
-# Regenerate the Dart bindings after editing crates/*/src/api.
-codegen:
-    cd apps/signer && flutter_rust_bridge_codegen generate
-    cd apps/coordinator && flutter_rust_bridge_codegen generate
+# Lint everything.
+check:
+    cargo clippy --workspace --all-targets
 
-analyze:
-    cd packages/minifrost_ui && flutter analyze
-    cd apps/signer && flutter analyze
-    cd apps/coordinator && flutter analyze
-
-# Fetch Dart dependencies for everything.
-setup:
-    cd packages/minifrost_ui && flutter pub get
-    cd apps/signer && flutter pub get
-    cd apps/coordinator && flutter pub get
+# Fails if the signer could reach a network (Rust dependencies; pass an APK to check its permissions too).
+check-signer-offline *apk:
+    scripts/check-signer-offline.sh {{apk}}
 
 devices:
     adb devices -l
-    flutter devices
+
+# Build an app's debug APK (Rust library via cargo-ndk, see scripts/android-native.sh) and install it.
+[private]
+android app:
+    cd apps/{{app}}/android && ./gradlew assembleDebug
+    for d in $(adb devices -l | awk 'NR > 1 && $2 == "device" {print $1}'); do adb -s "$d" install -r -t apps/{{app}}/android/app/build/outputs/apk/debug/app-debug.apk; done
 
 # --- packaging -------------------------------------------------------------------------------
 
-# Build the release bundle of a Linux desktop app (coordinator|signer) and install it, with its
+# Build the release binary of a Linux desktop app (coordinator|signer) and install it, with its
 # launcher entry and icon, under ~/.local.
 install-desktop app:
-    cd apps/{{app}} && flutter build linux --release
-    rm -rf ~/.local/opt/minifrost_{{app}}
-    mkdir -p ~/.local/opt ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor/512x512/apps
-    cp -r apps/{{app}}/build/linux/x64/release/bundle ~/.local/opt/minifrost_{{app}}
-    ln -sf ~/.local/opt/minifrost_{{app}}/minifrost_{{app}} ~/.local/bin/minifrost_{{app}}
+    cargo build --release -p minifrost_{{app}}_app
+    rm -rf ~/.local/opt/minifrost_{{app}}  # the old Flutter bundle
+    mkdir -p ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor/512x512/apps
+    install -m755 "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/release/minifrost_{{app}}" ~/.local/bin/minifrost_{{app}}
     magick assets/logo.png -gravity center -crop 800x800+0+0 +repage -resize 512x512 ~/.local/share/icons/hicolor/512x512/apps/minifrost.png
     cp packaging/minifrost_{{app}}.desktop ~/.local/share/applications/
