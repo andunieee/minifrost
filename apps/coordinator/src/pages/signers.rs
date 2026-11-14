@@ -120,37 +120,24 @@ impl Component for EnrollPage {
         let p = use_palette();
         let app = use_consume::<App>();
         let nav = use_consume::<Nav>();
-        let mut added = use_state(|| None::<SignerInfo>);
         let mut error = use_state(|| None::<String>);
-        let on_payload = move |payload: Vec<u8>| {
-            if added.peek().is_some() {
-                return;
+        let on_payload = move |payload: Vec<u8>| match app.enroll(payload) {
+            Ok(s) => {
+                nav.overlay
+                    .success(format!("Read enrolment code: added “{}”.", s.name), Some(signer_color(&s.device_id, p.dark)));
+                nav.pop();
             }
-            match app.enroll(payload) {
-                Ok(s) => {
-                    nav.overlay
-                        .success(format!("Read enrolment code: added “{}”.", s.name), Some(signer_color(&s.device_id, p.dark)));
-                    nav.changed();
-                    added.set(Some(s));
-                }
-                Err(e) => error.set(Some(e)),
-            }
+            Err(e) => error.set(Some(e)),
         };
 
         rect().expanded().child(app_bar(&p, "Add signer", back(move |_| nav.pop()))).child(
             page(560.)
-                .child(match added.read().clone() {
-                    Some(s) => rect()
-                        .width(Size::fill())
-                        .spacing(12.)
-                        .child(text(format!("Added “{}”.", s.name)))
-                        .child(Btn::new("Done").fill().on_press(move |_| nav.pop()))
-                        .into_element(),
-                    None => ScanPanel::new(on_payload)
+                .child(
+                    ScanPanel::new(on_payload)
                         .hint("Show the signer’s enrolment code to the camera")
                         .expecting("signer enrolment code")
                         .into_element(),
-                })
+                )
                 .map(error.read().clone(), |el, e| el.child(text(e).color(p.error))),
         )
     }
