@@ -1,4 +1,4 @@
-//! What shows above the screens: a toast at the bottom and dialogs the code can wait on, so a
+//! What shows above the screens: a toast at the top and dialogs the code can wait on, so a
 //! flow reads top to bottom (`if !overlay.confirm(..).await { return }`).
 
 use std::{
@@ -127,7 +127,7 @@ impl Overlay {
 
     /// A plain message, mostly what went wrong.
     pub fn toast(self, message: impl ToString) {
-        self.show(message.to_string(), None, None, Duration::from_secs(4));
+        self.show(message.to_string(), None, None, Duration::from_secs(6));
     }
 
     /// "It worked", in green or in `color` (the colour of the signer it is about).
@@ -136,7 +136,7 @@ impl Overlay {
             message.into(),
             Some(color.unwrap_or(Color::from_rgb(46, 125, 50))),
             Some(lucide::circle_check()),
-            Duration::from_secs(4),
+            Duration::from_secs(6),
         );
     }
 
@@ -146,7 +146,7 @@ impl Overlay {
             message.into(),
             Some(color.unwrap_or(Color::from_rgb(69, 90, 100))),
             Some(lucide::info()),
-            Duration::from_secs(2),
+            Duration::from_secs(3),
         );
     }
 
@@ -268,7 +268,8 @@ impl Component for OverlayHost {
                 let color = readable_on(background);
                 el.child(
                     rect()
-                        .position(Position::new_absolute().bottom(insets.bottom + 24.).left(0.))
+                        // Below the app bar, clear of the tab bar and the page's floating action.
+                        .position(Position::new_absolute().top(insets.top + 56. + 8.).left(0.))
                         .width(Size::fill())
                         .padding((0., 16.))
                         .cross_align(Alignment::center())
