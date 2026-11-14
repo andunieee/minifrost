@@ -968,6 +968,18 @@ impl Coordinator {
 
     // ------------------------------------------------------------------ wallet --------------
 
+    /// The code that has the key's signers show receive address `index` from their own key. No
+    /// session: nothing comes back, the user compares the screens.
+    pub fn verify_address(&self, key_id: &str, index: u32) -> Res<Broadcast> {
+        let (key_id, _, _) = self.key_and_network(key_id)?;
+        let index = frostsnap_core::tweak::NormalIndex::new(index).ok_or("address index out of range")?;
+        let verify = self
+            .inner
+            .verify_address(key_id, index)
+            .map_err(|e| e.to_string())?;
+        Ok(self.broadcast(verify.into_iter().collect(), WireStep::VerifyAddress))
+    }
+
     fn key_and_network(&self, key_id: &str) -> Res<(KeyId, frostsnap_core::MasterAppkey, Network)> {
         let k = self
             .inner

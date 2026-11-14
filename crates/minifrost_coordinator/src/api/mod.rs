@@ -26,6 +26,8 @@ pub struct WalletSummary {
     pub n_coins: u32,
     /// First unused receive address.
     pub receive_address: String,
+    /// Its derivation index, as the signers number it.
+    pub receive_index: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -212,9 +214,15 @@ impl CoordinatorApp {
             n_coins: view.utxos.len() as u32,
             receive_address: wallet::address(master, network, false, view.next_external)
                 .to_string(),
+            receive_index: view.next_external,
         };
         self.inner.lock().unwrap().store_wallet(&key_id, view)?;
         Ok(summary)
+    }
+
+    /// The QR code that makes the wallet's signers show receive address `index` on their screens.
+    pub fn verify_address(&self, key_id: String, index: u32) -> Result<Broadcast, String> {
+        self.inner.lock().unwrap().verify_address(&key_id, index)
     }
 
     /// Fee rate (sat/vB) for roughly the next `blocks` blocks.

@@ -12,7 +12,7 @@ use frostsnap_core::{
 };
 
 /// Bumped on any incompatible change to [`Packet`].
-pub const WIRE_VERSION: u8 = 7;
+pub const WIRE_VERSION: u8 = 8;
 
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
 pub enum Packet {
@@ -108,6 +108,7 @@ pub enum Step {
     ShowBackup,
     CheckBackup,
     FinishRestoring,
+    VerifyAddress,
 }
 
 impl Step {
@@ -121,6 +122,7 @@ impl Step {
             Step::ShowBackup => "Show the secret backup",
             Step::CheckBackup => "Check the backup",
             Step::FinishRestoring => "Save the restored key",
+            Step::VerifyAddress => "Verify a receive address",
         }
     }
 
@@ -149,7 +151,8 @@ impl Step {
             | (Step::SignNonces, M::Signing(CoordinatorSigning::RequestSign(_)))
             | (Step::ShowBackup, M::Restoration(R::DisplayBackup { .. }))
             | (Step::CheckBackup, M::Restoration(R::CheckBackup { .. }))
-            | (Step::FinishRestoring, M::Restoration(R::Consolidate(_))) => true,
+            | (Step::FinishRestoring, M::Restoration(R::Consolidate(_)))
+            | (Step::VerifyAddress, M::ScreenVerify(_)) => true,
             _ => false,
         }
     }

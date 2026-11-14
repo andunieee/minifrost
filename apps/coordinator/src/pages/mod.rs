@@ -17,6 +17,7 @@ pub use signers::{
 };
 pub use wallet_detail::{
     ConfirmSendPage,
+    VerifyAddressPage,
     WalletDetailPage,
 };
 pub use wallets::{

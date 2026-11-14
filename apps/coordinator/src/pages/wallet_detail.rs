@@ -5,6 +5,7 @@ use std::collections::{
 
 use minifrost_coordinator::api::{
     BackupShare,
+    Broadcast,
     KeySigner,
     KeyView,
     SendPreview,
@@ -293,7 +294,7 @@ impl Component for WalletDetailPage {
                     .map(error.read().clone(), |el, e| el.child(text(e).color(p.error)))
                     .map(s.clone(), |el, s| el.child(balance_card(&p, &s)))
                     .maybe(missing > 0, |el| el.child(backup_card.clone()))
-                    .map(s.clone(), |el, s| el.child(receive_card(&p, nav, &s, wide)))
+                    .map(s.clone(), |el, s| el.child(receive_card(&p, &app, nav, &w, &s, wide)))
                     .child(send_card)
                     .maybe(missing == 0, |el| el.child(backup_card))
                     .child(signers_card)
@@ -322,8 +323,20 @@ fn balance_card(p: &Palette, s: &WalletSummary) -> Rect {
         )
 }
 
-fn receive_card(p: &Palette, nav: Nav, s: &WalletSummary, wide: bool) -> Rect {
+fn receive_card(p: &Palette, app: &App, nav: Nav, w: &KeyView, s: &WalletSummary, wide: bool) -> Rect {
     let address = s.receive_address.clone();
+    let verify = {
+        let (app, wallet, s) = (app.clone(), w.clone(), s.clone());
+        move |_| match app.verify_address(wallet.key_id.clone(), s.receive_index) {
+            Ok(code) => nav.push(Page::VerifyAddress {
+                wallet: wallet.name.clone(),
+                label: format!("Receive #{}", s.receive_index),
+                address: s.receive_address.clone(),
+                code,
+            }),
+            Err(e) => nav.overlay.toast(e),
+        }
+    };
     let details = rect()
         .width(if wide { Size::flex(1.) } else { Size::fill() })
         .spacing(12.)
@@ -339,7 +352,8 @@ fn receive_card(p: &Palette, nav: Nav, s: &WalletSummary, wide: bool) -> Rect {
                 Ok(()) => nav.overlay.toast("Address copied"),
                 Err(e) => nav.overlay.toast(format!("Could not copy: {e:?}")),
             }
-        })));
+        })))
+        .child(rect().child(Btn::new("Verify on a signer").outline().icon(lucide::scan_qr_code()).on_press(verify)));
     let code = qr_view(&s.receive_address.to_uppercase(), 200., Color::BLACK);
     section(p, "Receive", lucide::arrow_down_left(), p.text).child(if wide {
         rect()
@@ -625,5 +639,49 @@ impl Component for ConfirmSendPage {
                     ),
             )
             .into_element()
+    }
+}
+
+/// Shows the QR code a signer scans to display this receive address from its own key, next to the
+/// address the coordinator is about to give out.
+#[derive(PartialEq)]
+pub struct VerifyAddressPage {
+    pub wallet: String,
+    pub label: String,
+    pub address: String,
+    pub code: Broadcast,
+}
+
+impl Component for VerifyAddressPage {
+    fn render(&self) -> impl IntoElement {
+        let p = use_palette();
+        let nav = use_consume::<Nav>();
+        let area = *Platform::get().current_window().root_size.read();
+        let size = (area.width.min(area.height) - 120.).clamp(200., 420.);
+
+        rect()
+            .expanded()
+            .child(app_bar(&p, "Verify address", back(move |_| nav.pop())))
+            .child(
+                page(720.)
+                    .child(text(format!("Wallet “{}”", self.wallet)).font_weight(FontWeight::BOLD))
+                    .child(label().font_size(24.).text(self.label.clone()))
+                    .child(
+                        rect()
+                            .width(Size::fill())
+                            .cross_align(Alignment::center())
+                            .child(AnimatedQr::new(self.code.frames.clone(), size).label(format!("Showing: {}", self.code.title))),
+                    )
+                    .maybe(self.code.frames.len() > 1, |el| {
+                        el.child(text("Hold the signer steady until it has all parts.").text_align(TextAlign::Center))
+                    })
+                    .child(text(
+                        "On a signer that holds this wallet’s key, tap “Scan coordinator” and scan this code. The signer \
+                         works the address out from its own key and shows it. Compare it with this one, character by \
+                         character:",
+                    ))
+                    .child(mono(group_address(&self.address), 18.).width(Size::fill()))
+                    .child(Btn::new("Done").fill().on_press(move |_| nav.pop())),
+            )
     }
 }

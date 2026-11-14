@@ -292,3 +292,33 @@ fn signer_refuses_a_code_whose_title_does_not_fit_its_step() {
         Step::Confirm(Prompt::JoinKeygen { .. })
     ));
 }
+
+/// The coordinator's QR makes every signer of the wallet show the receive address it derives from
+/// its own key; it matches the coordinator's, and a signer that doesn't hold the key ignores it.
+#[test]
+fn signers_show_the_receive_address_from_a_qr() {
+    let mut coord = Coordinator::in_memory();
+    let (mut signers, key_id) = common::create_wallet(&mut coord, &["alice", "bob", "carol"], 2);
+    let (master, network) = coord.wallet_params(&key_id).unwrap();
+
+    for index in [0, 7] {
+        let code = coord.verify_address(&key_id, index).unwrap();
+        let expected = wallet::address(master, network, false, index).to_string();
+        for s in signers.iter_mut() {
+            match signer_step(s, &code.frames) {
+                Step::Address { key_name, label, address } => {
+                    assert_eq!(key_name, "family");
+                    assert_eq!(label, format!("Receive #{index}"));
+                    assert_eq!(address, expected);
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+    }
+
+    // a signer of another wallet can't derive it
+    let mut other = Coordinator::in_memory();
+    let (mut strangers, _) = common::create_wallet(&mut other, &["dave", "erin"], 2);
+    let code = coord.verify_address(&key_id, 0).unwrap();
+    assert!(matches!(signer_step(&mut strangers[0], &code.frames), Step::Ignored { .. }));
+}

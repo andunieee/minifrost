@@ -82,6 +82,9 @@ impl Component for Shell {
                 Page::Enroll => EnrollPage.into(),
                 Page::NameWallet(naming) => NameWalletPage { naming }.into(),
                 Page::ConfirmSend { key_id, preview } => ConfirmSendPage { key_id, preview }.into(),
+                Page::VerifyAddress { wallet, label, address, code } => {
+                    VerifyAddressPage { wallet, label, address, code }.into()
+                }
             },
             None => {
                 let tab: Element = match *nav.tab.read() {

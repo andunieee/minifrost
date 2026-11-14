@@ -16,7 +16,7 @@ use frostsnap_core::{
     device_nonces::{AbSlots, NonceStreamSlot, SecretNonceSlot},
     message::{
         CoordinatorRestoration, CoordinatorToDeviceMessage, DeviceRestoration, DeviceSend,
-        DeviceToCoordinatorMessage, HeldShare2, keygen::Keygen, signing::CoordinatorSigning,
+        DeviceToCoordinatorMessage, HeldShare2, keygen::Keygen, screen_verify::ScreenVerify, signing::CoordinatorSigning,
     },
     schnorr_fun::frost::{ShareImage, ShareIndex},
     schnorr_fun::fun::{KeyPair, Scalar, marker::*},
@@ -209,6 +209,14 @@ pub enum Step {
     /// The coordinator wants the user to prove their physical backup is right. Walk through the
     /// questions with `quiz_question` / `quiz_answer`, or call `reject` to give up.
     CheckBackup { key_name: String },
+    /// A receive address, derived by this signer from its own key. Nothing to approve: the user
+    /// compares it with what the coordinator shows.
+    Address {
+        key_name: String,
+        /// "Receive #3"
+        label: String,
+        address: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -501,25 +509,17 @@ impl Signer {
                     self.new_share = Some(s.access_structure_ref.key_id);
                 }
             }
+            let consolidated = staged
+                .iter()
+                .any(|m| matches!(m, Mutation::Keygen(SaveShare(_))));
             self.history.extend(staged);
+            if consolidated {
+                self.drop_consolidated_backups();
+            }
         }
         std::mem::take(&mut self.dirty).then(|| self.snapshot())
     }
 
-    fn result(&mut self, step: Step) -> StepResult {
-        // Nonce slots change inside sign_ack without staged mutations, so a signing step always
-        // forces a snapshot.
-            let consolidated = staged
-                .iter()
-                .any(|m| matches!(m, Mutation::Keygen(SaveShare(_))));
-        StepResult {
-            if consolidated {
-                self.drop_consolidated_backups();
-            }
-            snapshot: self.take_snapshot(),
-            new_share: self.new_share.take().map(|k| k.to_string()),
-            step,
-        }
     /// Storing a share consumes the typed-in backup it came from: frostsnap forgets it in memory,
     /// but its `Save` mutation (the 25 words) would stay in `history`, and so on disk, even once
     /// the share is moved to the device key store. Drop every backup that is no longer pending.
@@ -534,6 +534,14 @@ impl Signer {
             .retain(|m| backup_image(m).is_none_or(|i| pending.contains(&i)));
     }
 
+    fn result(&mut self, step: Step) -> StepResult {
+        // Nonce slots change inside sign_ack without staged mutations, so a signing step always
+        // forces a snapshot.
+        StepResult {
+            snapshot: self.take_snapshot(),
+            new_share: self.new_share.take().map(|k| k.to_string()),
+            step,
+        }
     }
 
     // -----------------------------------------------------------------------------------------
@@ -629,6 +637,39 @@ impl Signer {
                     }
                 }
                 Err("Signing request was not accepted.".into())
+            }
+            CoordinatorToDeviceMessage::ScreenVerify(ScreenVerify::VerifyAddress {
+                master_appkey,
+                ..
+            }) => {
+                let key_id = master_appkey.key_id();
+                if !self.keys().iter().any(|k| k.key_id == key_id.to_string()) {
+                    return Err("This signer does not hold the key of that address.".into());
+                }
+                if self.inner.wallet_network(key_id).is_none() {
+                    return Err("This key is not a Bitcoin key.".into());
+                }
+                let sends = self
+                    .inner
+                    .recv_coordinator_message(msg, &mut OsRng)
+                    .map_err(|e| e.to_string())?;
+                sends
+                    .into_iter()
+                    .find_map(|s| match s {
+                        DeviceSend::ToUser(u) => match *u {
+                            DeviceToUserMessage::VerifyAddress {
+                                address,
+                                bip32_path,
+                            } => Some(Step::Address {
+                                key_name: self.key_name(key_id),
+                                label: bip32_path.label(),
+                                address: address.to_string(),
+                            }),
+                            _ => None,
+                        },
+                        _ => None,
+                    })
+                    .ok_or_else(|| "The address could not be derived.".to_string())
             }
             _ => {
                 // CertifyPlease / Check / Finalize, and every restoration / backup message

@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use minifrost_coordinator::api::{
+    Broadcast,
     CoordinatorApp,
     RestoringShareView,
     SendPreview,
@@ -59,6 +60,13 @@ pub enum Page {
     Enroll,
     NameWallet(Naming),
     ConfirmSend { key_id: String, preview: SendPreview },
+    /// A QR code for the wallet's signers, who show the receive address from their own key.
+    VerifyAddress {
+        wallet: String,
+        label: String,
+        address: String,
+        code: Broadcast,
+    },
 }
 
 /// The tab and the pages over it. `Copy`, so flows keep it across awaits.

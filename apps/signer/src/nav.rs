@@ -26,6 +26,12 @@ pub enum Screen {
     Prompt(Prompt),
     Quiz { key_name: String },
     EnterBackup,
+    /// A receive address the signer derived, to compare with the coordinator's.
+    Address {
+        key_name: String,
+        label: String,
+        address: String,
+    },
 }
 
 /// The screens, as a stack over Home. `Copy`, so flows keep it across awaits.
@@ -98,6 +104,7 @@ fn read_kind(step: &Step) -> Option<&'static str> {
             Prompt::DisplayBackup { .. } => "backup request",
         },
         Step::CheckBackup { .. } => "request to check a backup",
+        Step::Address { .. } => "address to verify",
         Step::Reply { .. } | Step::Done { .. } => "coordinator message",
         Step::Ignored { .. } | Step::UnlockShare { .. } => return None,
     })
@@ -125,6 +132,7 @@ pub async fn handle(nav: Nav, step: Step) {
         Step::UnlockShare { key_name, .. } => nav.overlay.toast(format!("The share of “{key_name}” could not be opened.")),
         Step::Done { message } => nav.overlay.alert("Done", message).await,
         Step::CheckBackup { key_name } => nav.push(Screen::Quiz { key_name }),
+        Step::Address { key_name, label, address } => nav.push(Screen::Address { key_name, label, address }),
         Step::Reply { frames, what, next } => nav.push(Screen::Reply {
             frames,
             title: "Show to coordinator".into(),

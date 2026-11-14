@@ -126,6 +126,7 @@ impl Component for SignerRoot {
                 Screen::Prompt(prompt) => PromptScreen { prompt }.into_element(),
                 Screen::Quiz { key_name } => QuizScreen { key_name }.into_element(),
                 Screen::EnterBackup => EnterBackupScreen.into_element(),
+                Screen::Address { key_name, label, address } => AddressScreen { key_name, label, address }.into_element(),
             })
     }
 }
