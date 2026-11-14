@@ -509,11 +509,31 @@ impl Signer {
     fn result(&mut self, step: Step) -> StepResult {
         // Nonce slots change inside sign_ack without staged mutations, so a signing step always
         // forces a snapshot.
+            let consolidated = staged
+                .iter()
+                .any(|m| matches!(m, Mutation::Keygen(SaveShare(_))));
         StepResult {
+            if consolidated {
+                self.drop_consolidated_backups();
+            }
             snapshot: self.take_snapshot(),
             new_share: self.new_share.take().map(|k| k.to_string()),
             step,
         }
+    /// Storing a share consumes the typed-in backup it came from: frostsnap forgets it in memory,
+    /// but its `Save` mutation (the 25 words) would stay in `history`, and so on disk, even once
+    /// the share is moved to the device key store. Drop every backup that is no longer pending.
+    fn drop_consolidated_backups(&mut self) {
+        let pending: Vec<ShareImage> = self
+            .inner
+            .held_shares()
+            .filter(|s| s.needs_consolidation)
+            .map(|s| s.share_image)
+            .collect();
+        self.history
+            .retain(|m| backup_image(m).is_none_or(|i| pending.contains(&i)));
+    }
+
     }
 
     // -----------------------------------------------------------------------------------------

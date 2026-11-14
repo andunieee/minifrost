@@ -370,7 +370,18 @@ fn restore_wallet_from_physical_backups_and_sign() {
             .is_err(),
         "carol's phone is not in this session"
     );
+    // the typed-in words sit in alice's snapshot until her backup becomes a real share, and not after
+    let words: [&str; 25] = backups[0].1.iter().map(String::as_str).collect::<Vec<_>>().try_into().unwrap();
+    let typed = bincode::encode_to_vec(
+        frost_backup::ShareBackup::from_words(backups[0].0, words).unwrap(),
+        bincode::config::standard(),
+    )
+    .unwrap();
+    let holds = |s: &Signer| s.snapshot().windows(typed.len()).any(|w| w == typed);
+    assert!(holds(alice), "the pending backup is in the snapshot");
     let key_id = finish_signers(&mut coord, &up2, &mut [alice, bob]);
+    assert!(!holds(alice), "the backup is gone once its share is stored");
+    assert!(alice.pending_backups().is_empty());
     assert_eq!(key_id, orig_key);
     assert!(coord.pending_consolidations().is_empty());
     // a restored wallet counts as backed up: its owner has the paper
