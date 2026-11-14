@@ -39,7 +39,9 @@ impl Component for ReplyScreen {
                             .color(signer_color(&ctl.device_id, p.dark)),
                     )
                     .child(text(self.what.clone()).text_align(TextAlign::Center))
-                    .child(text("Hold the device steady until the coordinator has all parts.").text_align(TextAlign::Center))
+                    .maybe(self.frames.len() > 1, |el| {
+                        el.child(text("Hold the device steady until the coordinator has all parts.").text_align(TextAlign::Center))
+                    })
                     .child(gap(8.))
                     .child(match next {
                         Some(next) => rect()
