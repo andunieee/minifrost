@@ -248,7 +248,6 @@ pub struct OverlayHost;
 impl Component for OverlayHost {
     fn render(&self) -> impl IntoElement {
         let overlay = use_overlay();
-        let p = use_palette();
         let insets = crate::platform::use_insets();
         let toast = overlay.toast.read().clone();
         let dialog = overlay.dialogs.read().last().cloned();
@@ -260,41 +259,96 @@ impl Component for OverlayHost {
             .height(Size::window_percent(100.))
             .map(dialog, |el, d| el.child(DialogView { dialog: d, overlay }))
             .map(toast, |el, t| {
-                let background = t.background.unwrap_or(if p.dark {
-                    Color::from_rgb(225, 225, 232)
-                } else {
-                    Color::from_rgb(48, 48, 56)
-                });
-                let color = readable_on(background);
-                el.child(
-                    rect()
-                        // Below the app bar, clear of the tab bar and the page's floating action.
-                        .position(Position::new_absolute().top(insets.top + 56. + 8.).left(0.))
-                        .width(Size::fill())
-                        .padding((0., 16.))
-                        .cross_align(Alignment::center())
-                        .child(
-                            rect()
-                                .horizontal()
-                                .max_width(Size::px(560.))
-                                .width(Size::fill())
-                                .content(Content::flex())
-                                .cross_align(Alignment::center())
-                                .spacing(12.)
-                                .padding((14., 16.))
-                                .corner_radius(10.)
-                                .background(background)
-                                .color(color)
-                                .shadow(Shadow::new().y(4.).blur(12.).color((0, 0, 0, 60)))
-                                .on_press(move |_| {
-                                    let mut toast = overlay.toast;
-                                    toast.set(None);
-                                })
-                                .map(t.icon, |el, i| el.child(icon(i, 20., color)))
-                                .child(label().width(Size::flex(1.)).text(t.message)),
-                        ),
-                )
+                let key = t.id;
+                el.child(ToastView { toast: t, overlay, insets_top: insets.top, key: DiffKey::None }.key(key))
             })
+    }
+}
+
+/// How far a toast has to be dragged sideways to be let go of.
+const SWIPE_DISMISS: f32 = 80.;
+
+#[derive(PartialEq)]
+struct ToastView {
+    toast: Toast,
+    overlay: Overlay,
+    insets_top: f32,
+    key: DiffKey,
+}
+
+impl KeyExt for ToastView {
+    fn key_mut(&mut self) -> &mut DiffKey {
+        &mut self.key
+    }
+}
+
+impl Component for ToastView {
+    fn render(&self) -> impl IntoElement {
+        let p = use_palette();
+        let overlay = self.overlay;
+        let t = self.toast.clone();
+        let mut start = use_state(|| None::<f64>);
+        let mut dx = use_state(|| 0f32);
+        let background = t.background.unwrap_or(if p.dark {
+            Color::from_rgb(225, 225, 232)
+        } else {
+            Color::from_rgb(48, 48, 56)
+        });
+        let color = readable_on(background);
+        let offset = *dx.read();
+
+        rect()
+            // Close to the top, over the app bar.
+            .position(Position::new_absolute().top(self.insets_top + 8.).left(0.))
+            .width(Size::fill())
+            .padding((0., 16.))
+            .cross_align(Alignment::center())
+            .offset_x(offset)
+            .opacity((1. - offset.abs() / (SWIPE_DISMISS * 3.)).clamp(0.2, 1.))
+            .on_pointer_down(move |e: Event<PointerEventData>| {
+                start.set(Some(e.global_location().x));
+                dx.set(0.);
+            })
+            .on_global_pointer_move(move |e: Event<PointerEventData>| {
+                if let Some(x0) = *start.peek() {
+                    dx.set((e.global_location().x - x0) as f32);
+                }
+            })
+            .on_global_pointer_up(move |_| {
+                if start.peek().is_none() {
+                    return;
+                }
+                start.set(None);
+                if dx.peek().abs() >= SWIPE_DISMISS {
+                    let mut toast = overlay.toast;
+                    toast.set(None);
+                } else {
+                    dx.set(0.);
+                }
+            })
+            .child(
+                rect()
+                    .horizontal()
+                    .max_width(Size::px(560.))
+                    .width(Size::fill())
+                    .content(Content::flex())
+                    .cross_align(Alignment::center())
+                    .spacing(12.)
+                    .padding((14., 16.))
+                    .corner_radius(10.)
+                    .background(background)
+                    .color(color)
+                    .shadow(Shadow::new().y(4.).blur(12.).color((0, 0, 0, 60)))
+                    .on_press(move |_| {
+                        // a drag that fell short isn't a tap
+                        if dx.peek().abs() < 4. {
+                            let mut toast = overlay.toast;
+                            toast.set(None);
+                        }
+                    })
+                    .map(t.icon, |el, i| el.child(icon(i, 20., color)))
+                    .child(label().width(Size::flex(1.)).text(t.message)),
+            )
     }
 }
 
