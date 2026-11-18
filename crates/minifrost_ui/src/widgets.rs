@@ -122,7 +122,47 @@ impl ChildrenExt for PageBuilder {
 
 impl IntoElement for PageBuilder {
     fn into_element(self) -> Element {
-        ScrollView::new()
+        PageView {
+            max_width: self.max_width,
+            padding: self.padding,
+            children: self.children,
+        }
+        .into_element()
+    }
+}
+
+/// The scroll position of the enclosing [`page`], for what moves on to a next step and wants the
+/// screen back at its top.
+#[derive(Clone, Copy)]
+pub struct PageScroll(ScrollController);
+
+impl PageScroll {
+    pub fn to_top(mut self) {
+        self.0.scroll_to(ScrollPosition::Start, Direction::Vertical);
+    }
+}
+
+pub fn use_page_scroll() -> Option<PageScroll> {
+    try_consume_context::<PageScroll>()
+}
+
+struct PageView {
+    max_width: f32,
+    padding: f32,
+    children: Vec<Element>,
+}
+
+impl PartialEq for PageView {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+impl Component for PageView {
+    fn render(&self) -> impl IntoElement {
+        let scroll = use_scroll_controller(ScrollConfig::default);
+        use_provide_context(|| PageScroll(scroll));
+        ScrollView::new_controlled(scroll)
             .width(Size::fill())
             .height(Size::flex(1.))
             .child(
@@ -132,10 +172,9 @@ impl IntoElement for PageBuilder {
                         .max_width(Size::px(self.max_width))
                         .padding(self.padding)
                         .spacing(12.)
-                        .children(self.children),
+                        .children(self.children.clone()),
                 ),
             )
-            .into_element()
     }
 }
 

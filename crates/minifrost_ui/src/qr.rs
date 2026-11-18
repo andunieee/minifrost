@@ -112,6 +112,15 @@ impl Component for AnimatedQr {
                 }
             })
         });
+        let page = use_page_scroll();
+        // a new code is the next step of a flow: start over at the top of the screen
+        use_side_effect_with_deps(&self.frames, move |_| {
+            show_raw.set(false);
+            index.set(0);
+            if let Some(page) = page {
+                page.to_top();
+            }
+        });
         // new frames while playing: play those instead
         use_side_effect_with_deps(&self.frames, move |frames| {
             if *playing.peek() && let Err(e) = sound::play(frames) {
