@@ -57,6 +57,11 @@ impl Component for Home {
             }
         };
 
+        let restore_key = {
+            let (ctl, keys) = (ctl.clone(), data.keys.clone());
+            move |_| run(pick_restore_code(ctl.clone(), nav, keys.clone()))
+        };
+
         rect()
             .expanded()
             .child(
@@ -86,6 +91,15 @@ impl Component for Home {
                         )
                     })
                     .child(gap(4.))
+                    .maybe(!data.keys.is_empty(), |el| {
+                        el.child(
+                            Btn::new("Restore wallet on coordinator")
+                                .outline()
+                                .icon(lucide::history())
+                                .fill()
+                                .on_press(restore_key),
+                        )
+                    })
                     .child(
                         Btn::new("Restore from a backup")
                             .outline()
@@ -136,6 +150,37 @@ impl Component for KeyRow {
     }
 }
 
+/// "Restore wallet on coordinator" from the home screen: the restore code of one of the keys held
+/// here, asking which when there are several.
+async fn pick_restore_code(ctl: Ctl, nav: Nav, keys: Vec<KeyInfo>) {
+    let k = match keys.as_slice() {
+        [] => return,
+        [one] => one.clone(),
+        _ => {
+            let choices = keys
+                .iter()
+                .map(|k| Choice::new(lucide::key_round(), format!("{} · {}", k.name, network_label(&k.network))))
+                .collect();
+            let Some(i) = nav
+                .overlay
+                .choose("Restore wallet on coordinator", "Which wallet’s key?", choices)
+                .await
+            else {
+                return;
+            };
+            keys[i].clone()
+        }
+    };
+    show_restore_code(ctl, nav, &k).await
+}
+
+async fn show_restore_code(ctl: Ctl, nav: Nav, k: &KeyInfo) {
+    match ctl.restore_code(&k.key_id).await {
+        Ok(step) => nav::handle(nav, step).await,
+        Err(e) => nav::error(nav, e).await,
+    }
+}
+
 async fn key_menu(ctl: Ctl, nav: Nav, k: KeyInfo) {
     let mut choices = vec![Choice::new(lucide::qr_code(), "Restore wallet on coordinator")];
     if keystore::SUPPORTED {
@@ -152,10 +197,7 @@ async fn key_menu(ctl: Ctl, nav: Nav, k: KeyInfo) {
     };
     let delete = if keystore::SUPPORTED { 2 } else { 1 };
     if i == 0 {
-        match ctl.restore_code(&k.key_id).await {
-            Ok(step) => nav::handle(nav, step).await,
-            Err(e) => nav::error(nav, e).await,
-        }
+        show_restore_code(ctl, nav, &k).await
     } else if i == delete {
         delete_key(ctl, nav, k).await;
     } else if k.on_keystore {

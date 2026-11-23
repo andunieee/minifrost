@@ -52,6 +52,8 @@ pub struct RestoringShareView {
     pub device_id: String,
     pub device_name: String,
     pub share_index: u32,
+    /// Typed into the signer from a written backup, rather than a key the signer held.
+    pub from_backup: bool,
     /// What the share knows about its wallet: nothing, for a typed-in backup.
     pub key_name: Option<String>,
     pub threshold: Option<u16>,
@@ -332,7 +334,7 @@ impl Coordinator {
             share,
         } = packet
         else {
-            return Err("That is not a restore code. On the signer, type in a backup or tap a key and choose “Restore wallet on coordinator”.".into());
+            return Err("That is not a restore code. On the signer, choose “Restore wallet on coordinator” for a key it holds, or “Restore from a backup” to type one in.".into());
         };
         let from = self.register_signer(device_id, &name);
         let share = RecoverShare {
@@ -668,6 +670,7 @@ impl Coordinator {
                 device_id: s.held_by.to_string(),
                 device_name: self.name_of(&s.held_by),
                 share_index: index_u32(s.held_share.share_image.index),
+                from_backup: s.held_share.needs_consolidation,
                 key_name: s.held_share.key_name.clone(),
                 threshold: s.held_share.threshold,
                 network: s

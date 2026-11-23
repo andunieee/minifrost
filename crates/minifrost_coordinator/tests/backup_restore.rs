@@ -433,6 +433,7 @@ fn restore_wallet_from_signers_when_the_coordinator_is_lost() {
     let share = &coord.restoring_shares()[0];
     assert_eq!(share.key_name.as_deref(), Some("family"));
     assert_eq!(share.threshold, Some(2));
+    assert!(!share.from_backup);
 
     // bob's code rebuilds it with no question asked, and no code for signers that kept their keys
     let up = coord
@@ -476,6 +477,7 @@ fn signer_codes_and_backups_mix() {
     let mut phone = Signer::create("new-bob".into());
     let code = type_backup(&mut phone, backups[1].0, &backups[1].1);
     coord.read_restore_code(&scan(&code)).unwrap();
+    assert!(coord.restoring_shares()[0].from_backup);
     let up = coord
         .read_restore_code(&scan(&key_code(&signers[0])))
         .unwrap();

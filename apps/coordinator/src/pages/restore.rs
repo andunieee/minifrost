@@ -1,6 +1,7 @@
 //! Rebuild a wallet from at least a threshold of its shares. Restoring starts on the signers: each
-//! shows a restore code, for a backup typed into it or a key it holds, and this page reads them
-//! one after another. The coordinator sorts them out and saves the wallet once it has enough.
+//! shows a restore code, for a key it holds or a written backup typed into it, and this page reads
+//! them one after another, of either kind in any mix. The coordinator sorts them out and saves the
+//! wallet once it has enough.
 
 use std::collections::BTreeMap;
 
@@ -38,6 +39,49 @@ fn follow(nav: Nav, u: Update, replace: bool) -> bool {
     true
 }
 
+/// Where a key comes from. Both give a restore code read the same way.
+#[derive(Clone, Copy, PartialEq)]
+enum Source {
+    Signer,
+    Backup,
+}
+
+impl Source {
+    fn icon(self) -> Bytes {
+        match self {
+            Source::Signer => lucide::key_round(),
+            Source::Backup => lucide::notebook_pen(),
+        }
+    }
+    fn title(self) -> &'static str {
+        match self {
+            Source::Signer => "From a signer that holds its key",
+            Source::Backup => "From a written backup",
+        }
+    }
+    fn how(self) -> &'static str {
+        match self {
+            Source::Signer => "On the signer, choose “Restore wallet on coordinator” and pick the wallet’s key.",
+            Source::Backup => {
+                "On any signer, choose “Restore from a backup” and type in the key number and the 25 words. \
+                 It saves the key once the wallet is rebuilt."
+            }
+        }
+    }
+    fn hint(self) -> &'static str {
+        match self {
+            Source::Signer => "Show the signer’s restore code for its key to the camera",
+            Source::Backup => "Show the restore code of the typed-in backup to the camera",
+        }
+    }
+    fn label(self) -> &'static str {
+        match self {
+            Source::Signer => "Signer’s key",
+            Source::Backup => "Typed-in backup",
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct RestorePage;
 
@@ -47,7 +91,8 @@ impl Component for RestorePage {
         let app = use_consume::<App>();
         let nav = use_consume::<Nav>();
         nav.watch();
-        let mut scanning = use_state(|| false);
+        // what the reader is open for; any restore code is taken whichever it is
+        let mut scanning = use_state(|| None::<Source>);
         // the signer the toast on screen is about, so rereading its code doesn't toast again
         let mut toast_from = use_state(|| None::<String>);
         let shares = app.restoring_shares();
@@ -74,7 +119,7 @@ impl Component for RestorePage {
                         let finished = u.finished.is_some();
                         // the page behind doesn't need the camera, and the wallet this was for is done
                         if follow(nav, u, false) || finished {
-                            scanning.set(false);
+                            scanning.set(None);
                         }
                     }
                     Err(e) => nav.overlay.toast(e),
@@ -86,22 +131,31 @@ impl Component for RestorePage {
         rect().expanded().child(app_bar(&p, "Restore", None)).child(
             page(720.)
                 .child(text(
-                    "Rebuild a wallet from at least a threshold of its shares. On each signer, type in a backup (25 \
-                     words) or tap a key and choose “Restore wallet on coordinator”, then read the code it shows here. \
-                     The wallet is saved as soon as there are enough.",
+                    "Rebuild a wallet from at least a threshold of its keys. Each key can come from a signer that \
+                     still holds it or from a written backup, in any mix: every code read counts toward the same \
+                     wallet, which is saved as soon as there are enough.",
                 ))
-                .child(
-                    rect().child(
-                        Btn::new(if scanning() { "Stop reading" } else { "Read a signer’s code" })
-                            .icon(if scanning() { lucide::x() } else { lucide::scan_qr_code() })
-                            .on_press(move |_| scanning.toggle()),
-                    ),
-                )
-                .maybe(scanning(), |el| {
+                .children([Source::Signer, Source::Backup].into_iter().map(|source| {
+                    let on = scanning() == Some(source);
+                    ListRow::new(label().text(source.title()))
+                        .icon(source.icon(), if on { p.accent } else { p.text_muted })
+                        .subtitle(source.how())
+                        .maybe(on, |row| row.border(p.accent))
+                        .trailing(
+                            Btn::new(if on { "Stop" } else { "Read code" })
+                                .tonal()
+                                .icon(if on { lucide::x() } else { lucide::scan_qr_code() })
+                                .on_press(move |_| scanning.set((!on).then_some(source))),
+                        )
+                        .on_press(move |_| scanning.set(Some(source)))
+                        .key(source.title())
+                        .into_element()
+                }))
+                .map(scanning(), |el, source| {
                     el.child(
                         rect().width(Size::fill()).max_width(Size::px(480.)).child(
                             ScanPanel::new(on_payload)
-                                .hint("Show the signer’s restore code to the camera")
+                                .hint(source.hint())
                                 .expecting("signer restore code"),
                         ),
                     )
@@ -118,10 +172,11 @@ impl Component for RestorePage {
                 }))
                 .maybe(!shares.is_empty(), |el| {
                     el.child(gap(8.)).child(title("Read so far")).children(shares.into_iter().map(|s| {
+                        let source = if s.from_backup { Source::Backup } else { Source::Signer };
                         let subtitle = match &s.key_name {
-                            None => "From a backup: its wallet shows once more codes are read.".to_string(),
+                            None => format!("{}: its wallet shows once more codes are read.", source.label()),
                             Some(name) => {
-                                let mut parts = vec![format!("“{name}”")];
+                                let mut parts = vec![source.label().to_string(), format!("“{name}”")];
                                 if let Some(n) = &s.network {
                                     parts.push(network_label(n).to_string());
                                 }
@@ -142,7 +197,7 @@ impl Component for RestorePage {
                         };
                         let one = s.clone();
                         ListRow::new(label().text(format!("Key #{} on {}", s.share_index, s.device_name)))
-                            .icon(lucide::key_round(), signer_color(&s.device_id, p.dark))
+                            .icon(source.icon(), signer_color(&s.device_id, p.dark))
                             .subtitle(subtitle)
                             .maybe(s.threshold.is_none(), |row| {
                                 row.trailing(Btn::new("Only one signature?").text().on_press(move |_| {
