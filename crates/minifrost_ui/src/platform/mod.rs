@@ -15,6 +15,8 @@ pub struct Insets {
     pub top: f32,
     pub right: f32,
     pub bottom: f32,
+    /// The soft keyboard is up (Android); always false elsewhere.
+    pub keyboard: bool,
 }
 
 /// Sets up what the platform reports (the insets, on Android). Call once, at the root.
@@ -28,6 +30,55 @@ pub fn use_init_platform() {
 
 pub fn use_insets() -> Insets {
     use_try_consume::<State<Insets>>().map(|s| *s.read()).unwrap_or_default()
+}
+
+/// Whether a text field is being edited, which on Android means the soft keyboard is up for it.
+#[cfg(target_os = "android")]
+pub fn editing() -> bool {
+    use freya_winit::integration::is_ime_role;
+
+    is_ime_role(
+        Platform::get()
+            .current_window()
+            .focused_accessibility_node
+            .peek()
+            .role(),
+    )
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn editing() -> bool {
+    false
+}
+
+/// Stop editing a text field; returns whether there was one. On Android the keyboard belongs to the
+/// focused field: hiding it while the field keeps the focus does not last, because Freya shows it
+/// again on the next accessibility update (and hiding it causes one: the layout grows as the
+/// keyboard goes). So move the focus away as well.
+#[cfg(target_os = "android")]
+pub fn stop_editing() -> bool {
+    use freya::android::AndroidExt;
+
+    if !editing() {
+        return false;
+    }
+    // The root node (`ACCESSIBILITY_ROOT_ID` in Freya) is not a text input, so the keyboard stays
+    // down.
+    let platform = Platform::get();
+    platform.current_window().send(UserEvent::FocusAccessibilityNode(
+        AccessibilityFocusStrategy::Node(AccessibilityId(0)),
+    ));
+    // Hide it now rather than wait for the focus update: Freya only hides keyboards it considers
+    // implicit, and this one was shown explicitly.
+    if let Err(err) = platform.hide_keyboard() {
+        tracing::warn!("keyboard: {err:?}");
+    }
+    true
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn stop_editing() -> bool {
+    false
 }
 
 /// The folder a desktop app keeps its data in, where the Flutter builds kept it: the data

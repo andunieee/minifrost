@@ -106,16 +106,25 @@ pub fn send(op: &str, data: &[u8]) {
 /// Feeds the insets the activity reports into `state`, for the life of the app.
 pub(crate) fn watch_insets(mut state: State<Insets>) {
     let (tx, mut rx) = mpsc::unbounded();
+    let mut keyboard_open = false;
     {
         let mut slot = INSETS.lock().unwrap();
         if let Some(insets) = slot.0 {
+            keyboard_open = insets.keyboard;
             state.set(insets);
         }
         slot.1 = Some(tx);
     }
     spawn_in_window(async move {
         while let Some(insets) = rx.next().await {
+            let was_open = keyboard_open;
+            keyboard_open = insets.keyboard;
             state.set_if_modified(insets);
+            // The user put the keyboard away while a field still had the focus: stop editing, or
+            // the next accessibility update brings the keyboard back.
+            if was_open && !keyboard_open {
+                let _ = super::stop_editing();
+            }
         }
     });
 }
@@ -151,12 +160,14 @@ pub extern "system" fn Java_dev_minifrost_Native_insets(
     top: f32,
     right: f32,
     bottom: f32,
+    keyboard: bool,
 ) {
     let insets = Insets {
         left,
         top,
         right,
         bottom,
+        keyboard,
     };
     let mut slot = INSETS.lock().unwrap();
     slot.0 = Some(insets);

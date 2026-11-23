@@ -24,5 +24,6 @@ desktop_camera = { path = "../desktop_camera" }
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
+freya-winit = { workspace = true }
 jni = "0.22"
 winit = { version = "0.30.12", features = ["android-native-activity", "rwh_06"] }

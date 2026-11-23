@@ -68,7 +68,15 @@ impl Component for Shell {
         let on_key = {
             let app = app.clone();
             move |e: Event<KeyboardEventData>| {
-                if platform::is_back(&e.key) && !nav.back(&app) {
+                if !platform::is_back(&e.key) {
+                    return;
+                }
+                // While a field is being edited, Back puts the keyboard away, as in any other app
+                // on the phone; only the next one navigates.
+                if platform::stop_editing() {
+                    return;
+                }
+                if !nav.back(&app) {
                     platform::leave();
                 }
             }

@@ -101,7 +101,15 @@ impl Component for SignerRoot {
         let ctl = use_provide_context(|| self.ctl.clone());
         let nav = use_provide_context(|| Nav::new(self.overlay));
         let on_key = move |e: Event<KeyboardEventData>| {
-            if platform::is_back(&e.key) && !nav.back(&ctl) {
+            if !platform::is_back(&e.key) {
+                return;
+            }
+            // While a field is being edited, Back puts the keyboard away, as in any other app on
+            // the phone; only the next one navigates.
+            if platform::stop_editing() {
+                return;
+            }
+            if !nav.back(&ctl) {
                 platform::leave();
             }
         };

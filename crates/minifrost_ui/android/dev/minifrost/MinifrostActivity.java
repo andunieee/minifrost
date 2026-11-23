@@ -70,7 +70,7 @@ public abstract class MinifrostActivity extends NativeActivity {
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             int ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
             Native.insets(bars.left / density, bars.top / density, bars.right / density,
-                    Math.max(bars.bottom, ime) / density);
+                    Math.max(bars.bottom, ime) / density, ime > 0);
             return insets;
         });
         decor.post(() -> {
