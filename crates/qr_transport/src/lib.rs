@@ -12,8 +12,9 @@ use std::collections::BTreeMap;
 const PREFIX: &str = "MF1";
 const B32: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-/// Default characters of payload per frame. Keeps each QR around version 8-10 at ECC level L.
-pub const DEFAULT_FRAME_CHARS: usize = 220;
+/// Default characters of payload per frame. With the header that is at most a version 12 QR
+/// (65 modules) at ECC level M, which phone cameras read at a glance.
+pub const DEFAULT_FRAME_CHARS: usize = 384;
 
 fn b32_encode(data: &[u8]) -> String {
     let mut out = String::with_capacity((data.len() * 8).div_ceil(5));
@@ -56,12 +57,15 @@ fn payload_id(payload: &[u8]) -> u32 {
     u32::from_be_bytes([h[0], h[1], h[2], h[3]])
 }
 
-/// Split `payload` into frames of at most `frame_chars` base32 characters each.
+/// Split `payload` into as few frames as fit `frame_chars` base32 characters each, sharing the
+/// characters evenly so every frame's code is about the same size.
 /// An empty payload still yields one frame so the receiver can tell "empty" from "nothing".
 pub fn split(payload: &[u8], frame_chars: usize) -> Vec<String> {
     let encoded = b32_encode(payload);
     // base32 chunks must stay a multiple of 8 chars so every chunk decodes independently
-    let step = (frame_chars.max(8) / 8) * 8;
+    let max = (frame_chars.max(8) / 8) * 8;
+    let frames = encoded.len().div_ceil(max).max(1);
+    let step = (encoded.len().div_ceil(frames).div_ceil(8) * 8).max(8);
     let chunks: Vec<&str> = if encoded.is_empty() {
         vec![""]
     } else {
@@ -260,6 +264,18 @@ mod tests {
                 }
             }
             assert_eq!(out.unwrap(), payload, "len {len}");
+        }
+    }
+
+    #[test]
+    fn frames_are_few_and_even() {
+        for len in [1usize, 239, 240, 241, 1000, 2203] {
+            let frames = split(&vec![7u8; len], DEFAULT_FRAME_CHARS);
+            let chars = (len * 8).div_ceil(5);
+            assert_eq!(frames.len(), chars.div_ceil(DEFAULT_FRAME_CHARS), "len {len}");
+            let sizes: Vec<usize> = frames.iter().map(|f| f.rsplit(':').next().unwrap().len()).collect();
+            assert!(sizes.iter().all(|&n| n <= DEFAULT_FRAME_CHARS));
+            assert!(sizes.iter().max().unwrap() - sizes.iter().min().unwrap() <= 8 * frames.len(), "{sizes:?}");
         }
     }
 
