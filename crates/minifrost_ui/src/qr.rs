@@ -113,8 +113,14 @@ impl Component for AnimatedQr {
             })
         });
         let page = use_page_scroll();
-        // a new code is the next step of a flow: start over at the top of the screen
-        use_side_effect_with_deps(&self.frames, move |_| {
+        // a new code is the next step of a flow: start over at the top of the screen. Scrolling
+        // reads the page's layout, so this also reruns on every layout: only act on new frames
+        let mut reset_for = None;
+        use_side_effect_with_deps(&self.frames, move |frames| {
+            if reset_for.as_ref() == Some(frames) {
+                return;
+            }
+            reset_for = Some(frames.clone());
             show_raw.set(false);
             index.set(0);
             if let Some(page) = page {
