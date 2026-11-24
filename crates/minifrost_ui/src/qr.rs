@@ -59,7 +59,8 @@ pub fn qr_view(data: &str, size: f32, ink: Color) -> Rect {
 }
 
 /// Shows a list of text frames as a looping QR code; a single frame is shown still. It can also
-/// play the same frames as sound for a listening device, copy them as text, or show them raw.
+/// play the same frames as sound for a listening device, copy them as text, or show them raw (every
+/// part, one per line).
 #[derive(PartialEq)]
 pub struct AnimatedQr {
     pub frames: Vec<String>,
@@ -105,10 +106,7 @@ impl Component for AnimatedQr {
             spawn(async move {
                 loop {
                     timer(Duration::from_millis(1000 / FPS)).await;
-                    // the raw text lists every part, so the code holds still while it is read
-                    if !*show_raw.peek() {
-                        *index.write() += 1;
-                    }
+                    *index.write() += 1;
                 }
             })
         });
