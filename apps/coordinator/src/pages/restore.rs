@@ -3,7 +3,13 @@
 //! them one after another, of either kind in any mix. The coordinator sorts them out and saves the
 //! wallet once it has enough.
 
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    time::{
+        Duration,
+        Instant,
+    },
+};
 
 use minifrost_coordinator::api::{
     Finished,
@@ -42,6 +48,10 @@ fn follow(nav: Nav, u: Update, replace: bool) -> bool {
     if replace { nav.replace(page) } else { nav.push(page) }
     true
 }
+
+/// A code read again within this long of the last read is still in front of the camera, which
+/// keeps reading it.
+const STILL_IN_VIEW: Duration = Duration::from_secs(2);
 
 /// Where a key comes from. Both give a restore code read the same way.
 #[derive(Clone, Copy, PartialEq)]
@@ -97,8 +107,9 @@ impl Component for RestorePage {
         nav.watch();
         // what the reader is open for; any restore code is taken whichever it is
         let mut scanning = use_state(|| None::<Source>);
-        // the signer the toast on screen is about, so rereading its code doesn't toast again
-        let mut toast_from = use_state(|| None::<String>);
+        // the signer read last and when: its code held in view doesn't toast again, but shown
+        // anew it says it was already read
+        let mut last_read = use_state(|| None::<(Option<String>, Instant)>);
         let shares = app.restoring_shares();
         let unnamed = app.unnamed_wallets();
         // the same wallet can have several signers waiting; one code serves them all
@@ -114,12 +125,17 @@ impl Component for RestorePage {
                     Ok(u) => {
                         let from = u.from.as_ref().map(|s| s.device_id.clone());
                         let color = from.as_deref().map(|id| signer_color(id, p.dark));
+                        let now = Instant::now();
+                        let in_view = last_read
+                            .peek()
+                            .as_ref()
+                            .is_some_and(|(last, at)| *last == from && now - *at < STILL_IN_VIEW);
                         if !u.repeat {
                             nav.overlay.success(u.message.clone(), color);
-                        } else if *toast_from.peek() != from {
+                        } else if !in_view {
                             nav.overlay.info(u.message.clone(), color);
                         }
-                        toast_from.set(from);
+                        last_read.set(Some((from, now)));
                         let finished = u.finished.is_some();
                         // the page behind doesn't need the camera, and the wallet this was for is done
                         if follow(nav, u, false) || finished {
