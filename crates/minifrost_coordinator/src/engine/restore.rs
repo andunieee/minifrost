@@ -334,7 +334,7 @@ impl Coordinator {
             share,
         } = packet
         else {
-            return Err("That is not a restore code. On the signer, choose “Restore wallet on coordinator” for a key it holds, or “Restore from a backup” to type one in.".into());
+            return Err("That is not a restore code. On the signer, tap a key it holds and choose “Restore wallet on coordinator”, or “Restore from a backup” to type one in.".into());
         };
         let from = self.register_signer(device_id, &name);
         let share = RecoverShare {

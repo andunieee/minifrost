@@ -57,11 +57,6 @@ impl Component for Home {
             }
         };
 
-        let restore_key = {
-            let (ctl, keys) = (ctl.clone(), data.keys.clone());
-            move |_| run(pick_restore_code(ctl.clone(), nav, keys.clone()))
-        };
-
         rect()
             .expanded()
             .child(
@@ -91,15 +86,6 @@ impl Component for Home {
                         )
                     })
                     .child(gap(4.))
-                    .maybe(!data.keys.is_empty(), |el| {
-                        el.child(
-                            Btn::new("Restore wallet on coordinator")
-                                .outline()
-                                .icon(lucide::history())
-                                .fill()
-                                .on_press(restore_key),
-                        )
-                    })
                     .child(
                         Btn::new("Restore from a backup")
                             .outline()
@@ -148,30 +134,6 @@ impl Component for KeyRow {
             .subtitle(subtitle)
             .on_press(move |_| run(key_menu(ctl.clone(), nav, k.clone())))
     }
-}
-
-/// "Restore wallet on coordinator" from the home screen: the restore code of one of the keys held
-/// here, asking which when there are several.
-async fn pick_restore_code(ctl: Ctl, nav: Nav, keys: Vec<KeyInfo>) {
-    let k = match keys.as_slice() {
-        [] => return,
-        [one] => one.clone(),
-        _ => {
-            let choices = keys
-                .iter()
-                .map(|k| Choice::new(lucide::key_round(), format!("{} · {}", k.name, network_label(&k.network))))
-                .collect();
-            let Some(i) = nav
-                .overlay
-                .choose("Restore wallet on coordinator", "Which wallet’s key?", choices)
-                .await
-            else {
-                return;
-            };
-            keys[i].clone()
-        }
-    };
-    show_restore_code(ctl, nav, &k).await
 }
 
 async fn show_restore_code(ctl: Ctl, nav: Nav, k: &KeyInfo) {

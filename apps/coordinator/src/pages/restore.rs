@@ -75,7 +75,7 @@ impl Source {
     }
     fn how(self) -> &'static str {
         match self {
-            Source::Signer => "On the signer, choose “Restore wallet on coordinator” and pick the wallet’s key.",
+            Source::Signer => "On the signer, tap the wallet’s key and choose “Restore wallet on coordinator”.",
             Source::Backup => {
                 "On any signer, choose “Restore from a backup” and type in the key number and the 25 words. \
                  It saves the key once the wallet is rebuilt."
