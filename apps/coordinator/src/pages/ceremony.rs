@@ -64,6 +64,11 @@ impl Component for CeremonyPage {
         let qr_size = if narrow { (width - 80.).clamp(200., 380.) } else { 380. };
 
         let mut apply = move |next: Update| {
+            // a wallet that was just created or rebuilt: go to it
+            if let Some(Finished::KeyCreated { key_id, .. } | Finished::WalletRestored { key_id, .. }) = &next.finished {
+                nav.open_wallet(key_id.clone());
+                return;
+            }
             message.set(next.message.clone());
             if next.broadcast.is_some() {
                 broadcast.set(next.broadcast.clone());

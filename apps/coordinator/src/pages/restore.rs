@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use minifrost_coordinator::api::{
+    Finished,
     PendingConsolidationView,
     Update,
 };
@@ -19,7 +20,7 @@ use crate::nav::{
 };
 
 /// What a restore code or step led to: naming the wallet it rebuilt, then the code for the
-/// signers. `replace`: in place of the page on top (the naming form).
+/// signers, then the wallet itself. `replace`: in place of the page on top (the naming form).
 fn follow(nav: Nav, u: Update, replace: bool) -> bool {
     let page = if let Some(w) = u.unnamed_wallet {
         Page::NameWallet(Naming::Unnamed(w))
@@ -29,6 +30,9 @@ fn follow(nav: Nav, u: Update, replace: bool) -> bool {
             update: u,
             key_id: None,
         }
+    } else if let Some(Finished::WalletRestored { key_id, .. }) = u.finished {
+        nav.open_wallet(key_id);
+        return true;
     } else {
         if replace {
             nav.pop();

@@ -114,6 +114,14 @@ impl Nav {
         self.tab.set(tab);
     }
 
+    /// A wallet's page over the Wallets tab, in place of whatever led to it (creating or restoring
+    /// the wallet).
+    pub fn open_wallet(self, key_id: String) {
+        self.set_tab(Tab::Wallets);
+        self.push(Page::WalletDetail { key_id });
+        self.changed();
+    }
+
     /// Something changed in the coordinator: the pages read it again.
     pub fn changed(mut self) {
         *self.rev.write() += 1;
